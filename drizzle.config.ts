@@ -2,7 +2,7 @@ import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
   out: './drizzle',
-  schema: './app/server/db/schema.ts',
+  schema: './app/db/schema.ts',
   dialect: 'sqlite',
   migrations: {
     prefix: 'supabase',

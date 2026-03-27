@@ -8,7 +8,8 @@
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "db-generate": "drizzle-kit generate",
-    "db-migrate": "drizzle-kit migrate"
+    "db-migrate": "drizzle-kit migrate",
+    "db-push": "drizzle-kit push"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
