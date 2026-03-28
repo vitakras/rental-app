@@ -1,23 +1,23 @@
 {
-  "permissions": {
-    "defaultMode": "acceptEdits",
-    "allow": [
-      "Bash(bun run *)",
-      "Bash(bun test*)",
-      "Bash(git status)",
-      "Bash(git log*)",
-      "Bash(git diff*)",
-      "Bash(git add *)",
-      "Bash(git commit*)",
-      "Bash(git branch*)",
-      "Bash(git stash*)"
-    ],
-    "deny": [
-      "Bash(git push --force*)",
-      "Bash(git reset --hard*)",
-      "Bash(git checkout -- *)",
-      "Bash(git clean *)",
-      "Bash(rm -rf *)"
-    ]
-  }
+	"permissions": {
+		"defaultMode": "acceptEdits",
+		"allow": [
+			"Bash(bun run *)",
+			"Bash(bun test*)",
+			"Bash(git status)",
+			"Bash(git log*)",
+			"Bash(git diff*)",
+			"Bash(git add *)",
+			"Bash(git commit*)",
+			"Bash(git branch*)",
+			"Bash(git stash*)"
+		],
+		"deny": [
+			"Bash(git push --force*)",
+			"Bash(git reset --hard*)",
+			"Bash(git checkout -- *)",
+			"Bash(git clean *)",
+			"Bash(rm -rf *)"
+		]
+	}
 }
