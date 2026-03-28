@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
-import type { ApplicationRepository } from "../createApplication.service";
-import { createApplication } from "../createApplication.service";
+import type { ApplicationRepository } from "../application.service";
+import { createApplication } from "../application.service";
 
 const baseInput = {
 	desiredMoveInDate: "2026-06-01",

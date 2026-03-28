@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { applicationsTable, residentsTable } from "~/db/schema";
 import { applicationRepository } from "../application.repository";
-import { createTestDb, type TestDb } from "./test-db";
+import { createTestDb, type TestDb } from "./db.helper";
 
 describe("applicationRepository.create", () => {
 	let testDb: TestDb;
