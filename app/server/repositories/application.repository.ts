@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
 import { applicationsTable, residentsTable } from "~/db/schema";
@@ -96,6 +96,27 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 				.returning();
 
 			return updated ?? null;
+		},
+
+		async findAllSubmitted() {
+			return db
+				.select({
+					id: applicationsTable.id,
+					status: applicationsTable.status,
+					desiredMoveInDate: applicationsTable.desiredMoveInDate,
+					createdAt: applicationsTable.createdAt,
+					primaryApplicantName: residentsTable.fullName,
+				})
+				.from(applicationsTable)
+				.innerJoin(
+					residentsTable,
+					and(
+						eq(residentsTable.applicationId, applicationsTable.id),
+						eq(residentsTable.role, "primary"),
+					),
+				)
+				.where(eq(applicationsTable.status, "submitted"))
+				.orderBy(desc(applicationsTable.createdAt));
 		},
 	};
 }
