@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import type { ApplicationRepository } from "../application.service";
-import { createApplication } from "../application.service";
+import { createApplicationService } from "../application.service";
 
 const baseInput = {
 	desiredMoveInDate: "2026-06-01",
@@ -23,11 +23,11 @@ function makeRepo(
 	};
 }
 
-describe("createApplication", () => {
+describe("createApplicationService", () => {
 	describe("validation", () => {
 		it("rejects a missing desiredMoveInDate", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				desiredMoveInDate: "",
 			});
@@ -42,7 +42,7 @@ describe("createApplication", () => {
 
 		it("rejects an invalid date format", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				desiredMoveInDate: "06/01/2026",
 			});
@@ -57,7 +57,7 @@ describe("createApplication", () => {
 
 		it("rejects a missing owner fullName", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				owner: { ...baseInput.owner, fullName: "" },
 			});
@@ -74,7 +74,7 @@ describe("createApplication", () => {
 
 		it("rejects an invalid owner email", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				owner: { ...baseInput.owner, email: "not-an-email" },
 			});
@@ -89,7 +89,7 @@ describe("createApplication", () => {
 
 		it("rejects an invalid role for additional adult", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -110,7 +110,7 @@ describe("createApplication", () => {
 
 		it("rejects an invalid email for additional adult", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -127,7 +127,7 @@ describe("createApplication", () => {
 
 		it("rejects a missing child fullName", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				children: [{ fullName: "", dateOfBirth: "2020-01-01" }],
 			});
@@ -139,7 +139,9 @@ describe("createApplication", () => {
 	describe("success path", () => {
 		it("calls repo.create with validated data and returns applicationId", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, baseInput);
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication(
+				baseInput,
+			);
 
 			expect(result.success).toBe(true);
 			if (result.success) {
@@ -156,14 +158,17 @@ describe("createApplication", () => {
 
 		it("does not call repo.create when validation fails", async () => {
 			const repo = makeRepo();
-			await createApplication(repo, { ...baseInput, desiredMoveInDate: "" });
+			await createApplicationService({ applicationRepository: repo }).createApplication({
+				...baseInput,
+				desiredMoveInDate: "",
+			});
 
 			expect(repo.create).not.toHaveBeenCalled();
 		});
 
 		it("passes optional adult email through when provided", async () => {
 			const repo = makeRepo();
-			const result = await createApplication(repo, {
+			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -184,7 +189,7 @@ describe("createApplication", () => {
 
 		it("omits optional adult email when not provided", async () => {
 			const repo = makeRepo();
-			await createApplication(repo, {
+			await createApplicationService({ applicationRepository: repo }).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -208,9 +213,9 @@ describe("createApplication", () => {
 				}),
 			});
 
-			await expect(createApplication(repo, baseInput)).rejects.toThrow(
-				"DB error",
-			);
+			await expect(
+				createApplicationService({ applicationRepository: repo }).createApplication(baseInput),
+			).rejects.toThrow("DB error");
 		});
 	});
 });
