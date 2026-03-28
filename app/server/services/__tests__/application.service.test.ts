@@ -19,6 +19,8 @@ function makeRepo(
 ): ApplicationRepository {
 	return {
 		create: mock(async () => ({ id: 1 })),
+		findById: mock(async () => ({ id: 1, status: "pending" })),
+		submit: mock(async () => ({ id: 1 })),
 		...overrides,
 	};
 }
@@ -217,5 +219,57 @@ describe("createApplicationService", () => {
 				createApplicationService({ applicationRepository: repo }).createApplication(baseInput),
 			).rejects.toThrow("DB error");
 		});
+	});
+});
+
+describe("submitApplication", () => {
+	it("returns success with applicationId when repo submits successfully", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({ applicationRepository: repo }).submitApplication(1);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.applicationId).toBe(1);
+		}
+		expect(repo.submit).toHaveBeenCalledTimes(1);
+		expect(repo.submit).toHaveBeenCalledWith(1);
+	});
+
+	it("returns not_found when the application does not exist", async () => {
+		const repo = makeRepo({
+			findById: mock(async () => null),
+		});
+		const result = await createApplicationService({ applicationRepository: repo }).submitApplication(99);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.reason).toBe("not_found");
+		}
+		expect(repo.submit).not.toHaveBeenCalled();
+	});
+
+	it("returns not_pending when the application is not in pending state", async () => {
+		const repo = makeRepo({
+			findById: mock(async () => ({ id: 1, status: "submitted" })),
+		});
+		const result = await createApplicationService({ applicationRepository: repo }).submitApplication(1);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.reason).toBe("not_pending");
+		}
+		expect(repo.submit).not.toHaveBeenCalled();
+	});
+
+	it("propagates errors thrown by repo.submit", async () => {
+		const repo = makeRepo({
+			submit: mock(async () => {
+				throw new Error("DB error");
+			}),
+		});
+
+		await expect(
+			createApplicationService({ applicationRepository: repo }).submitApplication(1),
+		).rejects.toThrow("DB error");
 	});
 });

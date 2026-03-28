@@ -39,6 +39,8 @@ type CreateApplicationPayload = z.output<typeof createApplicationSchema>;
 
 export interface ApplicationRepository {
 	create(input: CreateApplicationPayload): Promise<{ id: number }>;
+	findById(id: number): Promise<{ id: number; status: string } | null>;
+	submit(id: number): Promise<{ id: number } | null>;
 }
 
 // ── Service ────────────────────────────────────────────────────────────────────
@@ -46,6 +48,10 @@ export interface ApplicationRepository {
 export type CreateApplicationResult =
 	| { success: true; applicationId: number }
 	| { success: false; errors: z.ZodIssue[] };
+
+export type SubmitApplicationResult =
+	| { success: true; applicationId: number }
+	| { success: false; reason: "not_found" | "not_pending" };
 
 export function createApplicationService({
 	applicationRepository,
@@ -65,6 +71,24 @@ export function createApplicationService({
 			const application = await applicationRepository.create(parsed.data);
 
 			return { success: true, applicationId: application.id };
+		},
+
+		async submitApplication(
+			applicationId: number,
+		): Promise<SubmitApplicationResult> {
+			const app = await applicationRepository.findById(applicationId);
+
+			if (!app) {
+				return { success: false, reason: "not_found" };
+			}
+
+			if (app.status !== "pending") {
+				return { success: false, reason: "not_pending" };
+			}
+
+			await applicationRepository.submit(applicationId);
+
+			return { success: true, applicationId };
 		},
 	};
 }

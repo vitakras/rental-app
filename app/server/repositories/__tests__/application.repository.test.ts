@@ -169,3 +169,95 @@ describe("applicationRepository.create", () => {
 		expect(applications).toHaveLength(0);
 	});
 });
+
+describe("applicationRepository.findById", () => {
+	let testDb: TestDb;
+	let repo: ReturnType<typeof applicationRepository>;
+
+	beforeEach(async () => {
+		testDb = await createTestDb();
+		repo = applicationRepository(testDb.db);
+	});
+
+	afterEach(() => {
+		testDb.cleanup();
+	});
+
+	const baseInput = {
+		desiredMoveInDate: "2026-06-01",
+		owner: {
+			fullName: "Alex Johnson",
+			dateOfBirth: "1990-05-15",
+			email: "alex@example.com",
+			phone: "555-000-0001",
+		},
+		additionalAdults: [],
+		children: [],
+	};
+
+	it("returns the application when found", async () => {
+		const created = await repo.create(baseInput);
+		const app = await repo.findById(created.id);
+
+		expect(app).not.toBeNull();
+		expect(app?.id).toBe(created.id);
+		expect(app?.status).toBe("pending");
+	});
+
+	it("returns null for a non-existent id", async () => {
+		const app = await repo.findById(99999);
+		expect(app).toBeNull();
+	});
+});
+
+describe("applicationRepository.submit", () => {
+	let testDb: TestDb;
+	let repo: ReturnType<typeof applicationRepository>;
+
+	beforeEach(async () => {
+		testDb = await createTestDb();
+		repo = applicationRepository(testDb.db);
+	});
+
+	afterEach(() => {
+		testDb.cleanup();
+	});
+
+	const baseInput = {
+		desiredMoveInDate: "2026-06-01",
+		owner: {
+			fullName: "Alex Johnson",
+			dateOfBirth: "1990-05-15",
+			email: "alex@example.com",
+			phone: "555-000-0001",
+		},
+		additionalAdults: [],
+		children: [],
+	};
+
+	it("updates status to submitted and returns the application", async () => {
+		const created = await repo.create(baseInput);
+		const updated = await repo.submit(created.id);
+
+		expect(updated).not.toBeNull();
+		expect(updated?.id).toBe(created.id);
+		expect(updated?.status).toBe("submitted");
+	});
+
+	it("persists the submitted status in the database", async () => {
+		const created = await repo.create(baseInput);
+		await repo.submit(created.id);
+
+		const [app] = await testDb.db
+			.select()
+			.from(applicationsTable)
+			.where(eq(applicationsTable.id, created.id));
+
+		expect(app.status).toBe("submitted");
+	});
+
+	it("returns null for a non-existent application id", async () => {
+		const result = await repo.submit(99999);
+		expect(result).toBeNull();
+	});
+});

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
 import { applicationsTable, residentsTable } from "~/db/schema";
@@ -76,6 +77,25 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 
 				return application;
 			});
+		},
+
+		async findById(id: number) {
+			const [app] = await db
+				.select()
+				.from(applicationsTable)
+				.where(eq(applicationsTable.id, id));
+
+			return app ?? null;
+		},
+
+		async submit(id: number) {
+			const [updated] = await db
+				.update(applicationsTable)
+				.set({ status: "submitted" })
+				.where(eq(applicationsTable.id, id))
+				.returning();
+
+			return updated ?? null;
 		},
 	};
 }
