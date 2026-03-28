@@ -935,6 +935,12 @@ export default function Apply() {
 												fullName: c.name,
 												dateOfBirth: c.dob,
 											})),
+											pets: pets.map((p) => ({
+												type: p.type,
+												name: p.name || undefined,
+												breed: p.breed || undefined,
+												notes: p.notes || undefined,
+											})),
 										}),
 									},
 									{ method: "post" },

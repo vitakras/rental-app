@@ -1,4 +1,5 @@
 import type { Route } from "./+types/applications";
+import { Link } from "react-router";
 import { repositories } from "~/server/container";
 
 export function links() {
@@ -75,9 +76,10 @@ export default function LandlordApplications({ loaderData }: Route.ComponentProp
 				) : (
 					<div className="space-y-3">
 						{applications.map((app) => (
-							<div
+							<Link
 								key={app.id}
-								className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]"
+								to={`/l/applications/${app.id}`}
+								className="block bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] hover:shadow-[0_2px_8px_rgba(28,26,23,0.12)] transition-shadow"
 							>
 								<div className="flex items-start justify-between gap-4 mb-3">
 									<div className="min-w-0">
@@ -108,7 +110,7 @@ export default function LandlordApplications({ loaderData }: Route.ComponentProp
 										</p>
 									</div>
 								</div>
-							</div>
+							</Link>
 						))}
 					</div>
 				)}

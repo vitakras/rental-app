@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
-import { applicationsTable, residentsTable } from "~/db/schema";
+import { applicationsTable, petsTable, residentsTable } from "~/db/schema";
 
 type DbInstance = typeof defaultDb;
 
@@ -26,11 +26,19 @@ interface ChildInput {
 	dateOfBirth: string;
 }
 
+interface PetInput {
+	type: string;
+	name?: string;
+	breed?: string;
+	notes?: string;
+}
+
 export interface CreateApplicationInput {
 	desiredMoveInDate: string;
 	owner: OwnerInput;
 	additionalAdults: AdditionalAdultInput[];
 	children: ChildInput[];
+	pets: PetInput[];
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -75,6 +83,18 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 					})),
 				]);
 
+				if (input.pets.length > 0) {
+					await tx.insert(petsTable).values(
+						input.pets.map((pet) => ({
+							applicationId: application.id,
+							type: pet.type,
+							name: pet.name ?? null,
+							breed: pet.breed ?? null,
+							notes: pet.notes ?? null,
+						})),
+					);
+				}
+
 				return application;
 			});
 		},
@@ -96,6 +116,22 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 				.returning();
 
 			return updated ?? null;
+		},
+
+		async findByIdWithDetails(id: number) {
+			const [app] = await db
+				.select()
+				.from(applicationsTable)
+				.where(eq(applicationsTable.id, id));
+
+			if (!app) return null;
+
+			const [residents, pets] = await Promise.all([
+				db.select().from(residentsTable).where(eq(residentsTable.applicationId, id)),
+				db.select().from(petsTable).where(eq(petsTable.applicationId, id)),
+			]);
+
+			return { ...app, residents, pets };
 		},
 
 		async findAllSubmitted() {

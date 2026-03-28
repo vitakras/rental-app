@@ -27,6 +27,7 @@ describe("applicationRepository.create", () => {
 		},
 		additionalAdults: [],
 		children: [],
+		pets: [],
 	};
 
 	it("creates the application row with correct fields", async () => {
@@ -193,6 +194,7 @@ describe("applicationRepository.findById", () => {
 		},
 		additionalAdults: [],
 		children: [],
+		pets: [],
 	};
 
 	it("returns the application when found", async () => {
@@ -233,6 +235,7 @@ describe("applicationRepository.submit", () => {
 		},
 		additionalAdults: [],
 		children: [],
+		pets: [],
 	};
 
 	it("updates status to submitted and returns the application", async () => {

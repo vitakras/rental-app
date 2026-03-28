@@ -4,5 +4,8 @@ export default [
 	index("routes/home.tsx"),
 	route("apply", "routes/apply.tsx"),
 	route("applications/:id", "routes/application.tsx"),
-	...prefix("l", [route("applications", "routes/landlord/applications.tsx")]),
+	...prefix("l", [
+		route("applications", "routes/landlord/applications.tsx"),
+		route("applications/:id", "routes/landlord/application.tsx"),
+	]),
 ] satisfies RouteConfig;

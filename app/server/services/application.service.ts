@@ -25,17 +25,26 @@ const childSchema = z.object({
 	dateOfBirth: dateString,
 });
 
+const petSchema = z.object({
+	type: z.string().min(1),
+	name: z.string().optional(),
+	breed: z.string().optional(),
+	notes: z.string().optional(),
+});
+
 export const createApplicationSchema = z.object({
 	desiredMoveInDate: dateString,
 	owner: ownerSchema,
 	additionalAdults: z.array(additionalAdultSchema).default([]),
 	children: z.array(childSchema).default([]),
+	pets: z.array(petSchema).default([]),
 });
 
 export type CreateApplicationData = z.input<typeof createApplicationSchema>;
-type CreateApplicationPayload = z.output<typeof createApplicationSchema>;
 
 // ── Repository interface ───────────────────────────────────────────────────────
+
+export type CreateApplicationPayload = z.output<typeof createApplicationSchema>;
 
 export interface ApplicationRepository {
 	create(input: CreateApplicationPayload): Promise<{ id: number }>;

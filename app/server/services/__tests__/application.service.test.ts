@@ -155,6 +155,7 @@ describe("createApplicationService", () => {
 				owner: baseInput.owner,
 				additionalAdults: [],
 				children: [],
+				pets: [],
 			});
 		});
 
