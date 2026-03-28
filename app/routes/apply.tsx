@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
 
 export function links() {
 	return [
@@ -78,38 +82,21 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 	);
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-	return (
-		<label
-			className="block text-xs text-[#7A7268] mb-1.5"
-			style={{ fontFamily: "'DM Sans', sans-serif" }}
-		>
-			{children}
-		</label>
-	);
-}
-
 function TextInput({
 	label,
 	hint,
 	...props
-}: React.InputHTMLAttributes<HTMLInputElement> & {
+}: React.ComponentProps<typeof Input> & {
 	label: string;
 	hint?: string;
 }) {
+	const id = label.toLowerCase().replace(/\s+/g, "-");
 	return (
 		<div>
-			<FieldLabel>{label}</FieldLabel>
-			<input
-				{...props}
-				className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E1D9] bg-[#FAFAF9] text-sm text-[#1C1A17] placeholder-[#C0B8AF] focus:outline-none focus:border-[#C4714A] transition-colors"
-				style={{ fontFamily: "'DM Sans', sans-serif" }}
-			/>
+			<Label htmlFor={id} className="mb-1.5 block">{label}</Label>
+			<Input id={id} {...props} />
 			{hint && (
-				<p
-					className="text-xs text-[#7A7268] mt-1.5 leading-relaxed"
-					style={{ fontFamily: "'DM Sans', sans-serif" }}
-				>
+				<p className="text-xs text-[#7A7268] mt-1.5 leading-relaxed">
 					{hint}
 				</p>
 			)}
@@ -160,30 +147,33 @@ function Stepper({
 }) {
 	return (
 		<div className="flex items-center gap-5">
-			<button
+			<Button
 				type="button"
+				variant="outline"
+				size="stepper"
 				onClick={() => onChange(Math.max(min, value - 1))}
 				disabled={value <= min}
 				aria-label="Decrease"
-				className="w-11 h-11 rounded-full border-2 border-[#C4714A] text-[#C4714A] flex items-center justify-center text-2xl leading-none select-none transition-all active:scale-90 disabled:opacity-25 disabled:cursor-not-allowed"
+				className="border-2 border-[#C4714A] text-[#C4714A] hover:bg-transparent active:scale-90 disabled:opacity-25"
 			>
 				−
-			</button>
+			</Button>
 			<span
 				className="w-8 text-center text-3xl text-[#1C1A17] select-none tabular-nums"
 				style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
 			>
 				{value}
 			</span>
-			<button
+			<Button
 				type="button"
+				size="stepper"
 				onClick={() => onChange(Math.min(max, value + 1))}
 				disabled={value >= max}
 				aria-label="Increase"
-				className="w-11 h-11 rounded-full bg-[#C4714A] text-white flex items-center justify-center text-2xl leading-none select-none transition-all active:scale-90 disabled:opacity-25 disabled:cursor-not-allowed"
+				className="bg-[#C4714A] text-white hover:bg-[#B5663F] border-0 active:scale-90 disabled:opacity-25"
 			>
 				+
-			</button>
+			</Button>
 		</div>
 	);
 }
@@ -256,11 +246,13 @@ function RoleSelector({
 
 function RemoveButton({ onClick }: { onClick: () => void }) {
 	return (
-		<button
+		<Button
 			type="button"
+			variant="ghost"
+			size="icon-sm"
 			onClick={onClick}
-			className="w-7 h-7 rounded-full bg-[#F5F0E8] hover:bg-[#EDE8E0] flex items-center justify-center text-[#7A7268] transition-colors flex-shrink-0"
 			aria-label="Remove"
+			className="rounded-full bg-[#F5F0E8] hover:bg-[#EDE8E0] text-[#7A7268] flex-shrink-0"
 		>
 			<svg
 				aria-hidden="true"
@@ -274,7 +266,7 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
 			>
 				<path d="M1 1l10 10M11 1L1 11" />
 			</svg>
-		</button>
+		</Button>
 	);
 }
 
@@ -446,10 +438,11 @@ export default function Apply() {
 				</div>
 				<div className="bg-[#F5F0E8]/90 backdrop-blur-sm">
 					<div className="max-w-lg mx-auto px-5 py-3 flex items-center justify-between">
-						<button
+						<Button
 							type="button"
-							className="flex items-center gap-1 text-sm text-[#7A7268] py-1"
-							style={{ fontFamily: "'DM Sans', sans-serif" }}
+							variant="ghost-muted"
+							size="sm"
+							className="gap-1 py-1"
 						>
 							<svg
 								aria-hidden="true"
@@ -465,7 +458,7 @@ export default function Apply() {
 								<path d="M10 12L6 8l4-4" />
 							</svg>
 							Back
-						</button>
+						</Button>
 						<span
 							className="text-xs text-[#7A7268] tracking-widest uppercase"
 							style={{ fontFamily: "'DM Sans', sans-serif" }}
@@ -652,12 +645,9 @@ export default function Apply() {
 								</div>
 
 								<div className="mb-4">
-									<label
-										className="block text-xs text-[#7A7268] mb-2"
-										style={{ fontFamily: "'DM Sans', sans-serif" }}
-									>
+									<Label className="mb-2 block">
 										What's their role in this application?
-									</label>
+									</Label>
 									<RoleSelector
 										value={adult.role}
 										onChange={(role) => updateAdult(i, "role", role)}
@@ -731,18 +721,13 @@ export default function Apply() {
 				{/* ── Move-in date card ── */}
 				<div className="bg-white rounded-2xl p-5 mb-4 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
 					<SectionLabel>Move-in date</SectionLabel>
-					<label
-						className="block text-sm font-medium text-[#1C1A17] mb-3"
-						style={{ fontFamily: "'DM Sans', sans-serif" }}
-					>
+					<Label className="block text-sm font-medium text-[#1C1A17] mb-3">
 						When would you like to move in?
-					</label>
-					<input
+					</Label>
+					<Input
 						type="date"
 						value={moveInDate}
 						onChange={(e) => setMoveInDate(e.target.value)}
-						className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E1D9] bg-[#FAFAF9] text-sm text-[#1C1A17] focus:outline-none focus:border-[#C4714A] transition-colors"
-						style={{ fontFamily: "'DM Sans', sans-serif" }}
 					/>
 					<p
 						className="text-xs text-[#7A7268] mt-2"
@@ -822,7 +807,7 @@ export default function Apply() {
 
 								{/* Type */}
 								<div className="mb-4">
-									<FieldLabel>Type of animal</FieldLabel>
+									<Label className="mb-1.5 block">Type of animal</Label>
 									<div className="flex flex-wrap gap-2">
 										{PET_TYPES.map((t) => (
 											<button
@@ -866,16 +851,14 @@ export default function Apply() {
 
 								{/* Notes */}
 								<div>
-									<FieldLabel>
+									<Label className="mb-1.5 block">
 										Anything else the landlord should know?
-									</FieldLabel>
-									<textarea
+									</Label>
+									<Textarea
 										rows={3}
 										placeholder="Temperament, certifications, special needs..."
 										value={pet.notes}
 										onChange={(e) => updatePet(pet.id, "notes", e.target.value)}
-										className="w-full px-4 py-3 rounded-xl border-2 border-[#E8E1D9] bg-[#FAFAF9] text-sm text-[#1C1A17] placeholder-[#C0B8AF] focus:outline-none focus:border-[#C4714A] transition-colors resize-none"
-										style={{ fontFamily: "'DM Sans', sans-serif" }}
 									/>
 								</div>
 							</div>
@@ -910,13 +893,9 @@ export default function Apply() {
 			<div className="fixed bottom-0 left-0 right-0 pointer-events-none z-20">
 				<div className="bg-gradient-to-t from-[#F5F0E8] via-[#F5F0E8]/95 to-transparent pt-8 pb-10 px-5 pointer-events-auto">
 					<div className="max-w-lg mx-auto">
-						<button
-							type="button"
-							className="w-full py-4 bg-[#1C1A17] text-white rounded-2xl text-sm font-medium tracking-wide transition-all active:scale-[0.98] hover:bg-[#2D2B28]"
-							style={{ fontFamily: "'DM Sans', sans-serif" }}
-						>
+						<Button variant="continue">
 							Continue
-						</button>
+						</Button>
 						<p
 							className="text-center text-xs text-[#7A7268] mt-3"
 							style={{ fontFamily: "'DM Sans', sans-serif" }}
