@@ -1,4 +1,6 @@
+import pino from "pino";
 import { z } from "zod";
+import type { Logger } from "~/server/logger";
 
 // ── Zod schema ─────────────────────────────────────────────────────────────────
 
@@ -62,10 +64,14 @@ export type SubmitApplicationResult =
 	| { success: true; applicationId: number }
 	| { success: false; reason: "not_found" | "not_pending" };
 
+const noopLogger = pino({ level: "silent" });
+
 export function createApplicationService({
 	applicationRepository,
+	logger = noopLogger,
 }: {
 	applicationRepository: ApplicationRepository;
+	logger?: Logger;
 }) {
 	return {
 		async createApplication(
@@ -74,11 +80,24 @@ export function createApplicationService({
 			const parsed = createApplicationSchema.safeParse(data);
 
 			if (!parsed.success) {
+				logger.warn({ errors: parsed.error.issues }, "Application validation failed");
 				return { success: false, errors: parsed.error.issues };
 			}
 
+			const { additionalAdults, children, pets } = parsed.data;
+			logger.info(
+				{
+					desiredMoveInDate: parsed.data.desiredMoveInDate,
+					additionalAdultCount: additionalAdults.length,
+					childCount: children.length,
+					petCount: pets.length,
+				},
+				"Creating application",
+			);
+
 			const application = await applicationRepository.create(parsed.data);
 
+			logger.info({ applicationId: application.id }, "Application created");
 			return { success: true, applicationId: application.id };
 		},
 
@@ -88,15 +107,21 @@ export function createApplicationService({
 			const app = await applicationRepository.findById(applicationId);
 
 			if (!app) {
+				logger.warn({ applicationId }, "Cannot submit application: not found");
 				return { success: false, reason: "not_found" };
 			}
 
 			if (app.status !== "pending") {
+				logger.warn(
+					{ applicationId, status: app.status },
+					"Cannot submit application: not pending",
+				);
 				return { success: false, reason: "not_pending" };
 			}
 
 			await applicationRepository.submit(applicationId);
 
+			logger.info({ applicationId }, "Application submitted");
 			return { success: true, applicationId };
 		},
 	};
