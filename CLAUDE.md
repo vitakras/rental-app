@@ -6,20 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Development
-npm run dev          # Start dev server at http://localhost:5173
+bun run dev          # Start dev server at http://localhost:5173
 
 # Build & Type checking
-npm run build        # Production build
-npm run typecheck    # Run react-router typegen + tsc
+bun run build        # Production build
+bun run typecheck    # Run react-router typegen + tsc
 
 # Testing
-bun test             # Run all tests
-bun test --watch     # Watch mode
+bun run test         # Run all tests (sets NODE_ENV=test automatically)
+bun test --watch     # Watch mode (set NODE_ENV=test manually)
 
 # Database
-npm run db-generate  # Generate Drizzle migrations from schema changes
-npm run db-migrate   # Apply migrations
-npm run db-push      # Push schema directly (no migration file)
+bun run db-generate  # Generate Drizzle migrations from schema changes
+bun run db-migrate   # Apply migrations
+bun run db-push      # Push schema directly (no migration file)
 ```
 
 ## Architecture
@@ -54,26 +54,34 @@ repo.create(input);
 
 **Route configuration:** `app/routes.ts` defines the route tree. React Router generates types automatically (run `typecheck` to regenerate after adding routes).
 
-**Environment:** `DB_FILE_NAME` env var points to the SQLite file (default: `data/rental_app_development.sqlite`). Set in `.env`.
+**Environment / database URLs** (`app/db/config.ts`):
+
+| `NODE_ENV`    | Default database URL                          |
+|---------------|-----------------------------------------------|
+| `development` | `file:data/rental_app_development.sqlite`     |
+| `test`        | `file:data/rental_app_test.sqlite`            |
+| `production`  | `DATABASE_URL` env var (required)             |
+
+Override any environment by setting `DATABASE_URL` in `.env`. The `data/` directory is created automatically if it doesn't exist.
 
 ## Testing
 
-Tests live in `__tests__/` at the project root, mirroring the `app/` structure:
+Tests live in `__tests__/` co-located next to the logic they cover:
 
 ```
-__tests__/
-  helpers/
-    test-db.ts        # creates an in-memory SQLite db with schema applied
-  repositories/
-    *.test.ts
+app/server/repositories/
+  application.repository.ts
+  __tests__/
+    test-db.ts                        # creates a temp-file SQLite db with schema applied
+    application.repository.test.ts
 ```
 
-**Pattern:** Repository functions accept an optional `dbInstance` parameter. Tests pass an in-memory db from `createTestDb()` — no module mocking required.
+**Pattern:** Repository factory functions accept an injected `db` instance. Tests create an isolated db via `createTestDb()` and pass it in — no module mocking required.
 
 ```ts
 // in a test
-const db = createTestDb();
-const result = await createApplication(input, db);
+const testDb = await createTestDb();
+const repo = applicationRepository(testDb.db);
 ```
 
 `createTestDb()` returns `{ db, cleanup }`. It uses `generateSQLiteDrizzleJson` + `generateSQLiteMigration` from `drizzle-kit/api` to derive CREATE TABLE statements from `~/db/schema` — no duplicated SQL.

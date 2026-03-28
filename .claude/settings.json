@@ -2,9 +2,8 @@
   "permissions": {
     "defaultMode": "acceptEdits",
     "allow": [
-      "Bash(npm run *)",
-      "Bash(bun test*)",
       "Bash(bun run *)",
+      "Bash(bun test*)",
       "Bash(git status)",
       "Bash(git log*)",
       "Bash(git diff*)",
