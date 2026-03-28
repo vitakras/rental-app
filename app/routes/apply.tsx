@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { redirect, useSubmit } from "react-router";
+import type { Route } from "./+types/apply";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import { services } from "~/server/container";
 
 export function links() {
 	return [
@@ -21,6 +24,19 @@ export function links() {
 
 export function meta() {
 	return [{ title: "Apply — Find Your Home" }];
+}
+
+export async function action({ request }: Route.ActionArgs) {
+	const formData = await request.formData();
+	const raw = JSON.parse(formData.get("data") as string);
+
+	const result = await services.applicationService.createApplication(raw);
+
+	if (!result.success) {
+		return { errors: result.errors };
+	}
+
+	return redirect(`/applications/${result.applicationId}`);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -321,6 +337,8 @@ function NoSmokingIcon() {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Apply() {
+	const submit = useSubmit();
+
 	// Owner
 	const [fullName, setFullName] = useState("");
 	const [email, setEmail] = useState("");
@@ -893,7 +911,36 @@ export default function Apply() {
 			<div className="fixed bottom-0 left-0 right-0 pointer-events-none z-20">
 				<div className="bg-gradient-to-t from-[#F5F0E8] via-[#F5F0E8]/95 to-transparent pt-8 pb-10 px-5 pointer-events-auto">
 					<div className="max-w-lg mx-auto">
-						<Button variant="continue">
+						<Button
+							variant="continue"
+							type="button"
+							onClick={() =>
+								submit(
+									{
+										data: JSON.stringify({
+											desiredMoveInDate: moveInDate,
+											owner: {
+												fullName,
+												dateOfBirth: ownerDob,
+												email,
+												phone,
+											},
+											additionalAdults: additionalAdults.map((a) => ({
+												fullName: a.name,
+												dateOfBirth: a.dob,
+												role: a.role,
+												email: a.email || undefined,
+											})),
+											children: childList.map((c) => ({
+												fullName: c.name,
+												dateOfBirth: c.dob,
+											})),
+										}),
+									},
+									{ method: "post" },
+								)
+							}
+						>
 							Continue
 						</Button>
 						<p

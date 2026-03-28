@@ -5,6 +5,7 @@ export default defineConfig({
 	out: "./drizzle",
 	schema: "./app/db/schema.ts",
 	dialect: "turso",
+	casing: "snake_case",
 	migrations: {
 		prefix: "supabase",
 	},
