@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1774751792469,
+      "tag": "20260329023632_fixed_mulholland_black",
+      "breakpoints": true
+    }
+  ]
+}

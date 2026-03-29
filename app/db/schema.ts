@@ -70,3 +70,23 @@ export const petsTable = sqliteTable("pets", {
 	notes: text(),
 	...timestamps,
 });
+
+// "pending_upload" | "uploaded" | "attached" | "deleted" | "upload_failed"
+export type FileStatus =
+	| "pending_upload"
+	| "uploaded"
+	| "attached"
+	| "deleted"
+	| "upload_failed";
+
+export const filesTable = sqliteTable("files", {
+	id: text().primaryKey(),
+	storageKey: text().notNull(),
+	originalFilename: text().notNull(),
+	contentType: text().notNull(),
+	sizeBytes: int().notNull(),
+	status: text().$type<FileStatus>().notNull().default("pending_upload"),
+	uploadedByUserId: text().notNull(),
+	uploadedAt: text(),
+	...timestamps
+});
