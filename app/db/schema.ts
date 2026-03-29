@@ -71,6 +71,30 @@ export const petsTable = sqliteTable("pets", {
 	...timestamps,
 });
 
+// "identity" | "income" | "residence" | "reference" | "other"
+export type ApplicationDocumentCategory =
+	| "identity"
+	| "income"
+	| "residence"
+	| "reference"
+	| "other";
+
+// "government_id" | "paystub" | "employment_letter" | "bank_statement" | "reference_letter" | "other"
+export type ApplicationDocumentType =
+	| "government_id"
+	| "paystub"
+	| "employment_letter"
+	| "bank_statement"
+	| "reference_letter"
+	| "other";
+
+// "submitted" | "under_review" | "accepted" | "rejected"
+export type ApplicationDocumentStatus =
+	| "submitted"
+	| "under_review"
+	| "accepted"
+	| "rejected";
+
 // "pending_upload" | "uploaded" | "attached" | "deleted" | "upload_failed"
 export type FileStatus =
 	| "pending_upload"
@@ -88,5 +112,24 @@ export const filesTable = sqliteTable("files", {
 	status: text().$type<FileStatus>().notNull().default("pending_upload"),
 	uploadedByUserId: text().notNull(),
 	uploadedAt: text(),
-	...timestamps
+	...timestamps,
+});
+
+export const applicationDocumentsTable = sqliteTable("application_documents", {
+	id: int().primaryKey({ autoIncrement: true }),
+	applicationId: int()
+		.notNull()
+		.references(() => applicationsTable.id),
+	residentId: int().references(() => residentsTable.id),
+	fileId: text()
+		.notNull()
+		.references(() => filesTable.id),
+	category: text().$type<ApplicationDocumentCategory>().notNull(),
+	documentType: text().$type<ApplicationDocumentType>().notNull(),
+	status: text()
+		.$type<ApplicationDocumentStatus>()
+		.notNull()
+		.default("submitted"),
+	notes: text(),
+	...timestamps,
 });

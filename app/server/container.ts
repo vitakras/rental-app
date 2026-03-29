@@ -1,5 +1,6 @@
 import { db } from "~/db";
 import logger from "~/server/logger";
+import { applicationDocumentRepository } from "~/server/repositories/application-document.repository";
 import { applicationRepository } from "~/server/repositories/application.repository";
 import { fileRepository } from "~/server/repositories/file.repository";
 import { incomeSourceRepository } from "~/server/repositories/income-source.repository";
@@ -11,6 +12,7 @@ export const repositories = {
 	applicationRepository: applicationRepository(db),
 	incomeSourceRepository: incomeSourceRepository(db),
 	fileRepository: fileRepository(db),
+	applicationDocumentRepository: applicationDocumentRepository(db),
 };
 
 const blobStorage = createLocalBlobStorage();

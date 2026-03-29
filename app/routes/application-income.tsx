@@ -60,7 +60,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		await repositories.incomeSourceRepository.createMany(allSources);
 	}
 
-	return redirect(`/applications/${id}`);
+	return redirect(`/applications/${id}/documents`);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
