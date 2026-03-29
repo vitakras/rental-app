@@ -50,6 +50,45 @@ const PET_EMOJI: Record<string, string> = {
 	Bird: "🐦",
 };
 
+const INCOME_TYPE_LABELS: Record<string, string> = {
+	employment: "Employment",
+	self_employment: "Self-employment",
+	other: "Other",
+};
+
+function formatCurrency(cents: number): string {
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: "USD",
+		maximumFractionDigits: 0,
+	}).format(cents / 100);
+}
+
+function IncomeSection({ incomeSources }: { incomeSources: { id: number; type: string; employerOrSourceName: string; titleOrOccupation?: string | null; monthlyAmountCents: number; startDate: string }[] }) {
+	if (incomeSources.length === 0) return null;
+	return (
+		<div className="mt-4 pt-4 border-t border-[#F0EBE3]">
+			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">Income</p>
+			<div className="space-y-3">
+				{incomeSources.map((source) => (
+					<div key={source.id} className="grid grid-cols-2 gap-3">
+						<div className="col-span-2">
+							<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
+								{INCOME_TYPE_LABELS[source.type] ?? source.type}
+							</p>
+							<p className="text-sm text-[#1C1A17]">{source.employerOrSourceName}</p>
+						</div>
+						{source.titleOrOccupation && (
+							<Field label="Title" value={source.titleOrOccupation} />
+						)}
+						<Field label="Monthly income" value={formatCurrency(source.monthlyAmountCents) + "/mo"} />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
 function SectionHeading({ children }: { children: React.ReactNode }) {
 	return (
 		<p className="text-[10px] text-[#C4714A] tracking-widest uppercase font-medium mb-3">
@@ -122,11 +161,14 @@ export default function LandlordApplicationDetail({ loaderData }: Route.Componen
 				{primary && (
 					<div>
 						<SectionHeading>Primary Applicant</SectionHeading>
-						<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] grid grid-cols-2 gap-4">
-							<Field label="Name" value={primary.fullName} />
-							<Field label="Date of birth" value={primary.dateOfBirth} />
-							<Field label="Email" value={primary.email} />
-							<Field label="Phone" value={primary.phone} />
+						<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
+							<div className="grid grid-cols-2 gap-4">
+								<Field label="Name" value={primary.fullName} />
+								<Field label="Date of birth" value={primary.dateOfBirth} />
+								<Field label="Email" value={primary.email} />
+								<Field label="Phone" value={primary.phone} />
+							</div>
+							<IncomeSection incomeSources={primary.incomeSources} />
 						</div>
 					</div>
 				)}
@@ -149,6 +191,9 @@ export default function LandlordApplicationDetail({ loaderData }: Route.Componen
 										<Field label="Date of birth" value={resident.dateOfBirth} />
 										{resident.email && <Field label="Email" value={resident.email} />}
 									</div>
+									{resident.role !== "child" && (
+										<IncomeSection incomeSources={resident.incomeSources} />
+									)}
 								</div>
 							))}
 						</div>

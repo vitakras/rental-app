@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
-import { applicationsTable, petsTable, residentsTable } from "~/db/schema";
+import { applicationsTable, incomeSourcesTable, petsTable, residentsTable } from "~/db/schema";
 
 type DbInstance = typeof defaultDb;
 
@@ -131,7 +131,21 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 				db.select().from(petsTable).where(eq(petsTable.applicationId, id)),
 			]);
 
-			return { ...app, residents, pets };
+			const residentIds = residents.map((r) => r.id);
+			const incomeSources =
+				residentIds.length > 0
+					? await db
+							.select()
+							.from(incomeSourcesTable)
+							.where(inArray(incomeSourcesTable.residentId, residentIds))
+					: [];
+
+			const residentsWithIncome = residents.map((r) => ({
+				...r,
+				incomeSources: incomeSources.filter((is) => is.residentId === r.id),
+			}));
+
+			return { ...app, residents: residentsWithIncome, pets };
 		},
 
 		async findAllSubmitted() {
