@@ -36,7 +36,7 @@ export async function action({ request }: Route.ActionArgs) {
 		return { errors: result.errors };
 	}
 
-	return redirect(`/applications/${result.applicationId}`);
+	return redirect(`/applications/${result.applicationId}/income`);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -451,7 +451,7 @@ export default function Apply() {
 				<div className="h-[3px] bg-[#E8E1D9]">
 					<div
 						className="h-full bg-[#C4714A] transition-all duration-700"
-						style={{ width: "14%" }}
+						style={{ width: "33%" }}
 					/>
 				</div>
 				<div className="bg-[#F5F0E8]/90 backdrop-blur-sm">
@@ -481,7 +481,7 @@ export default function Apply() {
 							className="text-xs text-[#7A7268] tracking-widest uppercase"
 							style={{ fontFamily: "'DM Sans', sans-serif" }}
 						>
-							Step 1
+							Step 1 of 3
 						</span>
 						<div className="w-12" />
 					</div>

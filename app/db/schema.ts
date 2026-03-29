@@ -1,3 +1,7 @@
+// NOTE: Column names use camelCase here. The db client in app/db/index.ts is
+// configured with `casing: "snake_case"`, so Drizzle automatically maps
+// camelCase property names to snake_case column names in the database.
+// Do NOT add explicit snake_case column name strings to column definitions.
 import { sql } from "drizzle-orm";
 import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -8,6 +12,9 @@ const timestamps = {
 
 // "primary" | "co-applicant" | "dependent" | "child"
 export type ResidentRole = "primary" | "co-applicant" | "dependent" | "child";
+
+// "employment" | "self_employment" | "other"
+export type IncomeSourceType = "employment" | "self_employment" | "other";
 
 // "pending" | "submitted" | "approved" | "rejected"
 export type ApplicationStatus =
@@ -34,6 +41,21 @@ export const residentsTable = sqliteTable("residents", {
 	dateOfBirth: text().notNull(),
 	email: text(),
 	phone: text(),
+	...timestamps,
+});
+
+export const incomeSourcesTable = sqliteTable("income_sources", {
+	id: int().primaryKey({ autoIncrement: true }),
+	residentId: int()
+		.notNull()
+		.references(() => residentsTable.id),
+	type: text().$type<IncomeSourceType>().notNull(),
+	employerOrSourceName: text().notNull(),
+	titleOrOccupation: text(),
+	monthlyAmountCents: int().notNull(),
+	startDate: text().notNull(),
+	endDate: text(),
+	notes: text(),
 	...timestamps,
 });
 
