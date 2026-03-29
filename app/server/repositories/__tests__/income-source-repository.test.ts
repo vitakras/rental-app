@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
 import { incomeSourcesTable, residentsTable } from "~/db/schema";
-import { applicationRepository } from "../application.repository";
-import { incomeSourceRepository } from "../income-source.repository";
-import { createTestDb, type TestDb } from "./db.helper";
+import { applicationRepository } from "../application-repository";
+import { incomeSourceRepository } from "../income-source-repository";
+import { createTestDb, type TestDb } from "./db-helper";
 
 const baseAppInput = {
 	desiredMoveInDate: "2026-06-01",
@@ -195,4 +195,3 @@ describe("incomeSourceRepository.findByResidentId", () => {
 		expect(sources[0].employerOrSourceName).toBe("Corp A");
 	});
 });
-

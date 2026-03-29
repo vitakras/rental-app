@@ -1,12 +1,12 @@
 import { db } from "~/db";
 import logger from "~/server/logger";
-import { applicationDocumentRepository } from "~/server/repositories/application-document.repository";
-import { applicationRepository } from "~/server/repositories/application.repository";
-import { fileRepository } from "~/server/repositories/file.repository";
-import { incomeSourceRepository } from "~/server/repositories/income-source.repository";
-import { createApplicationService } from "~/server/services/application.service";
-import { createFileService } from "~/server/services/file.service";
-import { createLocalBlobStorage } from "~/server/storage/local-blob.storage";
+import { applicationDocumentRepository } from "~/server/repositories/application-document-repository";
+import { applicationRepository } from "~/server/repositories/application-repository";
+import { fileRepository } from "~/server/repositories/file-repository";
+import { incomeSourceRepository } from "~/server/repositories/income-source-repository";
+import { createApplicationService } from "~/server/services/application-service";
+import { createFileService } from "~/server/services/file-service";
+import { createLocalBlobStorage } from "~/server/storage/local-blob-storage";
 
 export const repositories = {
 	applicationRepository: applicationRepository(db),

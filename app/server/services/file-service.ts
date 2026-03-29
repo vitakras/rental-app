@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import pino from "pino";
 import { z } from "zod";
 import type { Logger } from "~/server/logger";
-import type { BlobStorage } from "~/server/storage/blob.storage";
-import type { FileRecord, FileRepository } from "../repositories/file.repository";
+import type { BlobStorage } from "~/server/storage/blob-storage";
+import type { FileRecord, FileRepository } from "../repositories/file-repository";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 

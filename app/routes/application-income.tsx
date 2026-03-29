@@ -6,7 +6,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { repositories } from "~/server/container";
-import type { CreateIncomeSourceInput } from "~/server/repositories/income-source.repository";
+import type { CreateIncomeSourceInput } from "~/server/repositories/income-source-repository";
 
 export function links() {
 	return [
