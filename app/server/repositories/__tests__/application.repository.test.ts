@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
-import { applicationsTable, residentsTable } from "~/db/schema";
+import { applicationsTable, petsTable, residentsTable } from "~/db/schema";
 import { applicationRepository } from "../application.repository";
 import { createTestDb, type TestDb } from "./db.helper";
 
@@ -262,5 +262,189 @@ describe("applicationRepository.submit", () => {
 	it("returns null for a non-existent application id", async () => {
 		const result = await repo.submit(99999);
 		expect(result).toBeNull();
+	});
+});
+
+describe("applicationRepository.updateOccupants", () => {
+	let testDb: TestDb;
+	let repo: ReturnType<typeof applicationRepository>;
+
+	const baseInput = {
+		desiredMoveInDate: "2026-06-01",
+		owner: {
+			fullName: "Alex Johnson",
+			dateOfBirth: "1990-05-15",
+			email: "alex@example.com",
+			phone: "555-000-0001",
+		},
+		additionalAdults: [],
+		children: [],
+		pets: [],
+	};
+
+	beforeEach(async () => {
+		testDb = await createTestDb();
+		repo = applicationRepository(testDb.db);
+	});
+
+	afterEach(() => {
+		testDb.cleanup();
+	});
+
+	it("updates smokes on the application", async () => {
+		const created = await repo.create(baseInput);
+		await repo.updateOccupants(created.id, {
+			smokes: true,
+			additionalAdults: [],
+			children: [],
+			pets: [],
+		});
+
+		const [app] = await testDb.db
+			.select()
+			.from(applicationsTable)
+			.where(eq(applicationsTable.id, created.id));
+
+		expect(app.smokes).toBe(true);
+	});
+
+	it("inserts additional adults and children", async () => {
+		const created = await repo.create(baseInput);
+		await repo.updateOccupants(created.id, {
+			smokes: false,
+			additionalAdults: [
+				{
+					fullName: "Jane Smith",
+					dateOfBirth: "1992-03-20",
+					role: "co-applicant",
+					email: "jane@example.com",
+				},
+			],
+			children: [{ fullName: "Sam Johnson", dateOfBirth: "2019-06-15" }],
+			pets: [],
+		});
+
+		const residents = await testDb.db
+			.select()
+			.from(residentsTable)
+			.where(eq(residentsTable.applicationId, created.id));
+
+		expect(residents).toHaveLength(3);
+		expect(residents.filter((r) => r.role === "primary")).toHaveLength(1);
+		expect(residents.filter((r) => r.role === "co-applicant")).toHaveLength(1);
+		expect(residents.filter((r) => r.role === "child")).toHaveLength(1);
+	});
+
+	it("does not touch the primary resident", async () => {
+		const created = await repo.create(baseInput);
+		await repo.updateOccupants(created.id, {
+			smokes: false,
+			additionalAdults: [],
+			children: [],
+			pets: [],
+		});
+
+		const residents = await testDb.db
+			.select()
+			.from(residentsTable)
+			.where(eq(residentsTable.applicationId, created.id));
+
+		expect(residents).toHaveLength(1);
+		expect(residents[0].role).toBe("primary");
+		expect(residents[0].fullName).toBe("Alex Johnson");
+	});
+
+	it("replaces non-primary residents on repeated calls", async () => {
+		const created = await repo.create({
+			...baseInput,
+			additionalAdults: [
+				{
+					fullName: "Old Adult",
+					dateOfBirth: "1985-01-01",
+					role: "dependent",
+				},
+			],
+		});
+
+		await repo.updateOccupants(created.id, {
+			smokes: false,
+			additionalAdults: [
+				{
+					fullName: "New Adult",
+					dateOfBirth: "1990-06-15",
+					role: "co-applicant",
+					email: "new@example.com",
+				},
+			],
+			children: [],
+			pets: [],
+		});
+
+		const residents = await testDb.db
+			.select()
+			.from(residentsTable)
+			.where(eq(residentsTable.applicationId, created.id));
+
+		expect(residents).toHaveLength(2);
+		const names = residents.map((r) => r.fullName);
+		expect(names).toContain("New Adult");
+		expect(names).not.toContain("Old Adult");
+	});
+
+	it("inserts and replaces pets", async () => {
+		const created = await repo.create({
+			...baseInput,
+			pets: [{ type: "Dog", name: "Rex" }],
+		});
+
+		await repo.updateOccupants(created.id, {
+			smokes: false,
+			additionalAdults: [],
+			children: [],
+			pets: [
+				{ type: "Cat", name: "Whiskers" },
+				{ type: "Bird" },
+			],
+		});
+
+		const pets = await testDb.db
+			.select()
+			.from(petsTable)
+			.where(eq(petsTable.applicationId, created.id));
+
+		expect(pets).toHaveLength(2);
+		const petNames = pets.map((p) => p.name);
+		expect(petNames).toContain("Whiskers");
+		expect(petNames).not.toContain("Rex");
+	});
+
+	it("removes all occupants and pets when called with empty arrays", async () => {
+		const created = await repo.create({
+			...baseInput,
+			additionalAdults: [
+				{ fullName: "Jane Smith", dateOfBirth: "1992-03-20", role: "co-applicant", email: "jane@example.com" },
+			],
+			pets: [{ type: "Dog", name: "Rex" }],
+		});
+
+		await repo.updateOccupants(created.id, {
+			smokes: false,
+			additionalAdults: [],
+			children: [],
+			pets: [],
+		});
+
+		const residents = await testDb.db
+			.select()
+			.from(residentsTable)
+			.where(eq(residentsTable.applicationId, created.id));
+
+		const pets = await testDb.db
+			.select()
+			.from(petsTable)
+			.where(eq(petsTable.applicationId, created.id));
+
+		expect(residents).toHaveLength(1); // only primary
+		expect(pets).toHaveLength(0);
 	});
 });

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, not } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
 import { applicationsTable, incomeSourcesTable, petsTable, residentsTable } from "~/db/schema";
@@ -36,6 +36,13 @@ interface PetInput {
 export interface CreateApplicationInput {
 	desiredMoveInDate: string;
 	owner: OwnerInput;
+	additionalAdults: AdditionalAdultInput[];
+	children: ChildInput[];
+	pets: PetInput[];
+}
+
+interface UpdateOccupantsInput {
+	smokes: boolean;
 	additionalAdults: AdditionalAdultInput[];
 	children: ChildInput[];
 	pets: PetInput[];
@@ -96,6 +103,61 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 				}
 
 				return application;
+			});
+		},
+
+		async updateOccupants(id: number, input: UpdateOccupantsInput) {
+			return db.transaction(async (tx) => {
+				await tx
+					.update(applicationsTable)
+					.set({ smokes: input.smokes })
+					.where(eq(applicationsTable.id, id));
+
+				await tx
+					.delete(residentsTable)
+					.where(
+						and(
+							eq(residentsTable.applicationId, id),
+							not(eq(residentsTable.role, "primary")),
+						),
+					);
+
+				const newResidents = [
+					...input.additionalAdults.map((adult) => ({
+						applicationId: id,
+						role: adult.role as ResidentRole,
+						fullName: adult.fullName,
+						dateOfBirth: adult.dateOfBirth,
+						email: adult.email ?? null,
+						phone: null,
+					})),
+					...input.children.map((child) => ({
+						applicationId: id,
+						role: "child" as ResidentRole,
+						fullName: child.fullName,
+						dateOfBirth: child.dateOfBirth,
+						email: null,
+						phone: null,
+					})),
+				];
+
+				if (newResidents.length > 0) {
+					await tx.insert(residentsTable).values(newResidents);
+				}
+
+				await tx.delete(petsTable).where(eq(petsTable.applicationId, id));
+
+				if (input.pets.length > 0) {
+					await tx.insert(petsTable).values(
+						input.pets.map((pet) => ({
+							applicationId: id,
+							type: pet.type,
+							name: pet.name ?? null,
+							breed: pet.breed ?? null,
+							notes: pet.notes ?? null,
+						})),
+					);
+				}
 			});
 		},
 

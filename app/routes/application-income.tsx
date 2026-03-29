@@ -417,7 +417,7 @@ export default function ApplicationIncome() {
 				<div className="h-[3px] bg-[#E8E1D9]">
 					<div
 						className="h-full bg-[#C4714A] transition-all duration-700"
-						style={{ width: "66%" }}
+						style={{ width: "75%" }}
 					/>
 				</div>
 				<div className="bg-[#F5F0E8]/90 backdrop-blur-sm">
@@ -448,7 +448,7 @@ export default function ApplicationIncome() {
 							className="text-xs text-[#7A7268] tracking-widest uppercase"
 							style={{ fontFamily: "'DM Sans', sans-serif" }}
 						>
-							Step 2 of 3
+							Step 3 of 4
 						</span>
 						<div className="w-12" />
 					</div>

@@ -21,6 +21,7 @@ function makeRepo(
 		create: mock(async () => ({ id: 1 })),
 		findById: mock(async () => ({ id: 1, status: "pending" })),
 		submit: mock(async () => ({ id: 1 })),
+		updateOccupants: mock(async () => {}),
 		...overrides,
 	};
 }
@@ -271,6 +272,77 @@ describe("submitApplication", () => {
 
 		await expect(
 			createApplicationService({ applicationRepository: repo }).submitApplication(1),
+		).rejects.toThrow("DB error");
+	});
+});
+
+describe("updateOccupants", () => {
+	const baseOccupants = {
+		smokes: false,
+		additionalAdults: [],
+		children: [],
+		pets: [],
+	};
+
+	it("calls repo.updateOccupants with validated data", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({ applicationRepository: repo }).updateOccupants(1, baseOccupants);
+
+		expect(result.success).toBe(true);
+		expect(repo.updateOccupants).toHaveBeenCalledWith(1, baseOccupants);
+	});
+
+	it("returns success false for invalid adult role", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({ applicationRepository: repo }).updateOccupants(1, {
+			...baseOccupants,
+			additionalAdults: [
+				{
+					fullName: "Jane",
+					dateOfBirth: "1990-01-01",
+					role: "owner" as "co-applicant",
+				},
+			],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.errors.some((e) => e.path.includes("role"))).toBe(true);
+		}
+	});
+
+	it("returns success false when smokes is missing", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({ applicationRepository: repo }).updateOccupants(1, {
+			...baseOccupants,
+			smokes: undefined as unknown as boolean,
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.errors.some((e) => e.path.includes("smokes"))).toBe(true);
+		}
+	});
+
+	it("does not call repo.updateOccupants on validation failure", async () => {
+		const repo = makeRepo();
+		await createApplicationService({ applicationRepository: repo }).updateOccupants(1, {
+			...baseOccupants,
+			smokes: "yes" as unknown as boolean,
+		});
+
+		expect(repo.updateOccupants).not.toHaveBeenCalled();
+	});
+
+	it("propagates errors thrown by repo.updateOccupants", async () => {
+		const repo = makeRepo({
+			updateOccupants: mock(async () => {
+				throw new Error("DB error");
+			}),
+		});
+
+		await expect(
+			createApplicationService({ applicationRepository: repo }).updateOccupants(1, baseOccupants),
 		).rejects.toThrow("DB error");
 	});
 });

@@ -42,22 +42,38 @@ export const createApplicationSchema = z.object({
 	pets: z.array(petSchema).default([]),
 });
 
+export const updateOccupantsSchema = z.object({
+	smokes: z.boolean(),
+	additionalAdults: z.array(additionalAdultSchema).default([]),
+	children: z.array(childSchema).default([]),
+	pets: z.array(petSchema).default([]),
+});
+
+export type UpdateOccupantsData = z.input<typeof updateOccupantsSchema>;
+
 export type CreateApplicationData = z.input<typeof createApplicationSchema>;
 
 // ── Repository interface ───────────────────────────────────────────────────────
 
 export type CreateApplicationPayload = z.output<typeof createApplicationSchema>;
 
+export type UpdateOccupantsPayload = z.output<typeof updateOccupantsSchema>;
+
 export interface ApplicationRepository {
 	create(input: CreateApplicationPayload): Promise<{ id: number }>;
 	findById(id: number): Promise<{ id: number; status: string } | null>;
 	submit(id: number): Promise<{ id: number } | null>;
+	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
 }
 
 // ── Service ────────────────────────────────────────────────────────────────────
 
 export type CreateApplicationResult =
 	| { success: true; applicationId: number }
+	| { success: false; errors: z.ZodIssue[] };
+
+export type UpdateOccupantsResult =
+	| { success: true }
 	| { success: false; errors: z.ZodIssue[] };
 
 export type SubmitApplicationResult =
@@ -99,6 +115,35 @@ export function createApplicationService({
 
 			logger.info({ applicationId: application.id }, "Application created");
 			return { success: true, applicationId: application.id };
+		},
+
+		async updateOccupants(
+			applicationId: number,
+			data: UpdateOccupantsData,
+		): Promise<UpdateOccupantsResult> {
+			const parsed = updateOccupantsSchema.safeParse(data);
+
+			if (!parsed.success) {
+				logger.warn({ errors: parsed.error.issues }, "Occupants update validation failed");
+				return { success: false, errors: parsed.error.issues };
+			}
+
+			const { additionalAdults, children, pets, smokes } = parsed.data;
+			logger.info(
+				{
+					applicationId,
+					additionalAdultCount: additionalAdults.length,
+					childCount: children.length,
+					petCount: pets.length,
+					smokes,
+				},
+				"Updating occupants",
+			);
+
+			await applicationRepository.updateOccupants(applicationId, parsed.data);
+
+			logger.info({ applicationId }, "Occupants updated");
+			return { success: true };
 		},
 
 		async submitApplication(
