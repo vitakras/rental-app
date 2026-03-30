@@ -2,7 +2,7 @@ import { data, Form, useNavigation } from "react-router";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) {
 		throw data(null, { status: 404 });
@@ -25,7 +25,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	return { applicationId: id, status: application.status };
 }
 
-export async function action({ params }: Route.ActionArgs) {
+export async function clientAction({ params }: Route.ClientActionArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) {
 		throw data(null, { status: 404 });

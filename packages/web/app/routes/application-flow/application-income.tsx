@@ -12,7 +12,7 @@ export function meta() {
 	return [{ title: "Income — Rental Application" }];
 }
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
 	const response = await apiClient.applications[":id"].$get({
@@ -32,7 +32,10 @@ export async function loader({ params }: Route.LoaderArgs) {
 	return { applicationId: id, residents };
 }
 
-export async function action({ request, params }: Route.ActionArgs) {
+export async function clientAction({
+	request,
+	params,
+}: Route.ClientActionArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
 
@@ -341,7 +344,7 @@ function ResidentIncomeSection({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ApplicationIncome() {
-	const { applicationId, residents } = useLoaderData<typeof loader>();
+	const { applicationId, residents } = useLoaderData<typeof clientLoader>();
 	const submit = useSubmit();
 
 	const [residentSources, setResidentSources] = useState<

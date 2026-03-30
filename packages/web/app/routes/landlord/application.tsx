@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = Number(params.id);
 	if (isNaN(id)) throw new Response("Not Found", { status: 404 });
 	const response = await apiClient.landlord.applications[":id"].$get({

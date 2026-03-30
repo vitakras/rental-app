@@ -32,7 +32,7 @@ interface ResidentSlots {
 
 // ── Loader ────────────────────────────────────────────────────────────────────
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
 	const response = await apiClient.applications[":id"].$get({
@@ -251,7 +251,7 @@ function SlotCard({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ApplicationDocuments() {
-	const { applicationId, residents } = useLoaderData<typeof loader>();
+	const { applicationId, residents } = useLoaderData<typeof clientLoader>();
 	const navigate = useNavigate();
 
 	return (

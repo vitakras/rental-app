@@ -10,7 +10,7 @@ export function meta() {
 	return [{ title: "Apply — Find Your Home" }];
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function clientAction({ request }: Route.ClientActionArgs) {
 	const formData = await request.formData();
 	const raw = JSON.parse(formData.get("data") as string);
 	const response = await apiClient.applications.$post({

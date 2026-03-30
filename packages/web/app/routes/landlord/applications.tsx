@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/applications";
 
-export async function loader(_: Route.LoaderArgs) {
+export async function clientLoader(_: Route.ClientLoaderArgs) {
 	const response = await apiClient.landlord.applications.$get();
 	if (!response.ok) {
 		throw new Response(null, { status: response.status });
