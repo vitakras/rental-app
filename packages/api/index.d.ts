@@ -138,3 +138,5 @@ export type ApplicationWithDetails = {
 	residents: ResidentDetail[];
 	pets: PetDetail[];
 };
+
+export type { AppType } from "./src/app";

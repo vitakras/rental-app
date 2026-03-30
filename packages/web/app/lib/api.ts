@@ -1,4 +1,5 @@
 import { hc } from "hono/client";
+import type { AppType } from "api";
 
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8787";
 
@@ -23,4 +24,4 @@ function getApiBaseUrl() {
 	throw new Error("API_BASE_URL is required outside development and test");
 }
 
-export const apiClient = hc(getApiBaseUrl()) as any;
+export const apiClient = hc<AppType>(getApiBaseUrl());

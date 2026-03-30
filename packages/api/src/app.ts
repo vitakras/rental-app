@@ -10,20 +10,25 @@ export function createApp({
 }: {
 	services?: typeof defaultServices;
 } = {}) {
+	const applicantRoutes = createApplicantApplicationsRoutes(services).route(
+		"/",
+		createApplicantUploadsRoutes(services),
+	);
 	const storage = createStorageRoutes();
 
-	return new Hono()
+	const routes = new Hono()
 		.get("/", (c) => {
 			return c.text("Hello Hono!");
 		})
-		.route("/applications", createApplicantApplicationsRoutes(services))
-		.route("/applications", createApplicantUploadsRoutes(services))
+		.route("/applications", applicantRoutes)
 		.route(
 			"/landlord/applications",
 			createLandlordApplicationsRoutes(services),
 		)
 		.route("/storage", storage)
 		.route("/storage/", storage);
+
+	return routes;
 }
 
 export type AppType = ReturnType<typeof createApp>;

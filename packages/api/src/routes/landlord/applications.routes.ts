@@ -9,30 +9,26 @@ export function createLandlordApplicationsRoutes({
 }: {
 	applicationService: ApplicationService;
 }) {
-	const applications = new Hono();
+	return new Hono()
+		.get("/", async (c) => {
+			const result = await applicationService.listSubmittedApplications();
+			return c.json({ applications: result.applications }, 200);
+		})
+		.get("/:id", async (c) => {
+			const rawId = Number(c.req.param("id"));
 
-	applications.get("/", async (c) => {
-		const result = await applicationService.listSubmittedApplications();
-		return c.json({ applications: result.applications });
-	});
+			if (!Number.isInteger(rawId) || rawId <= 0) {
+				return c.json({ error: "Invalid application ID" }, 400);
+			}
 
-	applications.get("/:id", async (c) => {
-		const rawId = Number(c.req.param("id"));
+			const result = await applicationService.getApplicationWithDetails(rawId);
 
-		if (!Number.isInteger(rawId) || rawId <= 0) {
-			return c.json({ error: "Invalid application ID" }, 400);
-		}
+			if (!result.success) {
+				return c.json({ error: "Application not found" }, 404);
+			}
 
-		const result = await applicationService.getApplicationWithDetails(rawId);
-
-		if (!result.success) {
-			return c.json({ error: "Application not found" }, 404);
-		}
-
-		return c.json({ application: result.application });
-	});
-
-	return applications;
+			return c.json({ application: result.application }, 200);
+		});
 }
 
 const applications = createLandlordApplicationsRoutes({

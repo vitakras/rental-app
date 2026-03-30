@@ -12,38 +12,34 @@ function safeResolvePath(key: string): string | null {
 }
 
 export function createStorageRoutes() {
-	const storage = new Hono();
+	return new Hono()
+		.get("/:key{.+}", async (c) => {
+			const filePath = safeResolvePath(decodeURIComponent(c.req.param("key")));
 
-	storage.get("/:key{.+}", async (c) => {
-		const filePath = safeResolvePath(decodeURIComponent(c.req.param("key")));
+			if (!filePath) {
+				return new Response(null, { status: 403 });
+			}
 
-		if (!filePath) {
-			return new Response(null, { status: 403 });
-		}
+			try {
+				const buffer = await fs.readFile(filePath);
+				return new Response(buffer, {
+					headers: { "Content-Type": "application/octet-stream" },
+				});
+			} catch {
+				return new Response(null, { status: 404 });
+			}
+		})
+		.put("/:key{.+}", async (c) => {
+			const filePath = safeResolvePath(decodeURIComponent(c.req.param("key")));
 
-		try {
-			const buffer = await fs.readFile(filePath);
-			return new Response(buffer, {
-				headers: { "Content-Type": "application/octet-stream" },
-			});
-		} catch {
-			return new Response(null, { status: 404 });
-		}
-	});
+			if (!filePath) {
+				return new Response(null, { status: 403 });
+			}
 
-	storage.put("/:key{.+}", async (c) => {
-		const filePath = safeResolvePath(decodeURIComponent(c.req.param("key")));
+			await fs.mkdir(path.dirname(filePath), { recursive: true });
+			const buffer = await c.req.arrayBuffer();
+			await fs.writeFile(filePath, Buffer.from(buffer));
 
-		if (!filePath) {
-			return new Response(null, { status: 403 });
-		}
-
-		await fs.mkdir(path.dirname(filePath), { recursive: true });
-		const buffer = await c.req.arrayBuffer();
-		await fs.writeFile(filePath, Buffer.from(buffer));
-
-		return new Response(null, { status: 200 });
-	});
-
-	return storage;
+			return new Response(null, { status: 200 });
+		});
 }

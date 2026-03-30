@@ -38,7 +38,6 @@ export async function action({ request, params }: Route.ActionArgs) {
 		const result = await response.json();
 		return { errors: result.issues };
 	}
-	if (response.status === 404) throw data(null, { status: 404 });
 	if (!response.ok) throw data(null, { status: response.status });
 
 	return redirect(`/applications/${id}/income`);

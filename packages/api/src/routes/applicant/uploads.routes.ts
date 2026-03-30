@@ -17,66 +17,65 @@ export function createApplicantUploadsRoutes({
 }: {
 	fileService: FileService;
 }) {
-	const uploads = new Hono();
+	return new Hono()
+		.post(
+			"/:id/upload/prepare",
+			ensureValidApplicationId,
+			zodJsonValidator(prepareDocumentUploadRequestSchema),
+			async (c) => {
+				const id = parseApplicationId(c.req.param("id"));
 
-	uploads.post(
-		"/:id/upload/prepare",
-		ensureValidApplicationId,
-		zodJsonValidator(prepareDocumentUploadRequestSchema),
-		async (c) => {
-		const id = parseApplicationId(c.req.param("id"));
+				if (!id) {
+					return c.json({ error: "invalid_application_id" }, 400);
+				}
 
-		if (!id) {
-			return c.json({ error: "invalid_application_id" }, 400);
-		}
+				const body = c.req.valid("json");
 
-		const body = c.req.valid("json");
+				const result = await fileService.prepareDocumentUpload({
+					originalFilename: body.filename,
+					contentType: body.contentType ?? "application/octet-stream",
+					sizeBytes: body.sizeBytes,
+					uploadedByUserId: `app-${id}`,
+				});
 
-		const result = await fileService.prepareDocumentUpload({
-			originalFilename: body.filename,
-			contentType: body.contentType ?? "application/octet-stream",
-			sizeBytes: body.sizeBytes,
-			uploadedByUserId: `app-${id}`,
-		});
+				if (!result.success) {
+					return c.json(
+						{ error: "validation_failed", issues: result.errors },
+						422,
+					);
+				}
 
-		if (!result.success) {
-			return c.json({ error: "validation_failed", issues: result.errors }, 422);
-		}
+				return c.json({ fileId: result.fileId, uploadUrl: result.uploadUrl }, 200);
+			},
+		)
+		.post(
+			"/:id/upload/complete",
+			ensureValidApplicationId,
+			zodJsonValidator(attachDocumentToApplicationSchema),
+			async (c) => {
+				const id = parseApplicationId(c.req.param("id"));
 
-		return c.json({ fileId: result.fileId, uploadUrl: result.uploadUrl });
-		},
-	);
+				if (!id) {
+					return c.json({ error: "invalid_application_id" }, 400);
+				}
 
-	uploads.post(
-		"/:id/upload/complete",
-		ensureValidApplicationId,
-		zodJsonValidator(attachDocumentToApplicationSchema),
-		async (c) => {
-		const id = parseApplicationId(c.req.param("id"));
+				const body = c.req.valid("json") as Parameters<
+					FileService["attachDocumentToApplication"]
+				>[0];
 
-		if (!id) {
-			return c.json({ error: "invalid_application_id" }, 400);
-		}
+				const result = await fileService.attachDocumentToApplication({
+					fileId: body.fileId,
+					applicationId: id,
+					residentId: body.residentId,
+					category: body.category,
+					documentType: body.documentType,
+				});
 
-		const body = c.req.valid("json") as Parameters<
-			FileService["attachDocumentToApplication"]
-		>[0];
+				if (!result.success) {
+					return c.json({ error: "attach_failed", reason: result.reason }, 422);
+				}
 
-		const result = await fileService.attachDocumentToApplication({
-			fileId: body.fileId,
-			applicationId: id,
-			residentId: body.residentId,
-			category: body.category,
-			documentType: body.documentType,
-		});
-
-		if (!result.success) {
-			return c.json({ error: "attach_failed", reason: result.reason }, 422);
-		}
-
-		return c.json({ success: true });
-		},
-	);
-
-	return uploads;
+				return c.json({ success: true }, 200);
+			},
+		);
 }

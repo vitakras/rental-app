@@ -22,10 +22,6 @@ export async function action({ request }: Route.ActionArgs) {
 		return { errors: result.issues };
 	}
 
-	if (!response.ok) {
-		throw new Response(null, { status: response.status });
-	}
-
 	const result = (await response.json()) as { applicationId: number };
 	return redirect(`/applications/${result.applicationId}/occupants`);
 }
