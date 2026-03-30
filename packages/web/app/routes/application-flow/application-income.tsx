@@ -5,7 +5,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { createApiClient } from "~/lib/api";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application-income";
 
 export function meta() {
@@ -15,8 +15,7 @@ export function meta() {
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
-	const api = createApiClient();
-	const response = await api.applications[":id"].$get({
+	const response = await apiClient.applications[":id"].$get({
 		param: { id: String(id) },
 	});
 
@@ -50,8 +49,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 			notes?: string;
 		}>;
 	}>;
-	const api = createApiClient();
-	const response = await api.applications[":id"].income.$put({
+	const response = await apiClient.applications[":id"].income.$put({
 		param: { id: String(id) },
 		json: raw,
 	});

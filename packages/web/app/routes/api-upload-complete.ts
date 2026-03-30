@@ -3,7 +3,7 @@ import type {
 	ApplicationDocumentType,
 } from "api";
 import { data } from "react-router";
-import { createApiClient } from "~/lib/api";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/api-upload-complete";
 
 function parseAttachInput(
@@ -30,9 +30,7 @@ export async function action({ request, params }: Route.ActionArgs) {
 		return data({ error: "invalid_application_id" }, { status: 400 });
 	}
 	const formData = await request.formData();
-	const api = createApiClient();
-
-	const response = await api.applications[":id"].upload.complete.$post({
+	const response = await apiClient.applications[":id"].upload.complete.$post({
 		param: { id: String(id) },
 		json: parseAttachInput(formData),
 	});

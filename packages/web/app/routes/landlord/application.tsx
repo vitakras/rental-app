@@ -1,13 +1,12 @@
 import type { ApplicationWithDetails } from "api";
 import { Link } from "react-router";
-import { createApiClient } from "~/lib/api";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
 	if (isNaN(id)) throw new Response("Not Found", { status: 404 });
-	const api = createApiClient();
-	const response = await api.landlord.applications[":id"].$get({
+	const response = await apiClient.landlord.applications[":id"].$get({
 		param: { id: String(id) },
 	});
 	if (response.status === 404) throw new Response("Not Found", { status: 404 });

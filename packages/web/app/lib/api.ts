@@ -23,6 +23,4 @@ function getApiBaseUrl() {
 	throw new Error("API_BASE_URL is required outside development and test");
 }
 
-export function createApiClient() {
-	return hc(getApiBaseUrl()) as any;
-}
+export const apiClient = hc(getApiBaseUrl()) as any;

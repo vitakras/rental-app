@@ -3,7 +3,7 @@ import { redirect, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { createApiClient } from "~/lib/api";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/apply";
 
 export function meta() {
@@ -13,9 +13,7 @@ export function meta() {
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData();
 	const raw = JSON.parse(formData.get("data") as string);
-	const api = createApiClient();
-
-	const response = await api.applications.$post({
+	const response = await apiClient.applications.$post({
 		json: raw,
 	});
 

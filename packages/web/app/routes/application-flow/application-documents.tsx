@@ -6,7 +6,7 @@ import type {
 import { data, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { useFileUpload } from "~/hooks/use-file-upload";
-import { createApiClient } from "~/lib/api";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application-documents";
 
 export function meta() {
@@ -35,8 +35,7 @@ interface ResidentSlots {
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
-	const api = createApiClient();
-	const response = await api.applications[":id"].$get({
+	const response = await apiClient.applications[":id"].$get({
 		param: { id: String(id) },
 	});
 	if (response.status === 404) throw data(null, { status: 404 });

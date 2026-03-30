@@ -1,5 +1,5 @@
 import { data, Form, useNavigation } from "react-router";
-import { createApiClient } from "~/lib/api";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
 
 export async function loader({ params }: Route.LoaderArgs) {
@@ -7,8 +7,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 	if (!Number.isInteger(id) || id <= 0) {
 		throw data(null, { status: 404 });
 	}
-	const api = createApiClient();
-	const response = await api.applications[":id"].$get({
+	const response = await apiClient.applications[":id"].$get({
 		param: { id: String(id) },
 	});
 
@@ -31,8 +30,7 @@ export async function action({ params }: Route.ActionArgs) {
 	if (!Number.isInteger(id) || id <= 0) {
 		throw data(null, { status: 404 });
 	}
-	const api = createApiClient();
-	const response = await api.applications[":id"].submit.$post({
+	const response = await apiClient.applications[":id"].submit.$post({
 		param: { id: String(id) },
 	});
 
