@@ -5,10 +5,18 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useRouteLoaderData,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { getServerApiBaseUrl } from "~/lib/api-base-url";
+
+export async function loader(_: Route.LoaderArgs) {
+	return {
+		apiBaseUrl: getServerApiBaseUrl(),
+	};
+}
 
 export const links: Route.LinksFunction = () => [
 	{ rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -24,6 +32,11 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+	const data = useRouteLoaderData<typeof loader>("root");
+	const appConfigScript = data
+		? `window.__APP_CONFIG__ = ${JSON.stringify(data).replace(/</g, "\\u003c")};`
+		: "";
+
 	return (
 		<html lang="en">
 			<head>
@@ -34,6 +47,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 			</head>
 			<body>
 				{children}
+				<script dangerouslySetInnerHTML={{ __html: appConfigScript }} />
 				<ScrollRestoration />
 				<Scripts />
 			</body>

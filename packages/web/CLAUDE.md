@@ -25,9 +25,9 @@ bun run typecheck
 
 ## Upload Flow
 
-- Browser file uploads still start at the same-origin proxy routes under `app/routes/api-upload-*.ts`.
-- Those route actions call the backend API to prepare and complete uploads.
+- Browser file uploads call the backend API directly for upload prepare/complete.
 - Raw file bytes go directly to the API storage route using the upload URL returned by the backend.
+- The API base URL is injected into the client from the root loader so browser uploads use the same backend origin as server-side loaders/actions.
 
 ## Testing
 

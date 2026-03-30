@@ -16,11 +16,6 @@ export default [
 			route("documents", "routes/application-flow/application-documents.tsx"),
 		]),
 	]),
-	route("api/applications/:id/upload/prepare", "routes/api-upload-prepare.ts"),
-	route(
-		"api/applications/:id/upload/complete",
-		"routes/api-upload-complete.ts",
-	),
 	route("l", "routes/landlord/layout.tsx", [
 		route("applications", "routes/landlord/applications.tsx"),
 		route("applications/:id", "routes/landlord/application.tsx"),

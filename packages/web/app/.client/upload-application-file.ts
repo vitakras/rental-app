@@ -2,6 +2,8 @@ import type {
 	ApplicationDocumentCategory,
 	ApplicationDocumentType,
 } from "api";
+import { apiClient } from "~/lib/api";
+
 export interface UploadApplicationFileInput {
 	applicationId: number;
 	file: File;
@@ -14,14 +16,13 @@ async function createUploadIntent(
 	applicationId: number,
 	file: File,
 ): Promise<{ fileId: string; uploadUrl: string }> {
-	const formData = new FormData();
-	formData.set("filename", file.name);
-	formData.set("contentType", file.type || "application/octet-stream");
-	formData.set("sizeBytes", String(file.size));
-
-	const res = await fetch(`/api/applications/${applicationId}/upload/prepare`, {
-		method: "POST",
-		body: formData,
+	const res = await apiClient.applications[":id"].upload.prepare.$post({
+		param: { id: String(applicationId) },
+		json: {
+			filename: file.name,
+			contentType: file.type || "application/octet-stream",
+			sizeBytes: file.size,
+		},
 	});
 	if (!res.ok) throw new Error("Failed to prepare upload");
 	return res.json();
@@ -43,19 +44,15 @@ async function completeUpload(
 	category: ApplicationDocumentCategory,
 	documentType: ApplicationDocumentType,
 ): Promise<void> {
-	const formData = new FormData();
-	formData.set("fileId", fileId);
-	formData.set("residentId", String(residentId));
-	formData.set("category", category);
-	formData.set("documentType", documentType);
-
-	const res = await fetch(
-		`/api/applications/${applicationId}/upload/complete`,
-		{
-			method: "POST",
-			body: formData,
+	const res = await apiClient.applications[":id"].upload.complete.$post({
+		param: { id: String(applicationId) },
+		json: {
+			fileId,
+			residentId,
+			category,
+			documentType,
 		},
-	);
+	});
 	if (!res.ok) throw new Error("Failed to complete upload");
 }
 
