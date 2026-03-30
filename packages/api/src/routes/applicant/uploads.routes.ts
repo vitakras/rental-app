@@ -1,10 +1,14 @@
 import { Hono } from "hono";
-import type { createFileService } from "~/services/file.service";
-
-function parseApplicationId(rawId: string) {
-	const id = Number(rawId);
-	return Number.isInteger(id) && id > 0 ? id : null;
-}
+import { zodJsonValidator } from "~/lib/zod-validator";
+import {
+	ensureValidApplicationId,
+	parseApplicationId,
+} from "~/routes/shared";
+import {
+	attachDocumentToApplicationSchema,
+	prepareDocumentUploadRequestSchema,
+	type createFileService,
+} from "~/services/file.service";
 
 type FileService = ReturnType<typeof createFileService>;
 
@@ -15,23 +19,18 @@ export function createApplicantUploadsRoutes({
 }) {
 	const uploads = new Hono();
 
-	uploads.post("/:id/upload/prepare", async (c) => {
+	uploads.post(
+		"/:id/upload/prepare",
+		ensureValidApplicationId,
+		zodJsonValidator(prepareDocumentUploadRequestSchema),
+		async (c) => {
 		const id = parseApplicationId(c.req.param("id"));
 
 		if (!id) {
 			return c.json({ error: "invalid_application_id" }, 400);
 		}
 
-		let body: {
-			filename: string;
-			contentType?: string;
-			sizeBytes: number;
-		};
-		try {
-			body = await c.req.json();
-		} catch {
-			return c.json({ error: "invalid_json" }, 400);
-		}
+		const body = c.req.valid("json");
 
 		const result = await fileService.prepareDocumentUpload({
 			originalFilename: body.filename,
@@ -45,26 +44,23 @@ export function createApplicantUploadsRoutes({
 		}
 
 		return c.json({ fileId: result.fileId, uploadUrl: result.uploadUrl });
-	});
+		},
+	);
 
-	uploads.post("/:id/upload/complete", async (c) => {
+	uploads.post(
+		"/:id/upload/complete",
+		ensureValidApplicationId,
+		zodJsonValidator(attachDocumentToApplicationSchema),
+		async (c) => {
 		const id = parseApplicationId(c.req.param("id"));
 
 		if (!id) {
 			return c.json({ error: "invalid_application_id" }, 400);
 		}
 
-		let body: {
-			fileId: string;
-			residentId: number;
-			category: Parameters<FileService["attachDocumentToApplication"]>[0]["category"];
-			documentType: Parameters<FileService["attachDocumentToApplication"]>[0]["documentType"];
-		};
-		try {
-			body = await c.req.json();
-		} catch {
-			return c.json({ error: "invalid_json" }, 400);
-		}
+		const body = c.req.valid("json") as Parameters<
+			FileService["attachDocumentToApplication"]
+		>[0];
 
 		const result = await fileService.attachDocumentToApplication({
 			fileId: body.fileId,
@@ -79,7 +75,8 @@ export function createApplicantUploadsRoutes({
 		}
 
 		return c.json({ success: true });
-	});
+		},
+	);
 
 	return uploads;
 }

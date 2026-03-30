@@ -1,15 +1,20 @@
 import { Hono } from "hono";
+import { zodJsonValidator } from "~/lib/zod-validator";
+import {
+	ensureValidApplicationId,
+	parseApplicationId,
+} from "~/routes/shared";
 import type {
 	AddIncomeSourcesData,
 	CreateApplicationData,
 	UpdateOccupantsData,
 	createApplicationService,
 } from "~/services/application.service";
-
-function parseApplicationId(rawId: string) {
-	const id = Number(rawId);
-	return Number.isInteger(id) && id > 0 ? id : null;
-}
+import {
+	addIncomeSourcesSchema,
+	createApplicationSchema,
+	updateOccupantsSchema,
+} from "~/services/application.service";
 
 type ApplicationService = ReturnType<typeof createApplicationService>;
 
@@ -20,15 +25,10 @@ export function createApplicantApplicationsRoutes({
 }) {
 	const applications = new Hono();
 
-	applications.post("/", async (c) => {
-		let body: unknown;
-		try {
-			body = await c.req.json();
-		} catch {
-			return c.json({ error: "invalid_json" }, 400);
-		}
+	applications.post("/", zodJsonValidator(createApplicationSchema), async (c) => {
+		const body = c.req.valid("json") as CreateApplicationData;
 		const result = await applicationService.createApplication(
-			body as CreateApplicationData,
+			body,
 		);
 
 		if (!result.success) {
@@ -41,22 +41,21 @@ export function createApplicantApplicationsRoutes({
 		return c.json({ applicationId: result.applicationId }, 201);
 	});
 
-	applications.put("/:id/occupants", async (c) => {
+	applications.put(
+		"/:id/occupants",
+		ensureValidApplicationId,
+		zodJsonValidator(updateOccupantsSchema),
+		async (c) => {
 		const id = parseApplicationId(c.req.param("id"));
 
 		if (!id) {
 			return c.json({ error: "invalid_application_id" }, 400);
 		}
 
-		let body: unknown;
-		try {
-			body = await c.req.json();
-		} catch {
-			return c.json({ error: "invalid_json" }, 400);
-		}
+		const body = c.req.valid("json") as UpdateOccupantsData;
 		const result = await applicationService.updateOccupants(
 			id,
-			body as UpdateOccupantsData,
+			body,
 		);
 
 		if (!result.success) {
@@ -67,24 +66,24 @@ export function createApplicantApplicationsRoutes({
 		}
 
 		return c.json({ success: true });
-	});
+		},
+	);
 
-	applications.put("/:id/income", async (c) => {
+	applications.put(
+		"/:id/income",
+		ensureValidApplicationId,
+		zodJsonValidator(addIncomeSourcesSchema),
+		async (c) => {
 		const id = parseApplicationId(c.req.param("id"));
 
 		if (!id) {
 			return c.json({ error: "invalid_application_id" }, 400);
 		}
 
-		let body: unknown;
-		try {
-			body = await c.req.json();
-		} catch {
-			return c.json({ error: "invalid_json" }, 400);
-		}
+		const body = c.req.valid("json") as AddIncomeSourcesData;
 		const result = await applicationService.addIncomeSources(
 			id,
-			body as AddIncomeSourcesData,
+			body,
 		);
 
 		if (!result.success) {
@@ -103,7 +102,8 @@ export function createApplicantApplicationsRoutes({
 		}
 
 		return c.json({ success: true });
-	});
+		},
+	);
 
 	applications.post("/:id/submit", async (c) => {
 		const id = parseApplicationId(c.req.param("id"));

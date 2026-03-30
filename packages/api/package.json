@@ -1,6 +1,11 @@
 {
 	"name": "api",
 	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./client": "./src/client.ts",
+		"./app": "./src/app.ts"
+	},
 	"scripts": {
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy --minify",

@@ -22,6 +22,36 @@ const prepareDocumentUploadSchema = z.object({
 	uploadedByUserId: z.string().min(1),
 });
 
+const applicationDocumentCategories = [
+	"identity",
+	"income",
+	"residence",
+	"reference",
+	"other",
+] as const satisfies [ApplicationDocumentCategory, ...ApplicationDocumentCategory[]];
+
+const applicationDocumentTypes = [
+	"government_id",
+	"paystub",
+	"employment_letter",
+	"bank_statement",
+	"reference_letter",
+	"other",
+] as const satisfies [ApplicationDocumentType, ...ApplicationDocumentType[]];
+
+export const prepareDocumentUploadRequestSchema = z.object({
+	filename: z.string().min(1),
+	contentType: z.string().min(1).optional(),
+	sizeBytes: z.number().int().positive(),
+});
+
+export const attachDocumentToApplicationSchema = z.object({
+	fileId: z.string().min(1),
+	residentId: z.number().int().positive(),
+	category: z.enum(applicationDocumentCategories),
+	documentType: z.enum(applicationDocumentTypes),
+});
+
 export type PrepareDocumentUploadData = z.input<
 	typeof prepareDocumentUploadSchema
 >;
