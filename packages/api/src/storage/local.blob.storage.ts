@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { getApiBaseUrl } from "~/config";
 import type { BlobStorage } from "./blob.storage";
 
 const UPLOADS_DIR = path.resolve("data/uploads");
@@ -21,14 +22,16 @@ export function createLocalBlobStorage(): BlobStorage {
 			await fs.mkdir(path.join(UPLOADS_DIR, path.dirname(key)), {
 				recursive: true,
 			});
-			return { uploadUrl: `/storage/${encodeStorageKeyForPath(key)}` };
+			return {
+				uploadUrl: `${getApiBaseUrl()}/storage/${encodeStorageKeyForPath(key)}`,
+			};
 		},
 
 		async createDownloadUrl(key) {
 			const filePath = path.join(UPLOADS_DIR, key);
 			await fs.access(filePath);
 			return {
-				downloadUrl: `/storage/${encodeStorageKeyForPath(key)}`,
+				downloadUrl: `${getApiBaseUrl()}/storage/${encodeStorageKeyForPath(key)}`,
 			};
 		},
 

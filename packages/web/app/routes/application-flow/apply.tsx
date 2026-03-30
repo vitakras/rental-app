@@ -3,7 +3,7 @@ import { redirect, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { services } from "~/server/container";
+import { createApiClient } from "~/lib/api";
 import type { Route } from "./+types/apply";
 
 export function meta() {
@@ -13,13 +13,22 @@ export function meta() {
 export async function action({ request }: Route.ActionArgs) {
 	const formData = await request.formData();
 	const raw = JSON.parse(formData.get("data") as string);
+	const api = createApiClient();
 
-	const result = await services.applicationService.createApplication(raw);
+	const response = await api.applications.$post({
+		json: raw,
+	});
 
-	if (!result.success) {
-		return { errors: result.errors };
+	if (response.status === 422) {
+		const result = await response.json();
+		return { errors: result.issues };
 	}
 
+	if (!response.ok) {
+		throw new Response(null, { status: response.status });
+	}
+
+	const result = (await response.json()) as { applicationId: number };
 	return redirect(`/applications/${result.applicationId}/occupants`);
 }
 

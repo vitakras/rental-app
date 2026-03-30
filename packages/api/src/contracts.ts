@@ -1,21 +1,17 @@
-import { createApp } from "~/app";
-
-const app = createApp();
-
-export default app;
 export type {
-	AddIncomeSourcesData,
 	ApplicationDocumentCategory,
 	ApplicationDocumentType,
 	ApplicationStatus,
+	IncomeSourceType,
+	ResidentRole,
+} from "~/db/schema";
+export type {
+	AddIncomeSourcesData,
 	ApplicationWithDetails,
 	CreateApplicationData,
 	IncomeSourceDetail,
-	IncomeSourceType,
 	PetDetail,
 	ResidentDetail,
-	ResidentRole,
 	SubmittedApplicationSummary,
 	UpdateOccupantsData,
-} from "~/contracts";
-export type { AppType } from "~/app";
+} from "~/services/application.service";

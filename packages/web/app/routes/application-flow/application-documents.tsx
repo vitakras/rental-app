@@ -1,11 +1,12 @@
-import { data, useLoaderData, useNavigate } from "react-router";
-import { Button } from "~/components/ui/button";
 import type {
 	ApplicationDocumentCategory,
 	ApplicationDocumentType,
-} from "~/db/schema";
+	ApplicationWithDetails,
+} from "api";
+import { data, useLoaderData, useNavigate } from "react-router";
+import { Button } from "~/components/ui/button";
 import { useFileUpload } from "~/hooks/use-file-upload";
-import { repositories } from "~/server/container";
+import { createApiClient } from "~/lib/api";
 import type { Route } from "./+types/application-documents";
 
 export function meta() {
@@ -33,10 +34,19 @@ interface ResidentSlots {
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
-	const app = await repositories.applicationRepository.findByIdWithDetails(id);
-	if (!app) throw data(null, { status: 404 });
+	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+	const api = createApiClient();
+	const response = await api.applications[":id"].$get({
+		param: { id: String(id) },
+	});
+	if (response.status === 404) throw data(null, { status: 404 });
+	if (!response.ok) throw data(null, { status: response.status });
 
-	const adults = app.residents.filter((r) => r.role !== "child");
+	const { application } = (await response.json()) as {
+		application: ApplicationWithDetails;
+	};
+
+	const adults = application.residents.filter((r) => r.role !== "child");
 
 	const residents: ResidentSlots[] = adults.map((resident) => {
 		const slots: DocumentSlot[] = [];

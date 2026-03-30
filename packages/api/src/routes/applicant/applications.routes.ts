@@ -41,6 +41,22 @@ export function createApplicantApplicationsRoutes({
 		return c.json({ applicationId: result.applicationId }, 201);
 	});
 
+	applications.get("/:id", ensureValidApplicationId, async (c) => {
+		const id = parseApplicationId(c.req.param("id"));
+
+		if (!id) {
+			return c.json({ error: "invalid_application_id" }, 400);
+		}
+
+		const result = await applicationService.getApplicationWithDetails(id);
+
+		if (!result.success) {
+			return c.json({ error: "application_not_found" }, 404);
+		}
+
+		return c.json({ application: result.application });
+	});
+
 	applications.put(
 		"/:id/occupants",
 		ensureValidApplicationId,

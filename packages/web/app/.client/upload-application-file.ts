@@ -1,8 +1,7 @@
 import type {
 	ApplicationDocumentCategory,
 	ApplicationDocumentType,
-} from "~/db/schema";
-
+} from "api";
 export interface UploadApplicationFileInput {
 	applicationId: number;
 	file: File;

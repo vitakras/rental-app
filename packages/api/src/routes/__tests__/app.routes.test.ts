@@ -165,6 +165,59 @@ describe("API application flow routes", () => {
 		});
 	});
 
+	it("returns an applicant application detail payload", async () => {
+		const services = makeServices();
+		const application: ApplicationWithDetails = {
+			id: 12,
+			status: "pending",
+			desiredMoveInDate: "2026-06-01",
+			smokes: false,
+			createdAt: "2026-01-01 00:00:00",
+			updatedAt: "2026-01-01 00:00:00",
+			residents: [],
+			pets: [],
+		};
+		services.applicationService.getApplicationWithDetails = mock(
+			async (): Promise<GetApplicationWithDetailsResult> => ({
+				success: true,
+				application,
+			}),
+		);
+		const app = createApp({ services });
+
+		const response = await app.request("/applications/12");
+
+		expect(response.status).toBe(200);
+		expect(
+			(await response.json()) as { application: ApplicationWithDetails },
+		).toEqual({ application });
+		expect(
+			services.applicationService.getApplicationWithDetails,
+		).toHaveBeenCalledWith(12);
+	});
+
+	it("rejects an invalid application id for applicant reads", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/applications/not-a-number");
+
+		expect(response.status).toBe(400);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "invalid_application_id",
+		});
+	});
+
+	it("returns 404 for a missing applicant application", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/applications/12");
+
+		expect(response.status).toBe(404);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "application_not_found",
+		});
+	});
+
 	it("rejects an invalid application id for occupants", async () => {
 		const app = createApp({ services: makeServices() });
 		const response = await app.request("/applications/not-a-number/occupants", {

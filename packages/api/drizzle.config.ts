@@ -1,9 +1,9 @@
 import { defineConfig } from "drizzle-kit";
-import { databaseUrl } from "./app/db/config";
+import { databaseUrl } from "./src/db/config";
 
 export default defineConfig({
 	out: "./drizzle",
-	schema: "./app/db/schema.ts",
+	schema: "./src/db/schema.ts",
 	dialect: "turso",
 	casing: "snake_case",
 	migrations: {

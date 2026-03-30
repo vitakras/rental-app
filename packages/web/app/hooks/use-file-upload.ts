@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { uploadApplicationFile } from "~/.client/upload-application-file";
 import type {
 	ApplicationDocumentCategory,
 	ApplicationDocumentType,
-} from "~/db/schema";
+} from "api";
+import { useState } from "react";
+import { uploadApplicationFile } from "~/.client/upload-application-file";
 
 export interface UploadedFile {
 	clientId: string;

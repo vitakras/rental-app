@@ -1,25 +1,45 @@
 import { data, Form, useNavigation } from "react-router";
-import { repositories, services } from "~/server/container";
+import { createApiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
-	const application = await repositories.applicationRepository.findById(id);
+	if (!Number.isInteger(id) || id <= 0) {
+		throw data(null, { status: 404 });
+	}
+	const api = createApiClient();
+	const response = await api.applications[":id"].$get({
+		param: { id: String(id) },
+	});
 
-	if (!application) {
+	if (response.status === 404) {
 		throw data(null, { status: 404 });
 	}
 
+	if (!response.ok) {
+		throw data(null, { status: response.status });
+	}
+
+	const { application } = (await response.json()) as {
+		application: { status: string };
+	};
 	return { applicationId: id, status: application.status };
 }
 
 export async function action({ params }: Route.ActionArgs) {
 	const id = Number(params.id);
-	const result = await services.applicationService.submitApplication(id);
+	if (!Number.isInteger(id) || id <= 0) {
+		throw data(null, { status: 404 });
+	}
+	const api = createApiClient();
+	const response = await api.applications[":id"].submit.$post({
+		param: { id: String(id) },
+	});
 
-	if (!result.success) {
-		if (result.reason === "not_found") throw data(null, { status: 404 });
-		if (result.reason === "not_pending") throw data(null, { status: 409 });
+	if (response.status === 404) throw data(null, { status: 404 });
+	if (response.status === 409) throw data(null, { status: 409 });
+	if (!response.ok) {
+		throw data(null, { status: response.status });
 	}
 
 	return null;

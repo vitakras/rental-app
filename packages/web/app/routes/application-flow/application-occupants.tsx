@@ -4,7 +4,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { repositories, services } from "~/server/container";
+import { createApiClient } from "~/lib/api";
 import type { Route } from "./+types/application-occupants";
 
 export function meta() {
@@ -13,23 +13,36 @@ export function meta() {
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
-	const app = await repositories.applicationRepository.findById(id);
+	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+	const api = createApiClient();
+	const response = await api.applications[":id"].$get({
+		param: { id: String(id) },
+	});
 
-	if (!app) throw data(null, { status: 404 });
+	if (response.status === 404) throw data(null, { status: 404 });
+	if (!response.ok) throw data(null, { status: response.status });
 
 	return { applicationId: id };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
 	const id = Number(params.id);
+	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
 	const formData = await request.formData();
 	const raw = JSON.parse(formData.get("data") as string);
+	const api = createApiClient();
 
-	const result = await services.applicationService.updateOccupants(id, raw);
+	const response = await api.applications[":id"].occupants.$put({
+		param: { id: String(id) },
+		json: raw,
+	});
 
-	if (!result.success) {
-		return { errors: result.errors };
+	if (response.status === 422) {
+		const result = await response.json();
+		return { errors: result.issues };
 	}
+	if (response.status === 404) throw data(null, { status: 404 });
+	if (!response.ok) throw data(null, { status: response.status });
 
 	return redirect(`/applications/${id}/income`);
 }

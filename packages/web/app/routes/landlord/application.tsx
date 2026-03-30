@@ -1,14 +1,20 @@
+import type { ApplicationWithDetails } from "api";
 import { Link } from "react-router";
-import { repositories } from "~/server/container";
+import { createApiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
 	if (isNaN(id)) throw new Response("Not Found", { status: 404 });
-
-	const application =
-		await repositories.applicationRepository.findByIdWithDetails(id);
-	if (!application) throw new Response("Not Found", { status: 404 });
+	const api = createApiClient();
+	const response = await api.landlord.applications[":id"].$get({
+		param: { id: String(id) },
+	});
+	if (response.status === 404) throw new Response("Not Found", { status: 404 });
+	if (!response.ok) throw new Response(null, { status: response.status });
+	const { application } = (await response.json()) as {
+		application: ApplicationWithDetails;
+	};
 
 	return { application };
 }

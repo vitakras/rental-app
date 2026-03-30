@@ -1,10 +1,17 @@
+import type { SubmittedApplicationSummary } from "api";
 import { Link } from "react-router";
-import { repositories } from "~/server/container";
+import { createApiClient } from "~/lib/api";
 import type { Route } from "./+types/applications";
 
 export async function loader(_: Route.LoaderArgs) {
-	const applications =
-		await repositories.applicationRepository.findAllSubmitted();
+	const api = createApiClient();
+	const response = await api.landlord.applications.$get();
+	if (!response.ok) {
+		throw new Response(null, { status: response.status });
+	}
+	const { applications } = (await response.json()) as {
+		applications: SubmittedApplicationSummary[];
+	};
 	return { applications };
 }
 

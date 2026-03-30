@@ -16,7 +16,6 @@ export default [
 			route("documents", "routes/application-flow/application-documents.tsx"),
 		]),
 	]),
-	route("api/storage/*", "routes/api-storage.ts"),
 	route("api/applications/:id/upload/prepare", "routes/api-upload-prepare.ts"),
 	route(
 		"api/applications/:id/upload/complete",
