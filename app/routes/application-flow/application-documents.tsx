@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { data, useLoaderData, useNavigate } from "react-router";
 import type { Route } from "./+types/application-documents";
 import { Button } from "~/components/ui/button";
 import type { ApplicationDocumentCategory, ApplicationDocumentType } from "~/db/schema";
-import { repositories, services } from "~/server/container";
+import { repositories } from "~/server/container";
+import { useFileUpload } from "~/hooks/use-file-upload";
 
 export function meta() {
 	return [{ title: "Documents — Rental Application" }];
@@ -91,53 +91,6 @@ export async function loader({ params }: Route.LoaderArgs) {
 	return { applicationId: id, residents };
 }
 
-// ── Action ────────────────────────────────────────────────────────────────────
-
-export async function action({ request, params }: Route.ActionArgs) {
-	const id = Number(params.id);
-	const formData = await request.formData();
-	const intent = formData.get("intent") as string;
-
-	if (intent === "prepare") {
-		const filename = formData.get("filename") as string;
-		const contentType = formData.get("contentType") as string;
-		const sizeBytes = Number(formData.get("sizeBytes"));
-
-		const result = await services.fileService.prepareDocumentUpload({
-			originalFilename: filename,
-			contentType: contentType || "application/octet-stream",
-			sizeBytes,
-			uploadedByUserId: `app-${id}`,
-		});
-
-		if (!result.success) return data({ error: "prepare_failed" }, { status: 422 });
-		return data({ fileId: result.fileId, uploadUrl: result.uploadUrl });
-	}
-
-	if (intent === "complete") {
-		const fileId = formData.get("fileId") as string;
-		const residentId = Number(formData.get("residentId"));
-		const category = formData.get("category") as ApplicationDocumentCategory;
-		const documentType = formData.get("documentType") as ApplicationDocumentType;
-
-		const completeResult = await services.fileService.completeUpload(fileId);
-		if (!completeResult.success) return data({ error: "complete_failed" }, { status: 422 });
-
-		await repositories.applicationDocumentRepository.create({
-			applicationId: id,
-			residentId,
-			fileId,
-			category,
-			documentType,
-		});
-		await repositories.fileRepository.markAttached(fileId);
-
-		return data({ success: true });
-	}
-
-	return data({ error: "unknown_intent" }, { status: 400 });
-}
-
 // ── Shared primitives ─────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -151,26 +104,16 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 	);
 }
 
-// ── Upload state ──────────────────────────────────────────────────────────────
-
-interface UploadedFile {
-	clientId: string;
-	filename: string;
-	status: "uploading" | "done" | "error";
-	fileId?: string;
-}
-
 // ── Slot card ─────────────────────────────────────────────────────────────────
 
 function SlotCard({
 	slot,
-	uploadedFiles,
-	onFiles,
+	applicationId,
 }: {
 	slot: DocumentSlot;
-	uploadedFiles: UploadedFile[];
-	onFiles: (files: FileList) => void;
+	applicationId: number;
 }) {
+	const { uploadedFiles, uploadFiles } = useFileUpload(applicationId, slot);
 	const hasUploads = uploadedFiles.length > 0;
 
 	return (
@@ -261,7 +204,7 @@ function SlotCard({
 					multiple
 					className="sr-only"
 					onChange={(e) => {
-						if (e.target.files?.length) onFiles(e.target.files);
+						if (e.target.files?.length) uploadFiles(e.target.files);
 						e.target.value = "";
 					}}
 				/>
@@ -290,74 +233,6 @@ function SlotCard({
 export default function ApplicationDocuments() {
 	const { applicationId, residents } = useLoaderData<typeof loader>();
 	const navigate = useNavigate();
-
-	const [uploads, setUploads] = useState<Record<string, UploadedFile[]>>({});
-
-	async function handleFiles(slotKey: string, files: FileList, slot: DocumentSlot) {
-		for (const file of Array.from(files)) {
-			const clientId = Math.random().toString(36).slice(2);
-
-			setUploads((prev) => ({
-				...prev,
-				[slotKey]: [
-					...(prev[slotKey] ?? []),
-					{ clientId, filename: file.name, status: "uploading" },
-				],
-			}));
-
-			try {
-				// 1. Prepare — get presigned upload URL
-				const prepareForm = new FormData();
-				prepareForm.set("intent", "prepare");
-				prepareForm.set("filename", file.name);
-				prepareForm.set("contentType", file.type || "application/octet-stream");
-				prepareForm.set("sizeBytes", String(file.size));
-
-				const prepareRes = await fetch(`/applications/${applicationId}/documents`, {
-					method: "POST",
-					body: prepareForm,
-				});
-				if (!prepareRes.ok) throw new Error("Failed to prepare upload");
-				const { fileId, uploadUrl } = await prepareRes.json();
-
-				// 2. Upload directly to blob storage
-				const uploadRes = await fetch(uploadUrl, {
-					method: "PUT",
-					body: file,
-					headers: { "Content-Type": file.type || "application/octet-stream" },
-				});
-				if (!uploadRes.ok) throw new Error("Failed to upload file");
-
-				// 3. Complete — mark uploaded + create applicationDocument
-				const completeForm = new FormData();
-				completeForm.set("intent", "complete");
-				completeForm.set("fileId", fileId);
-				completeForm.set("residentId", String(slot.residentId));
-				completeForm.set("category", slot.category);
-				completeForm.set("documentType", slot.documentType);
-
-				const completeRes = await fetch(`/applications/${applicationId}/documents`, {
-					method: "POST",
-					body: completeForm,
-				});
-				if (!completeRes.ok) throw new Error("Failed to complete upload");
-
-				setUploads((prev) => ({
-					...prev,
-					[slotKey]: (prev[slotKey] ?? []).map((f) =>
-						f.clientId === clientId ? { ...f, status: "done", fileId } : f,
-					),
-				}));
-			} catch {
-				setUploads((prev) => ({
-					...prev,
-					[slotKey]: (prev[slotKey] ?? []).map((f) =>
-						f.clientId === clientId ? { ...f, status: "error" } : f,
-					),
-				}));
-			}
-		}
-	}
 
 	return (
 		<div
@@ -440,8 +315,7 @@ export default function ApplicationDocuments() {
 							<SlotCard
 								key={slot.key}
 								slot={slot}
-								uploadedFiles={uploads[slot.key] ?? []}
-								onFiles={(files) => handleFiles(slot.key, files, slot)}
+								applicationId={applicationId}
 							/>
 						))}
 					</div>

@@ -1,5 +1,5 @@
 .DS_Store
-/data/*.sqlite
+/data/
 .env
 /node_modules/
 
