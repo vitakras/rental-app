@@ -1,4 +1,7 @@
-import type { ApplicationDocumentCategory, ApplicationDocumentType } from "~/db/schema";
+import type {
+	ApplicationDocumentCategory,
+	ApplicationDocumentType,
+} from "~/db/schema";
 
 export interface UploadApplicationFileInput {
 	applicationId: number;
@@ -47,10 +50,13 @@ async function completeUpload(
 	formData.set("category", category);
 	formData.set("documentType", documentType);
 
-	const res = await fetch(`/api/applications/${applicationId}/upload/complete`, {
-		method: "POST",
-		body: formData,
-	});
+	const res = await fetch(
+		`/api/applications/${applicationId}/upload/complete`,
+		{
+			method: "POST",
+			body: formData,
+		},
+	);
 	if (!res.ok) throw new Error("Failed to complete upload");
 }
 
@@ -63,6 +69,12 @@ export async function uploadApplicationFile({
 }: UploadApplicationFileInput): Promise<{ fileId: string }> {
 	const { fileId, uploadUrl } = await createUploadIntent(applicationId, file);
 	await uploadBytes(uploadUrl, file);
-	await completeUpload(applicationId, fileId, residentId, category, documentType);
+	await completeUpload(
+		applicationId,
+		fileId,
+		residentId,
+		category,
+		documentType,
+	);
 	return { fileId };
 }

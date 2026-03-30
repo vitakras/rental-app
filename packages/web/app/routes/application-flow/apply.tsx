@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { redirect, useSubmit } from "react-router";
-import type { Route } from "./+types/apply";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { services } from "~/server/container";
+import type { Route } from "./+types/apply";
 
 export function meta() {
 	return [{ title: "Apply — Find Your Home" }];
@@ -47,12 +47,12 @@ function TextInput({
 	const id = label.toLowerCase().replace(/\s+/g, "-");
 	return (
 		<div>
-			<Label htmlFor={id} className="mb-1.5 block">{label}</Label>
+			<Label htmlFor={id} className="mb-1.5 block">
+				{label}
+			</Label>
 			<Input id={id} {...props} />
 			{hint && (
-				<p className="text-xs text-[#7A7268] mt-1.5 leading-relaxed">
-					{hint}
-				</p>
+				<p className="text-xs text-[#7A7268] mt-1.5 leading-relaxed">{hint}</p>
 			)}
 		</div>
 	);

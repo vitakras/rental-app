@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { data, redirect, useSubmit } from "react-router";
-import type { Route } from "./+types/application-occupants";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { repositories, services } from "~/server/container";
+import type { Route } from "./+types/application-occupants";
 
 export function meta() {
 	return [{ title: "Occupants — Rental Application" }];
@@ -104,12 +104,12 @@ function TextInput({
 	const id = label.toLowerCase().replace(/\s+/g, "-");
 	return (
 		<div>
-			<Label htmlFor={id} className="mb-1.5 block">{label}</Label>
+			<Label htmlFor={id} className="mb-1.5 block">
+				{label}
+			</Label>
 			<Input id={id} {...props} />
 			{hint && (
-				<p className="text-xs text-[#7A7268] mt-1.5 leading-relaxed">
-					{hint}
-				</p>
+				<p className="text-xs text-[#7A7268] mt-1.5 leading-relaxed">{hint}</p>
 			)}
 		</div>
 	);

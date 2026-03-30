@@ -1,9 +1,12 @@
 import { data, useLoaderData, useNavigate } from "react-router";
-import type { Route } from "./+types/application-documents";
 import { Button } from "~/components/ui/button";
-import type { ApplicationDocumentCategory, ApplicationDocumentType } from "~/db/schema";
-import { repositories } from "~/server/container";
+import type {
+	ApplicationDocumentCategory,
+	ApplicationDocumentType,
+} from "~/db/schema";
 import { useFileUpload } from "~/hooks/use-file-upload";
+import { repositories } from "~/server/container";
+import type { Route } from "./+types/application-documents";
 
 export function meta() {
 	return [{ title: "Documents — Rental Application" }];
@@ -138,10 +141,7 @@ function SlotCard({
 			{hasUploads && (
 				<ul className="mb-3 space-y-1.5">
 					{uploadedFiles.map((file) => (
-						<li
-							key={file.clientId}
-							className="flex items-center gap-2"
-						>
+						<li key={file.clientId} className="flex items-center gap-2">
 							{file.status === "uploading" && (
 								<svg
 									aria-hidden="true"
@@ -151,7 +151,16 @@ function SlotCard({
 									viewBox="0 0 14 14"
 									fill="none"
 								>
-									<circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="22" strokeDashoffset="8" strokeLinecap="round" />
+									<circle
+										cx="7"
+										cy="7"
+										r="5.5"
+										stroke="currentColor"
+										strokeWidth="1.5"
+										strokeDasharray="22"
+										strokeDashoffset="8"
+										strokeLinecap="round"
+									/>
 								</svg>
 							)}
 							{file.status === "done" && (
@@ -191,7 +200,9 @@ function SlotCard({
 								}`}
 								style={{ fontFamily: "'DM Sans', sans-serif" }}
 							>
-								{file.status === "error" ? `${file.filename} — upload failed` : file.filename}
+								{file.status === "error"
+									? `${file.filename} — upload failed`
+									: file.filename}
 							</span>
 						</li>
 					))}

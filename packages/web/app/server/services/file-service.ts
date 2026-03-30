@@ -1,11 +1,17 @@
 import crypto from "node:crypto";
 import pino from "pino";
 import { z } from "zod";
+import type {
+	ApplicationDocumentCategory,
+	ApplicationDocumentType,
+} from "~/db/schema";
 import type { Logger } from "~/server/logger";
 import type { BlobStorage } from "~/server/storage/blob-storage";
-import type { ApplicationDocumentCategory, ApplicationDocumentType } from "~/db/schema";
 import type { ApplicationDocumentRepository } from "../repositories/application-document-repository";
-import type { FileRecord, FileRepository } from "../repositories/file-repository";
+import type {
+	FileRecord,
+	FileRepository,
+} from "../repositories/file-repository";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
@@ -16,7 +22,9 @@ const prepareDocumentUploadSchema = z.object({
 	uploadedByUserId: z.string().min(1),
 });
 
-export type PrepareDocumentUploadData = z.input<typeof prepareDocumentUploadSchema>;
+export type PrepareDocumentUploadData = z.input<
+	typeof prepareDocumentUploadSchema
+>;
 
 // ── Result types ──────────────────────────────────────────────────────────────
 
@@ -26,7 +34,10 @@ export type PrepareDocumentUploadResult =
 
 export type CompleteUploadResult =
 	| { success: true; file: FileRecord }
-	| { success: false; reason: "not_found" | "invalid_status" | "missing_object" };
+	| {
+			success: false;
+			reason: "not_found" | "invalid_status" | "missing_object";
+	  };
 
 export interface AttachDocumentInput {
 	fileId: string;
@@ -38,7 +49,10 @@ export interface AttachDocumentInput {
 
 export type AttachDocumentResult =
 	| { success: true }
-	| { success: false; reason: "not_found" | "invalid_status" | "missing_object" };
+	| {
+			success: false;
+			reason: "not_found" | "invalid_status" | "missing_object";
+	  };
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -65,7 +79,8 @@ export function createFileService({
 				return { success: false, errors: parsed.error.issues };
 			}
 
-			const { originalFilename, contentType, sizeBytes, uploadedByUserId } = parsed.data;
+			const { originalFilename, contentType, sizeBytes, uploadedByUserId } =
+				parsed.data;
 
 			const fileId = crypto.randomUUID();
 			const storageKey = `documents/${uploadedByUserId}/${fileId}/${originalFilename}`;
@@ -98,32 +113,57 @@ export function createFileService({
 			}
 
 			if (file.status !== "pending_upload") {
-				logger.warn({ fileId, status: file.status }, "Cannot complete upload: invalid status");
+				logger.warn(
+					{ fileId, status: file.status },
+					"Cannot complete upload: invalid status",
+				);
 				return { success: false, reason: "invalid_status" };
 			}
 
 			const objectExists = await blobStorage.objectExists(file.storageKey);
 			if (!objectExists) {
-				logger.warn({ fileId, storageKey: file.storageKey }, "Cannot complete upload: object missing");
+				logger.warn(
+					{ fileId, storageKey: file.storageKey },
+					"Cannot complete upload: object missing",
+				);
 				return { success: false, reason: "missing_object" };
 			}
 
 			await fileRepository.markUploaded(fileId);
 
 			logger.info({ fileId }, "Upload completed");
-			return { success: true, file: { ...file, status: "uploaded", uploadedAt: new Date().toISOString() } };
+			return {
+				success: true,
+				file: {
+					...file,
+					status: "uploaded",
+					uploadedAt: new Date().toISOString(),
+				},
+			};
 		},
 
-		async attachDocumentToApplication(input: AttachDocumentInput): Promise<AttachDocumentResult> {
-			const { fileId, applicationId, residentId, category, documentType } = input;
+		async attachDocumentToApplication(
+			input: AttachDocumentInput,
+		): Promise<AttachDocumentResult> {
+			const { fileId, applicationId, residentId, category, documentType } =
+				input;
 
 			const completeResult = await this.completeUpload(fileId);
 			if (!completeResult.success) return completeResult;
 
-			await applicationDocumentRepository.create({ applicationId, residentId, fileId, category, documentType });
+			await applicationDocumentRepository.create({
+				applicationId,
+				residentId,
+				fileId,
+				category,
+				documentType,
+			});
 			await fileRepository.markAttached(fileId);
 
-			logger.info({ fileId, applicationId }, "Document attached to application");
+			logger.info(
+				{ fileId, applicationId },
+				"Document attached to application",
+			);
 			return { success: true };
 		},
 	};

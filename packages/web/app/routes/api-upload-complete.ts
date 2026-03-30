@@ -1,10 +1,16 @@
 import { data } from "react-router";
-import type { Route } from "./+types/api-upload-complete";
-import type { ApplicationDocumentCategory, ApplicationDocumentType } from "~/db/schema";
-import type { AttachDocumentInput } from "~/server/services/file-service";
+import type {
+	ApplicationDocumentCategory,
+	ApplicationDocumentType,
+} from "~/db/schema";
 import { services } from "~/server/container";
+import type { AttachDocumentInput } from "~/server/services/file-service";
+import type { Route } from "./+types/api-upload-complete";
 
-function parseAttachInput(formData: FormData, applicationId: number): AttachDocumentInput {
+function parseAttachInput(
+	formData: FormData,
+	applicationId: number,
+): AttachDocumentInput {
 	return {
 		fileId: formData.get("fileId") as string,
 		applicationId,
@@ -20,7 +26,9 @@ export async function action({ request, params }: Route.ActionArgs) {
 	const id = Number(params.id);
 	const formData = await request.formData();
 
-	const result = await services.fileService.attachDocumentToApplication(parseAttachInput(formData, id));
+	const result = await services.fileService.attachDocumentToApplication(
+		parseAttachInput(formData, id),
+	);
 
 	if (!result.success) return data({ error: "attach_failed" }, { status: 422 });
 	return data({ success: true });

@@ -1,12 +1,13 @@
-import type { Route } from "./+types/application";
 import { Link } from "react-router";
 import { repositories } from "~/server/container";
+import type { Route } from "./+types/application";
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);
 	if (isNaN(id)) throw new Response("Not Found", { status: 404 });
 
-	const application = await repositories.applicationRepository.findByIdWithDetails(id);
+	const application =
+		await repositories.applicationRepository.findByIdWithDetails(id);
 	if (!application) throw new Response("Not Found", { status: 404 });
 
 	return { application };
@@ -14,7 +15,9 @@ export async function loader({ params }: Route.LoaderArgs) {
 
 export function meta({ data }: Route.MetaArgs) {
 	const primary = data?.application.residents.find((r) => r.role === "primary");
-	return [{ title: primary ? `${primary.fullName} — Application` : "Application" }];
+	return [
+		{ title: primary ? `${primary.fullName} — Application` : "Application" },
+	];
 }
 
 function formatDate(dateStr: string): string {
@@ -53,11 +56,24 @@ function formatCurrency(cents: number): string {
 	}).format(cents / 100);
 }
 
-function IncomeSection({ incomeSources }: { incomeSources: { id: number; type: string; employerOrSourceName: string; titleOrOccupation?: string | null; monthlyAmountCents: number; startDate: string }[] }) {
+function IncomeSection({
+	incomeSources,
+}: {
+	incomeSources: {
+		id: number;
+		type: string;
+		employerOrSourceName: string;
+		titleOrOccupation?: string | null;
+		monthlyAmountCents: number;
+		startDate: string;
+	}[];
+}) {
 	if (incomeSources.length === 0) return null;
 	return (
 		<div className="mt-4 pt-4 border-t border-[#F0EBE3]">
-			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">Income</p>
+			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
+				Income
+			</p>
 			<div className="space-y-3">
 				{incomeSources.map((source) => (
 					<div key={source.id} className="grid grid-cols-2 gap-3">
@@ -65,12 +81,17 @@ function IncomeSection({ incomeSources }: { incomeSources: { id: number; type: s
 							<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
 								{INCOME_TYPE_LABELS[source.type] ?? source.type}
 							</p>
-							<p className="text-sm text-[#1C1A17]">{source.employerOrSourceName}</p>
+							<p className="text-sm text-[#1C1A17]">
+								{source.employerOrSourceName}
+							</p>
 						</div>
 						{source.titleOrOccupation && (
 							<Field label="Title" value={source.titleOrOccupation} />
 						)}
-						<Field label="Monthly income" value={formatCurrency(source.monthlyAmountCents) + "/mo"} />
+						<Field
+							label="Monthly income"
+							value={formatCurrency(source.monthlyAmountCents) + "/mo"}
+						/>
 					</div>
 				))}
 			</div>
@@ -90,19 +111,28 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 	if (!value) return null;
 	return (
 		<div>
-			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">{label}</p>
+			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
+				{label}
+			</p>
 			<p className="text-sm text-[#1C1A17]">{value}</p>
 		</div>
 	);
 }
 
-export default function LandlordApplicationDetail({ loaderData }: Route.ComponentProps) {
+export default function LandlordApplicationDetail({
+	loaderData,
+}: Route.ComponentProps) {
 	const { application } = loaderData;
 	const primary = application.residents.find((r) => r.role === "primary");
-	const otherResidents = application.residents.filter((r) => r.role !== "primary");
+	const otherResidents = application.residents.filter(
+		(r) => r.role !== "primary",
+	);
 
 	return (
-		<div className="min-h-screen bg-[#F5F0E8]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+		<div
+			className="min-h-screen bg-[#F5F0E8]"
+			style={{ fontFamily: "'DM Sans', sans-serif" }}
+		>
 			{/* Top bar */}
 			<div className="fixed top-0 left-0 right-0 z-30 bg-[#F5F0E8]/90 backdrop-blur-sm border-b border-[#E8E1D9]">
 				<div className="max-w-lg mx-auto px-5 py-4 flex items-center gap-3">
@@ -128,7 +158,8 @@ export default function LandlordApplicationDetail({ loaderData }: Route.Componen
 						{primary?.fullName ?? `Application #${application.id}`}
 					</h1>
 					<span className="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#F5E8DF] text-[#C4714A]">
-						{application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+						{application.status.charAt(0).toUpperCase() +
+							application.status.slice(1)}
 					</span>
 				</div>
 			</div>
@@ -139,8 +170,14 @@ export default function LandlordApplicationDetail({ loaderData }: Route.Componen
 				<div className="mt-6">
 					<SectionHeading>Application</SectionHeading>
 					<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] grid grid-cols-2 gap-4">
-						<Field label="Move-in date" value={formatDate(application.desiredMoveInDate)} />
-						<Field label="Submitted" value={formatDate(application.createdAt)} />
+						<Field
+							label="Move-in date"
+							value={formatDate(application.desiredMoveInDate)}
+						/>
+						<Field
+							label="Submitted"
+							value={formatDate(application.createdAt)}
+						/>
 						<Field label="Smokes" value={application.smokes ? "Yes" : "No"} />
 						<Field label="Application #" value={String(application.id)} />
 					</div>
@@ -178,7 +215,9 @@ export default function LandlordApplicationDetail({ loaderData }: Route.Componen
 									<div className="grid grid-cols-2 gap-4">
 										<Field label="Name" value={resident.fullName} />
 										<Field label="Date of birth" value={resident.dateOfBirth} />
-										{resident.email && <Field label="Email" value={resident.email} />}
+										{resident.email && (
+											<Field label="Email" value={resident.email} />
+										)}
 									</div>
 									{resident.role !== "child" && (
 										<IncomeSection incomeSources={resident.incomeSources} />
@@ -200,7 +239,9 @@ export default function LandlordApplicationDetail({ loaderData }: Route.Componen
 									className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]"
 								>
 									<div className="flex items-center gap-2 mb-3">
-										<span className="text-base">{PET_EMOJI[pet.type] ?? "🐾"}</span>
+										<span className="text-base">
+											{PET_EMOJI[pet.type] ?? "🐾"}
+										</span>
 										<p className="text-sm font-medium text-[#1C1A17]">
 											{pet.name ?? pet.type}
 										</p>

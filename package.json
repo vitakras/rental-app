@@ -2,10 +2,12 @@
 	"name": "rental-app",
 	"private": true,
 	"type": "module",
-	"workspaces": ["packages/*"],
+	"workspaces": [
+		"packages/*"
+	],
 	"scripts": {
 		"build": "bun run --filter web build",
-		"dev": "bun run --filter web dev",
+		"dev": "bun run --parallel --workspaces dev",
 		"start": "bun run --filter web start",
 		"typecheck": "bun run --filter web typecheck",
 		"db-generate": "bun run --filter web db-generate",

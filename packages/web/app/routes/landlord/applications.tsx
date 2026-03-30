@@ -1,9 +1,10 @@
-import type { Route } from "./+types/applications";
 import { Link } from "react-router";
 import { repositories } from "~/server/container";
+import type { Route } from "./+types/applications";
 
 export async function loader(_: Route.LoaderArgs) {
-	const applications = await repositories.applicationRepository.findAllSubmitted();
+	const applications =
+		await repositories.applicationRepository.findAllSubmitted();
 	return { applications };
 }
 
@@ -20,11 +21,16 @@ function formatDate(dateStr: string): string {
 	}).format(new Date(normalized));
 }
 
-export default function LandlordApplications({ loaderData }: Route.ComponentProps) {
+export default function LandlordApplications({
+	loaderData,
+}: Route.ComponentProps) {
 	const { applications } = loaderData;
 
 	return (
-		<div className="min-h-screen bg-[#F5F0E8]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+		<div
+			className="min-h-screen bg-[#F5F0E8]"
+			style={{ fontFamily: "'DM Sans', sans-serif" }}
+		>
 			{/* Top bar */}
 			<div className="fixed top-0 left-0 right-0 z-30 bg-[#F5F0E8]/90 backdrop-blur-sm border-b border-[#E8E1D9]">
 				<div className="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">

@@ -1,7 +1,12 @@
 import { and, desc, eq, inArray, not } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
-import { applicationsTable, incomeSourcesTable, petsTable, residentsTable } from "~/db/schema";
+import {
+	applicationsTable,
+	incomeSourcesTable,
+	petsTable,
+	residentsTable,
+} from "~/db/schema";
 
 type DbInstance = typeof defaultDb;
 
@@ -189,7 +194,10 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 			if (!app) return null;
 
 			const [residents, pets] = await Promise.all([
-				db.select().from(residentsTable).where(eq(residentsTable.applicationId, id)),
+				db
+					.select()
+					.from(residentsTable)
+					.where(eq(residentsTable.applicationId, id)),
 				db.select().from(petsTable).where(eq(petsTable.applicationId, id)),
 			]);
 

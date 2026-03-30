@@ -30,7 +30,9 @@ describe("createApplicationService", () => {
 	describe("validation", () => {
 		it("rejects a missing desiredMoveInDate", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				desiredMoveInDate: "",
 			});
@@ -45,7 +47,9 @@ describe("createApplicationService", () => {
 
 		it("rejects an invalid date format", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				desiredMoveInDate: "06/01/2026",
 			});
@@ -60,7 +64,9 @@ describe("createApplicationService", () => {
 
 		it("rejects a missing owner fullName", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				owner: { ...baseInput.owner, fullName: "" },
 			});
@@ -77,7 +83,9 @@ describe("createApplicationService", () => {
 
 		it("rejects an invalid owner email", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				owner: { ...baseInput.owner, email: "not-an-email" },
 			});
@@ -92,7 +100,9 @@ describe("createApplicationService", () => {
 
 		it("rejects an invalid role for additional adult", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -113,7 +123,9 @@ describe("createApplicationService", () => {
 
 		it("rejects an invalid email for additional adult", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -130,7 +142,9 @@ describe("createApplicationService", () => {
 
 		it("rejects a missing child fullName", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				children: [{ fullName: "", dateOfBirth: "2020-01-01" }],
 			});
@@ -142,9 +156,9 @@ describe("createApplicationService", () => {
 	describe("success path", () => {
 		it("calls repo.create with validated data and returns applicationId", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication(
-				baseInput,
-			);
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication(baseInput);
 
 			expect(result.success).toBe(true);
 			if (result.success) {
@@ -162,7 +176,9 @@ describe("createApplicationService", () => {
 
 		it("does not call repo.create when validation fails", async () => {
 			const repo = makeRepo();
-			await createApplicationService({ applicationRepository: repo }).createApplication({
+			await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				desiredMoveInDate: "",
 			});
@@ -172,7 +188,9 @@ describe("createApplicationService", () => {
 
 		it("passes optional adult email through when provided", async () => {
 			const repo = makeRepo();
-			const result = await createApplicationService({ applicationRepository: repo }).createApplication({
+			const result = await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -193,7 +211,9 @@ describe("createApplicationService", () => {
 
 		it("omits optional adult email when not provided", async () => {
 			const repo = makeRepo();
-			await createApplicationService({ applicationRepository: repo }).createApplication({
+			await createApplicationService({
+				applicationRepository: repo,
+			}).createApplication({
 				...baseInput,
 				additionalAdults: [
 					{
@@ -218,7 +238,9 @@ describe("createApplicationService", () => {
 			});
 
 			await expect(
-				createApplicationService({ applicationRepository: repo }).createApplication(baseInput),
+				createApplicationService({
+					applicationRepository: repo,
+				}).createApplication(baseInput),
 			).rejects.toThrow("DB error");
 		});
 	});
@@ -227,7 +249,9 @@ describe("createApplicationService", () => {
 describe("submitApplication", () => {
 	it("returns success with applicationId when repo submits successfully", async () => {
 		const repo = makeRepo();
-		const result = await createApplicationService({ applicationRepository: repo }).submitApplication(1);
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).submitApplication(1);
 
 		expect(result.success).toBe(true);
 		if (result.success) {
@@ -241,7 +265,9 @@ describe("submitApplication", () => {
 		const repo = makeRepo({
 			findById: mock(async () => null),
 		});
-		const result = await createApplicationService({ applicationRepository: repo }).submitApplication(99);
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).submitApplication(99);
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -254,7 +280,9 @@ describe("submitApplication", () => {
 		const repo = makeRepo({
 			findById: mock(async () => ({ id: 1, status: "submitted" })),
 		});
-		const result = await createApplicationService({ applicationRepository: repo }).submitApplication(1);
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).submitApplication(1);
 
 		expect(result.success).toBe(false);
 		if (!result.success) {
@@ -271,7 +299,9 @@ describe("submitApplication", () => {
 		});
 
 		await expect(
-			createApplicationService({ applicationRepository: repo }).submitApplication(1),
+			createApplicationService({
+				applicationRepository: repo,
+			}).submitApplication(1),
 		).rejects.toThrow("DB error");
 	});
 });
@@ -286,7 +316,9 @@ describe("updateOccupants", () => {
 
 	it("calls repo.updateOccupants with validated data", async () => {
 		const repo = makeRepo();
-		const result = await createApplicationService({ applicationRepository: repo }).updateOccupants(1, baseOccupants);
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).updateOccupants(1, baseOccupants);
 
 		expect(result.success).toBe(true);
 		expect(repo.updateOccupants).toHaveBeenCalledWith(1, baseOccupants);
@@ -294,7 +326,9 @@ describe("updateOccupants", () => {
 
 	it("returns success false for invalid adult role", async () => {
 		const repo = makeRepo();
-		const result = await createApplicationService({ applicationRepository: repo }).updateOccupants(1, {
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).updateOccupants(1, {
 			...baseOccupants,
 			additionalAdults: [
 				{
@@ -313,7 +347,9 @@ describe("updateOccupants", () => {
 
 	it("returns success false when smokes is missing", async () => {
 		const repo = makeRepo();
-		const result = await createApplicationService({ applicationRepository: repo }).updateOccupants(1, {
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).updateOccupants(1, {
 			...baseOccupants,
 			smokes: undefined as unknown as boolean,
 		});
@@ -326,7 +362,9 @@ describe("updateOccupants", () => {
 
 	it("does not call repo.updateOccupants on validation failure", async () => {
 		const repo = makeRepo();
-		await createApplicationService({ applicationRepository: repo }).updateOccupants(1, {
+		await createApplicationService({
+			applicationRepository: repo,
+		}).updateOccupants(1, {
 			...baseOccupants,
 			smokes: "yes" as unknown as boolean,
 		});
@@ -342,7 +380,10 @@ describe("updateOccupants", () => {
 		});
 
 		await expect(
-			createApplicationService({ applicationRepository: repo }).updateOccupants(1, baseOccupants),
+			createApplicationService({ applicationRepository: repo }).updateOccupants(
+				1,
+				baseOccupants,
+			),
 		).rejects.toThrow("DB error");
 	});
 });

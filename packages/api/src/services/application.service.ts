@@ -4,9 +4,9 @@ import type { Logger } from "~/logger";
 
 // ── Zod schema ─────────────────────────────────────────────────────────────────
 
-const dateString = z
-	.string()
-	.regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Must be a date in YYYY-MM-DD format" });
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+	error: "Must be a date in YYYY-MM-DD format",
+});
 
 const ownerSchema = z.object({
 	fullName: z.string().min(1, { error: "Full name is required" }),
@@ -59,11 +59,70 @@ export type CreateApplicationPayload = z.output<typeof createApplicationSchema>;
 
 export type UpdateOccupantsPayload = z.output<typeof updateOccupantsSchema>;
 
+export type SubmittedApplicationSummary = {
+	id: number;
+	status: string;
+	desiredMoveInDate: string;
+	createdAt: string;
+	primaryApplicantName: string;
+};
+
+export type IncomeSourceDetail = {
+	id: number;
+	residentId: number;
+	type: string;
+	employerOrSourceName: string;
+	titleOrOccupation: string | null;
+	monthlyAmountCents: number;
+	startDate: string;
+	endDate: string | null;
+	notes: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type ResidentDetail = {
+	id: number;
+	applicationId: number;
+	role: string;
+	fullName: string;
+	dateOfBirth: string;
+	email: string | null;
+	phone: string | null;
+	createdAt: string;
+	updatedAt: string;
+	incomeSources: IncomeSourceDetail[];
+};
+
+export type PetDetail = {
+	id: number;
+	applicationId: number;
+	type: string;
+	name: string | null;
+	breed: string | null;
+	notes: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
+export type ApplicationWithDetails = {
+	id: number;
+	status: string;
+	desiredMoveInDate: string;
+	smokes: boolean;
+	createdAt: string;
+	updatedAt: string;
+	residents: ResidentDetail[];
+	pets: PetDetail[];
+};
+
 export interface ApplicationRepository {
 	create(input: CreateApplicationPayload): Promise<{ id: number }>;
 	findById(id: number): Promise<{ id: number; status: string } | null>;
 	submit(id: number): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
+	findAllSubmitted(): Promise<SubmittedApplicationSummary[]>;
+	findByIdWithDetails(id: number): Promise<ApplicationWithDetails | null>;
 }
 
 // ── Service ────────────────────────────────────────────────────────────────────
@@ -79,6 +138,15 @@ export type UpdateOccupantsResult =
 export type SubmitApplicationResult =
 	| { success: true; applicationId: number }
 	| { success: false; reason: "not_found" | "not_pending" };
+
+export type ListSubmittedApplicationsResult = {
+	success: true;
+	applications: SubmittedApplicationSummary[];
+};
+
+export type GetApplicationWithDetailsResult =
+	| { success: true; application: ApplicationWithDetails }
+	| { success: false; reason: "not_found" };
 
 const noopLogger = pino({ level: "silent" });
 
@@ -96,7 +164,10 @@ export function createApplicationService({
 			const parsed = createApplicationSchema.safeParse(data);
 
 			if (!parsed.success) {
-				logger.warn({ errors: parsed.error.issues }, "Application validation failed");
+				logger.warn(
+					{ errors: parsed.error.issues },
+					"Application validation failed",
+				);
 				return { success: false, errors: parsed.error.issues };
 			}
 
@@ -124,7 +195,10 @@ export function createApplicationService({
 			const parsed = updateOccupantsSchema.safeParse(data);
 
 			if (!parsed.success) {
-				logger.warn({ errors: parsed.error.issues }, "Occupants update validation failed");
+				logger.warn(
+					{ errors: parsed.error.issues },
+					"Occupants update validation failed",
+				);
 				return { success: false, errors: parsed.error.issues };
 			}
 
@@ -144,6 +218,32 @@ export function createApplicationService({
 
 			logger.info({ applicationId }, "Occupants updated");
 			return { success: true };
+		},
+
+		async listSubmittedApplications(): Promise<ListSubmittedApplicationsResult> {
+			logger.info("Listing submitted applications");
+			const applications = await applicationRepository.findAllSubmitted();
+			logger.info(
+				{ count: applications.length },
+				"Submitted applications fetched",
+			);
+			return { success: true, applications };
+		},
+
+		async getApplicationWithDetails(
+			applicationId: number,
+		): Promise<GetApplicationWithDetailsResult> {
+			logger.info({ applicationId }, "Fetching application with details");
+			const application =
+				await applicationRepository.findByIdWithDetails(applicationId);
+
+			if (!application) {
+				logger.warn({ applicationId }, "Application not found");
+				return { success: false, reason: "not_found" };
+			}
+
+			logger.info({ applicationId }, "Application fetched");
+			return { success: true, application };
 		},
 
 		async submitApplication(

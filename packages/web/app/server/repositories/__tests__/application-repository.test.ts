@@ -401,10 +401,7 @@ describe("applicationRepository.updateOccupants", () => {
 			smokes: false,
 			additionalAdults: [],
 			children: [],
-			pets: [
-				{ type: "Cat", name: "Whiskers" },
-				{ type: "Bird" },
-			],
+			pets: [{ type: "Cat", name: "Whiskers" }, { type: "Bird" }],
 		});
 
 		const pets = await testDb.db
@@ -422,7 +419,12 @@ describe("applicationRepository.updateOccupants", () => {
 		const created = await repo.create({
 			...baseInput,
 			additionalAdults: [
-				{ fullName: "Jane Smith", dateOfBirth: "1992-03-20", role: "co-applicant", email: "jane@example.com" },
+				{
+					fullName: "Jane Smith",
+					dateOfBirth: "1992-03-20",
+					role: "co-applicant",
+					email: "jane@example.com",
+				},
 			],
 			pets: [{ type: "Dog", name: "Rex" }],
 		});

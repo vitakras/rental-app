@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { data, redirect, useLoaderData, useSubmit } from "react-router";
-import type { Route } from "./+types/application-income";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { repositories } from "~/server/container";
 import type { CreateIncomeSourceInput } from "~/server/repositories/income-source-repository";
+import type { Route } from "./+types/application-income";
 
 export function meta() {
 	return [{ title: "Income — Rental Application" }];
@@ -83,8 +83,10 @@ function emptyIncomeSource(): IncomeSourceEntry {
 }
 
 function incomeSourceLabels(type: IncomeType) {
-	if (type === "employment") return { employer: "Employer name", title: "Job title" };
-	if (type === "self_employment") return { employer: "Business name", title: "Occupation" };
+	if (type === "employment")
+		return { employer: "Employer name", title: "Job title" };
+	if (type === "self_employment")
+		return { employer: "Business name", title: "Occupation" };
 	return { employer: "Source name", title: "Description" };
 }
 
@@ -108,7 +110,9 @@ function TextInput({
 	const id = label.toLowerCase().replace(/\s+/g, "-");
 	return (
 		<div>
-			<Label htmlFor={id} className="mb-1.5 block">{label}</Label>
+			<Label htmlFor={id} className="mb-1.5 block">
+				{label}
+			</Label>
 			<Input id={id} {...props} />
 		</div>
 	);

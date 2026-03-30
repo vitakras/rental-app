@@ -1,6 +1,6 @@
 import { data, Form, useNavigation } from "react-router";
-import type { Route } from "./+types/application";
 import { repositories, services } from "~/server/container";
+import type { Route } from "./+types/application";
 
 export async function loader({ params }: Route.LoaderArgs) {
 	const id = Number(params.id);

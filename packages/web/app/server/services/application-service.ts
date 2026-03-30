@@ -4,9 +4,9 @@ import type { Logger } from "~/server/logger";
 
 // ── Zod schema ─────────────────────────────────────────────────────────────────
 
-const dateString = z
-	.string()
-	.regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Must be a date in YYYY-MM-DD format" });
+const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+	error: "Must be a date in YYYY-MM-DD format",
+});
 
 const ownerSchema = z.object({
 	fullName: z.string().min(1, { error: "Full name is required" }),
@@ -96,7 +96,10 @@ export function createApplicationService({
 			const parsed = createApplicationSchema.safeParse(data);
 
 			if (!parsed.success) {
-				logger.warn({ errors: parsed.error.issues }, "Application validation failed");
+				logger.warn(
+					{ errors: parsed.error.issues },
+					"Application validation failed",
+				);
 				return { success: false, errors: parsed.error.issues };
 			}
 
@@ -124,7 +127,10 @@ export function createApplicationService({
 			const parsed = updateOccupantsSchema.safeParse(data);
 
 			if (!parsed.success) {
-				logger.warn({ errors: parsed.error.issues }, "Occupants update validation failed");
+				logger.warn(
+					{ errors: parsed.error.issues },
+					"Occupants update validation failed",
+				);
 				return { success: false, errors: parsed.error.issues };
 			}
 
