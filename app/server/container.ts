@@ -24,6 +24,7 @@ export const services = {
 	}),
 	fileService: createFileService({
 		fileRepository: repositories.fileRepository,
+		applicationDocumentRepository: repositories.applicationDocumentRepository,
 		blobStorage,
 		logger: logger.child({ service: "file" }),
 	}),

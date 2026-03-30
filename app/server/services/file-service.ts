@@ -3,6 +3,8 @@ import pino from "pino";
 import { z } from "zod";
 import type { Logger } from "~/server/logger";
 import type { BlobStorage } from "~/server/storage/blob-storage";
+import type { ApplicationDocumentCategory, ApplicationDocumentType } from "~/db/schema";
+import type { ApplicationDocumentRepository } from "../repositories/application-document-repository";
 import type { FileRecord, FileRepository } from "../repositories/file-repository";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
@@ -26,16 +28,30 @@ export type CompleteUploadResult =
 	| { success: true; file: FileRecord }
 	| { success: false; reason: "not_found" | "invalid_status" | "missing_object" };
 
+export interface AttachDocumentInput {
+	fileId: string;
+	applicationId: number;
+	residentId: number;
+	category: ApplicationDocumentCategory;
+	documentType: ApplicationDocumentType;
+}
+
+export type AttachDocumentResult =
+	| { success: true }
+	| { success: false; reason: "not_found" | "invalid_status" | "missing_object" };
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 const noopLogger = pino({ level: "silent" });
 
 export function createFileService({
 	fileRepository,
+	applicationDocumentRepository,
 	blobStorage,
 	logger = noopLogger,
 }: {
 	fileRepository: FileRepository;
+	applicationDocumentRepository: ApplicationDocumentRepository;
 	blobStorage: BlobStorage;
 	logger?: Logger;
 }) {
@@ -96,6 +112,19 @@ export function createFileService({
 
 			logger.info({ fileId }, "Upload completed");
 			return { success: true, file: { ...file, status: "uploaded", uploadedAt: new Date().toISOString() } };
+		},
+
+		async attachDocumentToApplication(input: AttachDocumentInput): Promise<AttachDocumentResult> {
+			const { fileId, applicationId, residentId, category, documentType } = input;
+
+			const completeResult = await this.completeUpload(fileId);
+			if (!completeResult.success) return completeResult;
+
+			await applicationDocumentRepository.create({ applicationId, residentId, fileId, category, documentType });
+			await fileRepository.markAttached(fileId);
+
+			logger.info({ fileId, applicationId }, "Document attached to application");
+			return { success: true };
 		},
 	};
 }
