@@ -58,7 +58,7 @@ function makeServices() {
 				async (): Promise<PrepareDocumentUploadResult> => ({
 					success: true,
 					fileId: "file-1",
-					uploadUrl: "/api/storage/documents/app-12/file.pdf",
+					uploadUrl: "/storage/documents/app-12/file.pdf",
 				}),
 			),
 			completeUpload: mock(
@@ -302,7 +302,7 @@ describe("API application flow routes", () => {
 		const services = makeServices();
 		const app = createApp({ services });
 
-		const response = await app.request("/api/applications/12/upload/prepare", {
+		const response = await app.request("/applications/12/upload/prepare", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -316,7 +316,7 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { fileId: string; uploadUrl: string }).toEqual(
 			{
 			fileId: "file-1",
-			uploadUrl: "/api/storage/documents/app-12/file.pdf",
+			uploadUrl: "/storage/documents/app-12/file.pdf",
 			},
 		);
 		expect(services.fileService.prepareDocumentUpload).toHaveBeenCalledWith({
@@ -331,7 +331,7 @@ describe("API application flow routes", () => {
 		const services = makeServices();
 		const app = createApp({ services });
 
-		const response = await app.request("/api/applications/12/upload/complete", {
+		const response = await app.request("/applications/12/upload/complete", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -365,7 +365,7 @@ describe("API application flow routes", () => {
 		);
 		const app = createApp({ services });
 
-		const response = await app.request("/api/applications/12/upload/complete", {
+		const response = await app.request("/applications/12/upload/complete", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
@@ -384,7 +384,7 @@ describe("API application flow routes", () => {
 
 	it("serves and stores files through the storage route", async () => {
 		const app = createApp({ services: makeServices() });
-		const route = "/api/storage/route-tests/documents/test.txt";
+		const route = "/storage/route-tests/documents/test.txt";
 
 		const putResponse = await app.request(route, {
 			method: "PUT",
@@ -400,7 +400,7 @@ describe("API application flow routes", () => {
 	it("blocks path traversal in the storage route", async () => {
 		const app = createApp({ services: makeServices() });
 
-		const response = await app.request("/api/storage/%252E%252E/forbidden.txt", {
+		const response = await app.request("/storage/%252E%252E/forbidden.txt", {
 			method: "PUT",
 			body: "nope",
 		});
@@ -411,7 +411,7 @@ describe("API application flow routes", () => {
 	it("returns 404 for missing storage objects", async () => {
 		const app = createApp({ services: makeServices() });
 
-		const response = await app.request("/api/storage/route-tests/missing.txt");
+		const response = await app.request("/storage/route-tests/missing.txt");
 
 		expect(response.status).toBe(404);
 	});

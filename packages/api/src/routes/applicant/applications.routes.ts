@@ -13,7 +13,7 @@ function parseApplicationId(rawId: string) {
 
 type ApplicationService = ReturnType<typeof createApplicationService>;
 
-export function createApplicationFlowRoutes({
+export function createApplicantApplicationsRoutes({
 	applicationService,
 }: {
 	applicationService: ApplicationService;

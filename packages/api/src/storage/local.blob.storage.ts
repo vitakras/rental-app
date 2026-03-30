@@ -12,8 +12,8 @@ function encodeStorageKeyForPath(key: string) {
 }
 
 // Routes that must exist to serve local uploads:
-//   PUT  /api/storage/*  — reads raw body, writes to data/uploads/<key>
-//   GET  /api/storage/*  — reads data/uploads/<key>, streams it back
+//   PUT  /storage/*  — reads raw body, writes to data/uploads/<key>
+//   GET  /storage/*  — reads data/uploads/<key>, streams it back
 
 export function createLocalBlobStorage(): BlobStorage {
 	return {
@@ -21,14 +21,14 @@ export function createLocalBlobStorage(): BlobStorage {
 			await fs.mkdir(path.join(UPLOADS_DIR, path.dirname(key)), {
 				recursive: true,
 			});
-			return { uploadUrl: `/api/storage/${encodeStorageKeyForPath(key)}` };
+			return { uploadUrl: `/storage/${encodeStorageKeyForPath(key)}` };
 		},
 
 		async createDownloadUrl(key) {
 			const filePath = path.join(UPLOADS_DIR, key);
 			await fs.access(filePath);
 			return {
-				downloadUrl: `/api/storage/${encodeStorageKeyForPath(key)}`,
+				downloadUrl: `/storage/${encodeStorageKeyForPath(key)}`,
 			};
 		},
 

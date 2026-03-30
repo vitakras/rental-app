@@ -8,10 +8,14 @@ function parseApplicationId(rawId: string) {
 
 type FileService = ReturnType<typeof createFileService>;
 
-export function createUploadRoutes({ fileService }: { fileService: FileService }) {
+export function createApplicantUploadsRoutes({
+	fileService,
+}: {
+	fileService: FileService;
+}) {
 	const uploads = new Hono();
 
-	uploads.post("/applications/:id/upload/prepare", async (c) => {
+	uploads.post("/:id/upload/prepare", async (c) => {
 		const id = parseApplicationId(c.req.param("id"));
 
 		if (!id) {
@@ -43,7 +47,7 @@ export function createUploadRoutes({ fileService }: { fileService: FileService }
 		return c.json({ fileId: result.fileId, uploadUrl: result.uploadUrl });
 	});
 
-	uploads.post("/applications/:id/upload/complete", async (c) => {
+	uploads.post("/:id/upload/complete", async (c) => {
 		const id = parseApplicationId(c.req.param("id"));
 
 		if (!id) {

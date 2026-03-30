@@ -23,7 +23,7 @@ describe("createLocalBlobStorage", () => {
 		});
 
 		expect(uploadUrl).toBe(
-			"/api/storage/documents/app-6/file%20id/lease%20packet.pdf",
+			"/storage/documents/app-6/file%20id/lease%20packet.pdf",
 		);
 	});
 
@@ -38,7 +38,7 @@ describe("createLocalBlobStorage", () => {
 		const { downloadUrl } = await storage.createDownloadUrl(key);
 
 		expect(downloadUrl).toBe(
-			"/api/storage/documents/app-6/file%20id/lease%20packet.pdf",
+			"/storage/documents/app-6/file%20id/lease%20packet.pdf",
 		);
 	});
 });
