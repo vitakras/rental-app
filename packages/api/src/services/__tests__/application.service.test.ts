@@ -1,5 +1,8 @@
 import { describe, expect, it, mock } from "bun:test";
-import type { ApplicationRepository } from "../application.service";
+import type {
+	ApplicationRepository,
+	IncomeSourceRepository,
+} from "../application.service";
 import { createApplicationService } from "../application.service";
 
 const baseInput = {
@@ -22,6 +25,17 @@ function makeRepo(
 		findById: mock(async () => ({ id: 1, status: "pending" })),
 		submit: mock(async () => ({ id: 1 })),
 		updateOccupants: mock(async () => {}),
+		findAllSubmitted: mock(async () => []),
+		findByIdWithDetails: mock(async () => null),
+		...overrides,
+	};
+}
+
+function makeIncomeSourceRepo(
+	overrides?: Partial<IncomeSourceRepository>,
+): IncomeSourceRepository {
+	return {
+		createMany: mock(async () => {}),
 		...overrides,
 	};
 }
@@ -385,5 +399,95 @@ describe("updateOccupants", () => {
 				baseOccupants,
 			),
 		).rejects.toThrow("DB error");
+	});
+});
+
+describe("addIncomeSources", () => {
+	const baseIncome = [
+		{
+			residentId: 2,
+			incomeSources: [
+				{
+					type: "employment" as const,
+					employerOrSourceName: "Acme Corp",
+					titleOrOccupation: "Engineer",
+					monthlyAmountCents: 500000,
+					startDate: "2024-01-01",
+				},
+			],
+		},
+	];
+
+	it("persists flattened income sources for an existing application", async () => {
+		const repo = makeRepo();
+		const incomeSourceRepository = makeIncomeSourceRepo();
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+			incomeSourceRepository,
+		}).addIncomeSources(1, baseIncome);
+
+		expect(result.success).toBe(true);
+		expect(repo.findById).toHaveBeenCalledWith(1);
+		expect(incomeSourceRepository.createMany).toHaveBeenCalledWith([
+			{
+				residentId: 2,
+				type: "employment",
+				employerOrSourceName: "Acme Corp",
+				titleOrOccupation: "Engineer",
+				monthlyAmountCents: 500000,
+				startDate: "2024-01-01",
+			},
+		]);
+	});
+
+	it("returns success without writing when the payload is empty", async () => {
+		const incomeSourceRepository = makeIncomeSourceRepo();
+
+		const result = await createApplicationService({
+			applicationRepository: makeRepo(),
+			incomeSourceRepository,
+		}).addIncomeSources(1, []);
+
+		expect(result.success).toBe(true);
+		expect(incomeSourceRepository.createMany).not.toHaveBeenCalled();
+	});
+
+	it("returns validation errors for malformed income payloads", async () => {
+		const incomeSourceRepository = makeIncomeSourceRepo();
+
+		const result = await createApplicationService({
+			applicationRepository: makeRepo(),
+			incomeSourceRepository,
+		}).addIncomeSources(1, [
+			{
+				residentId: 2,
+				incomeSources: [
+					{
+						type: "employment",
+						employerOrSourceName: "",
+						monthlyAmountCents: -1,
+						startDate: "01-01-2024",
+					},
+				],
+			},
+		]);
+
+		expect(result.success).toBe(false);
+		if (!result.success && "errors" in result) {
+			expect(result.errors.length).toBeGreaterThan(0);
+		}
+		expect(incomeSourceRepository.createMany).not.toHaveBeenCalled();
+	});
+
+	it("returns not_found for a missing application", async () => {
+		const result = await createApplicationService({
+			applicationRepository: makeRepo({
+				findById: mock(async () => null),
+			}),
+			incomeSourceRepository: makeIncomeSourceRepo(),
+		}).addIncomeSources(999, baseIncome);
+
+		expect(result).toEqual({ success: false, reason: "not_found" });
 	});
 });

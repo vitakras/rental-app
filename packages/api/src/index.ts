@@ -1,12 +1,5 @@
-import { Hono } from "hono";
-import { applications } from "~/routes/applications.routes";
+import { createApp } from "~/app";
 
-const app = new Hono();
-
-app.get("/", (c) => {
-	return c.text("Hello Hono!");
-});
-
-app.route("/landlord/applications", applications);
+const app = createApp();
 
 export default app;

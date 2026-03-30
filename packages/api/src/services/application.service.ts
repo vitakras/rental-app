@@ -1,5 +1,6 @@
 import pino from "pino";
 import { z } from "zod";
+import type { IncomeSourceType } from "~/db/schema";
 import type { Logger } from "~/logger";
 
 // ── Zod schema ─────────────────────────────────────────────────────────────────
@@ -49,15 +50,36 @@ export const updateOccupantsSchema = z.object({
 	pets: z.array(petSchema).default([]),
 });
 
-export type UpdateOccupantsData = z.input<typeof updateOccupantsSchema>;
+const incomeSourceSchema = z.object({
+	type: z.enum(["employment", "self_employment", "other"] satisfies [
+		IncomeSourceType,
+		...IncomeSourceType[],
+	]),
+	employerOrSourceName: z.string().min(1),
+	titleOrOccupation: z.string().optional(),
+	monthlyAmountCents: z.int().nonnegative(),
+	startDate: dateString,
+	endDate: dateString.optional(),
+	notes: z.string().optional(),
+});
 
+export const addIncomeSourcesSchema = z.array(
+	z.object({
+		residentId: z.int().positive(),
+		incomeSources: z.array(incomeSourceSchema).default([]),
+	}),
+);
+
+export type UpdateOccupantsData = z.input<typeof updateOccupantsSchema>;
 export type CreateApplicationData = z.input<typeof createApplicationSchema>;
+export type AddIncomeSourcesData = z.input<typeof addIncomeSourcesSchema>;
 
 // ── Repository interface ───────────────────────────────────────────────────────
 
 export type CreateApplicationPayload = z.output<typeof createApplicationSchema>;
 
 export type UpdateOccupantsPayload = z.output<typeof updateOccupantsSchema>;
+export type AddIncomeSourcesPayload = z.output<typeof addIncomeSourcesSchema>;
 
 export type SubmittedApplicationSummary = {
 	id: number;
@@ -125,6 +147,16 @@ export interface ApplicationRepository {
 	findByIdWithDetails(id: number): Promise<ApplicationWithDetails | null>;
 }
 
+export interface IncomeSourceRepository {
+	createMany(
+		inputs: Array<
+			{
+				residentId: number;
+			} & AddIncomeSourcesPayload[number]["incomeSources"][number]
+		>,
+	): Promise<void>;
+}
+
 // ── Service ────────────────────────────────────────────────────────────────────
 
 export type CreateApplicationResult =
@@ -139,6 +171,11 @@ export type SubmitApplicationResult =
 	| { success: true; applicationId: number }
 	| { success: false; reason: "not_found" | "not_pending" };
 
+export type AddIncomeSourcesResult =
+	| { success: true }
+	| { success: false; reason: "not_found" }
+	| { success: false; errors: z.ZodIssue[] };
+
 export type ListSubmittedApplicationsResult = {
 	success: true;
 	applications: SubmittedApplicationSummary[];
@@ -152,9 +189,11 @@ const noopLogger = pino({ level: "silent" });
 
 export function createApplicationService({
 	applicationRepository,
+	incomeSourceRepository,
 	logger = noopLogger,
 }: {
 	applicationRepository: ApplicationRepository;
+	incomeSourceRepository?: IncomeSourceRepository;
 	logger?: Logger;
 }) {
 	return {
@@ -217,6 +256,54 @@ export function createApplicationService({
 			await applicationRepository.updateOccupants(applicationId, parsed.data);
 
 			logger.info({ applicationId }, "Occupants updated");
+			return { success: true };
+		},
+
+		async addIncomeSources(
+			applicationId: number,
+			data: AddIncomeSourcesData,
+		): Promise<AddIncomeSourcesResult> {
+			const app = await applicationRepository.findById(applicationId);
+
+			if (!app) {
+				logger.warn(
+					{ applicationId },
+					"Cannot add income sources: application not found",
+				);
+				return { success: false, reason: "not_found" };
+			}
+
+			const parsed = addIncomeSourcesSchema.safeParse(data);
+
+			if (!parsed.success) {
+				logger.warn(
+					{ applicationId, errors: parsed.error.issues },
+					"Income sources validation failed",
+				);
+				return { success: false, errors: parsed.error.issues };
+			}
+
+			if (!incomeSourceRepository) {
+				throw new Error("incomeSourceRepository is required");
+			}
+
+			const allSources = parsed.data.flatMap(({ residentId, incomeSources }) =>
+				incomeSources.map((source) => ({ residentId, ...source })),
+			);
+
+			if (allSources.length === 0) {
+				logger.info({ applicationId }, "No income sources to add");
+				return { success: true };
+			}
+
+			logger.info(
+				{ applicationId, incomeSourceCount: allSources.length },
+				"Adding income sources",
+			);
+
+			await incomeSourceRepository.createMany(allSources);
+
+			logger.info({ applicationId }, "Income sources added");
 			return { success: true };
 		},
 

@@ -1,28 +1,42 @@
 import { Hono } from "hono";
-import { services } from "~/container";
+import { services as defaultServices } from "~/container";
+import type { createApplicationService } from "~/services/application.service";
 
-const applications = new Hono();
+type ApplicationService = ReturnType<typeof createApplicationService>;
 
-applications.get("/", async (c) => {
-	const result = await services.applicationService.listSubmittedApplications();
-	return c.json({ applications: result.applications });
-});
+export function createLandlordApplicationsRoutes({
+	applicationService,
+}: {
+	applicationService: ApplicationService;
+}) {
+	const applications = new Hono();
 
-applications.get("/:id", async (c) => {
-	const rawId = Number(c.req.param("id"));
+	applications.get("/", async (c) => {
+		const result = await applicationService.listSubmittedApplications();
+		return c.json({ applications: result.applications });
+	});
 
-	if (!Number.isInteger(rawId) || rawId <= 0) {
-		return c.json({ error: "Invalid application ID" }, 400);
-	}
+	applications.get("/:id", async (c) => {
+		const rawId = Number(c.req.param("id"));
 
-	const result =
-		await services.applicationService.getApplicationWithDetails(rawId);
+		if (!Number.isInteger(rawId) || rawId <= 0) {
+			return c.json({ error: "Invalid application ID" }, 400);
+		}
 
-	if (!result.success) {
-		return c.json({ error: "Application not found" }, 404);
-	}
+		const result = await applicationService.getApplicationWithDetails(rawId);
 
-	return c.json({ application: result.application });
+		if (!result.success) {
+			return c.json({ error: "Application not found" }, 404);
+		}
+
+		return c.json({ application: result.application });
+	});
+
+	return applications;
+}
+
+const applications = createLandlordApplicationsRoutes({
+	applicationService: defaultServices.applicationService,
 });
 
 export { applications };
