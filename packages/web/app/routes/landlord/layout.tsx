@@ -1,9 +1,24 @@
-import { Outlet } from "react-router";
-import { requireLandlordSession } from "~/lib/require-landlord-session.server";
+import { Outlet, redirect } from "react-router";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/layout";
 
-export async function loader({ request }: Route.LoaderArgs) {
-	await requireLandlordSession(request);
+export async function clientLoader(_: Route.ClientLoaderArgs) {
+	const response = await apiClient.auth.email.session.$get();
+
+	if (response.status === 401) {
+		throw redirect("/login?role=landlord");
+	}
+
+	const result = (await response.json()) as {
+		user: {
+			globalRole: string;
+		};
+	};
+
+	if (result.user.globalRole !== "landlord") {
+		throw redirect("/login?role=landlord");
+	}
+
 	return null;
 }
 

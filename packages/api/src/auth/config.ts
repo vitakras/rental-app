@@ -1,4 +1,4 @@
-const LOCAL_WEB_BASE_URL = "http://127.0.0.1:5173";
+const LOCAL_WEB_BASE_URL = "http://localhost:5173";
 const runtimeEnv = process.env.NODE_ENV ?? "development";
 
 function parsePositiveInt(value: string | undefined, fallback: number) {
