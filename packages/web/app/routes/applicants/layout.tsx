@@ -15,6 +15,6 @@ export function links() {
 	];
 }
 
-export default function ApplicationFlowLayout() {
+export default function ApplicantsLayout() {
 	return <Outlet />;
 }

@@ -24,7 +24,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 	}
 
 	const result = (await response.json()) as { applicationId: number };
-	return redirect(`/applications/${result.applicationId}/occupants`);
+	return redirect(`/a/applications/${result.applicationId}/occupants`);
 }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────

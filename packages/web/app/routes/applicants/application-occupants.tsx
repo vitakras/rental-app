@@ -44,7 +44,7 @@ export async function clientAction({
 	}
 	if (!response.ok) throw data(null, { status: response.status });
 
-	return redirect(`/applications/${id}/income`);
+	return redirect(`/a/applications/${id}/income`);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────

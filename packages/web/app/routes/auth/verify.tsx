@@ -35,7 +35,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 		return redirect("/l/applications");
 	}
 
-	return redirect("/apply");
+	return redirect("/a/apply");
 }
 
 function BackArrow() {

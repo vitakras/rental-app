@@ -63,7 +63,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 			return { error: "Something went wrong. Please try again." };
 		}
 
-		return redirect("/apply");
+		return redirect("/a/apply");
 	}
 
 	const response = await apiClient.auth.email.request.$post({

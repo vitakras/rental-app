@@ -349,7 +349,7 @@ export default function ApplicationDocuments() {
 						<Button
 							variant="continue"
 							type="button"
-							onClick={() => navigate(`/applications/${applicationId}`)}
+							onClick={() => navigate(`/a/applications/${applicationId}`)}
 						>
 							Continue
 						</Button>
