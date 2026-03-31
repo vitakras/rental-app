@@ -1,4 +1,5 @@
 const LOCAL_WEB_BASE_URL = "http://localhost:5173";
+const LOCAL_APPLICANT_SIGNUP_TOKEN = "11111111-1111-4111-8111-111111111111";
 const runtimeEnv = process.env.NODE_ENV ?? "development";
 
 function parsePositiveInt(value: string | undefined, fallback: number) {
@@ -27,6 +28,8 @@ export function getWebBaseUrl() {
 }
 
 export function getAuthConfig() {
+	const applicantSignupToken = process.env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
+
 	return {
 		loginTokenTtlSeconds: parsePositiveInt(
 			process.env.AUTH_LOGIN_TOKEN_TTL_SECONDS,
@@ -38,6 +41,13 @@ export function getAuthConfig() {
 		),
 		cookieName: process.env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
 		webBaseUrl: getWebBaseUrl(),
+		applicantSignupToken:
+			applicantSignupToken ||
+			(runtimeEnv === "development" || runtimeEnv === "test"
+				? LOCAL_APPLICANT_SIGNUP_TOKEN
+				: (() => {
+						throw new Error("AUTH_APPLICANT_SIGNUP_TOKEN is required");
+					})()),
 	};
 }
 

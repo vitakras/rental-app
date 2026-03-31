@@ -32,6 +32,20 @@ describe("auth repositories", () => {
 		expect(user?.email).toBe("Landlord@Example.com");
 	});
 
+	it("creates a user", async () => {
+		const repo = userRepository(testDb.db);
+		const user = await repo.create({
+			id: "user-2",
+			email: "applicant@example.com",
+			globalRole: "applicant",
+		});
+
+		expect(user.id).toBe("user-2");
+
+		const found = await repo.findByEmail("applicant@example.com");
+		expect(found?.id).toBe("user-2");
+	});
+
 	it("creates and consumes an email login token", async () => {
 		const repo = emailLoginTokenRepository(testDb.db);
 		const record = await repo.create({

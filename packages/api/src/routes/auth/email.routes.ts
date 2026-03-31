@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import type { Context } from "hono";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
+	applicantSignupSchema,
+	type ApplicantSignupData,
 	requestEmailLoginSchema,
 	type RequestEmailLoginData,
 	type VerifyEmailLoginData,
@@ -42,6 +44,46 @@ export function createAuthEmailRoutes({
 
 			return c.json({ user: result.user }, 200);
 		})
+		.post(
+			"/signup",
+			zodJsonValidator(applicantSignupSchema),
+			async (c) => {
+				const body = c.req.valid("json") as ApplicantSignupData;
+				const result = await authService.applicantSignup(body, {
+					ipAddress: getClientIp(c),
+					userAgent: c.req.header("user-agent") ?? null,
+				});
+
+				if (!result.success) {
+					if ("errors" in result) {
+						return c.json(
+							{ error: "validation_failed", issues: result.errors },
+							422,
+						);
+					}
+
+					if (result.reason === "email_already_exists") {
+						return c.json({ error: result.reason }, 409);
+					}
+
+					return c.json({ error: result.reason }, 401);
+				}
+
+				setSessionCookie(c, {
+					cookieName: authConfig.cookieName,
+					sessionId: result.session.id,
+					expiresAt: result.session.expiresAt,
+				});
+
+				return c.json(
+					{
+						success: true,
+						user: result.user,
+					},
+					201,
+				);
+			},
+		)
 		.post(
 			"/request",
 			zodJsonValidator(requestEmailLoginSchema),

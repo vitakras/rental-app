@@ -23,8 +23,14 @@ export const verifyEmailLoginSchema = z.object({
 	token: z.string().min(1, { error: "Token is required" }),
 });
 
+export const applicantSignupSchema = z.object({
+	email: z.string().trim().email({ error: "Invalid email address" }),
+	signupToken: z.uuid({ error: "Signup token must be a valid UUID" }),
+});
+
 export type RequestEmailLoginData = z.input<typeof requestEmailLoginSchema>;
 export type VerifyEmailLoginData = z.input<typeof verifyEmailLoginSchema>;
+export type ApplicantSignupData = z.input<typeof applicantSignupSchema>;
 
 export interface AuthUser {
 	id: string;
@@ -40,6 +46,11 @@ export type VerifyEmailLoginResult =
 	| { success: true; user: AuthUser; session: SessionRecord }
 	| { success: false; errors: z.ZodIssue[] }
 	| { success: false; reason: "invalid_or_expired_token" };
+
+export type ApplicantSignupResult =
+	| { success: true; user: AuthUser; session: SessionRecord }
+	| { success: false; errors: z.ZodIssue[] }
+	| { success: false; reason: "invalid_signup_token" | "email_already_exists" };
 
 export type GetSessionUserResult =
 	| { success: true; user: AuthUser; session: SessionRecord }
@@ -195,6 +206,63 @@ export function createAuthService({
 			});
 
 			logger.info({ email, userId: user.id, sessionId: session.id }, "Created session");
+			return {
+				success: true,
+				user: toAuthUser(user),
+				session,
+			};
+		},
+
+		async applicantSignup(
+			data: ApplicantSignupData,
+			{
+				ipAddress,
+				userAgent,
+			}: {
+				ipAddress?: string | null;
+				userAgent?: string | null;
+			} = {},
+		): Promise<ApplicantSignupResult> {
+			const parsed = applicantSignupSchema.safeParse(data);
+
+			if (!parsed.success) {
+				return { success: false, errors: parsed.error.issues };
+			}
+
+			if (parsed.data.signupToken !== authConfig.applicantSignupToken) {
+				logger.warn({ email: parsed.data.email }, "Applicant signup rejected");
+				return { success: false, reason: "invalid_signup_token" };
+			}
+
+			const email = normalizeEmail(parsed.data.email);
+			const existingUser = await userRepository.findByEmail(email);
+
+			if (existingUser) {
+				return { success: false, reason: "email_already_exists" };
+			}
+
+			const now = new Date();
+			const nowIso = now.toISOString();
+			const user = await userRepository.create({
+				id: crypto.randomUUID(),
+				email,
+				globalRole: "applicant",
+			});
+
+			const session = await sessionRepository.create({
+				id: crypto.randomUUID(),
+				userId: user.id,
+				expiresAt: addSeconds(now, authConfig.sessionTtlSeconds).toISOString(),
+				lastAccessedAt: nowIso,
+				ipAddress: ipAddress ?? null,
+				userAgent: userAgent ?? null,
+			});
+
+			logger.info(
+				{ email, userId: user.id, sessionId: session.id },
+				"Applicant signup completed",
+			);
+
 			return {
 				success: true,
 				user: toAuthUser(user),

@@ -17,6 +17,7 @@ const authConfig: AuthConfig = {
 	sessionTtlSeconds: 3600,
 	cookieName: "session",
 	webBaseUrl: "http://127.0.0.1:5173",
+	applicantSignupToken: "11111111-1111-4111-8111-111111111111",
 };
 
 const baseUser: UserRecord = {
@@ -55,6 +56,7 @@ function makeUserRepository(
 	overrides?: Partial<UserRepository>,
 ): UserRepository {
 	return {
+		create: mock(async () => baseUser),
 		findById: mock(async () => baseUser),
 		findByEmail: mock(async () => baseUser),
 		markEmailVerified: mock(async () => {}),
@@ -184,6 +186,92 @@ describe("createAuthService", () => {
 		expect(sessionInput.userId).toBe("user-1");
 		expect(sessionInput.ipAddress).toBe("127.0.0.1");
 		expect(sessionInput.userAgent).toBe("bun-test");
+	});
+
+	it("creates an applicant user and session on successful signup", async () => {
+		const userRepo = makeUserRepository({
+			findByEmail: mock(async () => null),
+		});
+		const sessionRepo = makeSessionRepository();
+
+		const result = await createAuthService({
+			userRepository: userRepo,
+			emailLoginTokenRepository: makeTokenRepository(),
+			sessionRepository: sessionRepo,
+			authMailer: makeMailer(),
+			authConfig,
+		}).applicantSignup(
+			{
+				email: " Alex@Example.com ",
+				signupToken: authConfig.applicantSignupToken,
+			},
+			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
+		);
+
+		expect(result.success).toBe(true);
+		expect(userRepo.findByEmail).toHaveBeenCalledWith("alex@example.com");
+		expect(userRepo.create).toHaveBeenCalledTimes(1);
+		expect(userRepo.create).toHaveBeenCalledWith({
+			id: expect.any(String),
+			email: "alex@example.com",
+			globalRole: "applicant",
+		});
+		expect(sessionRepo.create).toHaveBeenCalledWith({
+			id: expect.any(String),
+			userId: "user-1",
+			expiresAt: expect.any(String),
+			lastAccessedAt: expect.any(String),
+			ipAddress: "127.0.0.1",
+			userAgent: "bun-test",
+		});
+	});
+
+	it("rejects applicant signup with an invalid token", async () => {
+		const userRepo = makeUserRepository({
+			findByEmail: mock(async () => null),
+		});
+		const sessionRepo = makeSessionRepository();
+
+		const result = await createAuthService({
+			userRepository: userRepo,
+			emailLoginTokenRepository: makeTokenRepository(),
+			sessionRepository: sessionRepo,
+			authMailer: makeMailer(),
+			authConfig,
+		}).applicantSignup({
+			email: "alex@example.com",
+			signupToken: "22222222-2222-4222-8222-222222222222",
+		});
+
+		expect(result).toEqual({
+			success: false,
+			reason: "invalid_signup_token",
+		});
+		expect(userRepo.create).not.toHaveBeenCalled();
+		expect(sessionRepo.create).not.toHaveBeenCalled();
+	});
+
+	it("rejects applicant signup when the email already exists", async () => {
+		const userRepo = makeUserRepository();
+		const sessionRepo = makeSessionRepository();
+
+		const result = await createAuthService({
+			userRepository: userRepo,
+			emailLoginTokenRepository: makeTokenRepository(),
+			sessionRepository: sessionRepo,
+			authMailer: makeMailer(),
+			authConfig,
+		}).applicantSignup({
+			email: "alex@example.com",
+			signupToken: authConfig.applicantSignupToken,
+		});
+
+		expect(result).toEqual({
+			success: false,
+			reason: "email_already_exists",
+		});
+		expect(userRepo.create).not.toHaveBeenCalled();
+		expect(sessionRepo.create).not.toHaveBeenCalled();
 	});
 
 	it("rejects verification when the token lookup fails", async () => {

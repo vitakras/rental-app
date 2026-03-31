@@ -12,6 +12,7 @@ import type {
 	UpdateOccupantsResult,
 } from "~/services/application.service";
 import type {
+	ApplicantSignupResult,
 	RequestEmailLoginResult,
 	GetSessionUserResult,
 	VerifyEmailLoginResult,
@@ -29,6 +30,26 @@ function makeServices() {
 		authService: {
 			requestEmailLogin: mock(
 				async (): Promise<RequestEmailLoginResult> => ({ success: true }),
+			),
+			applicantSignup: mock(
+				async (): Promise<ApplicantSignupResult> => ({
+					success: true,
+					user: {
+						id: "user-1",
+						email: "alex@example.com",
+						globalRole: "applicant",
+					},
+					session: {
+						id: "session-1",
+						userId: "user-1",
+						expiresAt: "2026-04-29T00:00:00.000Z",
+						lastAccessedAt: "2026-01-01T00:00:00.000Z",
+						ipAddress: "127.0.0.1",
+						userAgent: "bun-test",
+						createdAt: "2026-01-01T00:00:00.000Z",
+						updatedAt: "2026-01-01T00:00:00.000Z",
+					},
+				}),
 			),
 			verifyEmailLogin: mock(
 				async (): Promise<VerifyEmailLoginResult> => ({
@@ -181,6 +202,99 @@ describe("API application flow routes", () => {
 			{ email: "alex@example.com" },
 			{ ipAddress: "127.0.0.1" },
 		);
+	});
+
+	it("creates an applicant account and sets a session cookie", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/signup", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-forwarded-for": "127.0.0.1",
+				"user-agent": "bun-test",
+			},
+			body: JSON.stringify({
+				email: "alex@example.com",
+				signupToken: "11111111-1111-4111-8111-111111111111",
+			}),
+		});
+
+		expect(response.status).toBe(201);
+		expect(
+			(await response.json()) as {
+				success: boolean;
+				user: { id: string; email: string; globalRole: string };
+			},
+		).toEqual({
+			success: true,
+			user: {
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+		});
+		expect(services.authService.applicantSignup).toHaveBeenCalledWith(
+			{
+				email: "alex@example.com",
+				signupToken: "11111111-1111-4111-8111-111111111111",
+			},
+			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
+		);
+		expect(response.headers.get("set-cookie")).toContain("session=session-1");
+	});
+
+	it("returns 409 when applicant signup email already exists", async () => {
+		const services = makeServices();
+		services.authService.applicantSignup = mock(
+			async (): Promise<ApplicantSignupResult> => ({
+				success: false,
+				reason: "email_already_exists",
+			}),
+		);
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/signup", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				email: "alex@example.com",
+				signupToken: "11111111-1111-4111-8111-111111111111",
+			}),
+		});
+
+		expect(response.status).toBe(409);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "email_already_exists",
+		});
+		expect(response.headers.get("set-cookie")).toBeNull();
+	});
+
+	it("returns 401 for an invalid applicant signup token", async () => {
+		const services = makeServices();
+		services.authService.applicantSignup = mock(
+			async (): Promise<ApplicantSignupResult> => ({
+				success: false,
+				reason: "invalid_signup_token",
+			}),
+		);
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/signup", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				email: "alex@example.com",
+				signupToken: "11111111-1111-4111-8111-111111111111",
+			}),
+		});
+
+		expect(response.status).toBe(401);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "invalid_signup_token",
+		});
+		expect(response.headers.get("set-cookie")).toBeNull();
 	});
 
 	it("returns success for an unknown login email request", async () => {

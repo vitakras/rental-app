@@ -17,6 +17,7 @@ export type {
 	UpdateOccupantsData,
 } from "~/services/application.service";
 export type {
+	ApplicantSignupData,
 	AuthUser,
 	RequestEmailLoginData,
 	VerifyEmailLoginData,
