@@ -10,7 +10,7 @@ import {
 	verifyEmailLoginSchema,
 	type createAuthService,
 } from "~/services/auth.service";
-import { getSessionCookie, setSessionCookie } from "~/auth/cookies";
+import { clearSessionCookie, getSessionCookie, setSessionCookie } from "~/auth/cookies";
 import { getAuthConfig } from "~/auth/config";
 
 type AuthService = ReturnType<typeof createAuthService>;
@@ -103,6 +103,18 @@ export function createAuthEmailRoutes({
 				return c.json({ success: true }, 200);
 			},
 		)
+		.post("/signout", async (c) => {
+			const sessionId = getSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+			});
+
+			if (sessionId) {
+				await authService.signout(sessionId);
+				clearSessionCookie(c, { cookieName: authConfig.cookieName });
+			}
+
+			return c.json({ success: true }, 200);
+		})
 		.post(
 			"/verify",
 			zodJsonValidator(verifyEmailLoginSchema),

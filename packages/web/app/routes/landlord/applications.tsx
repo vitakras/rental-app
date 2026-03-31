@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import type { SubmittedApplicationSummary } from "api";
-import { Link } from "react-router";
+import { Form, Link } from "react-router";
 import { apiClient } from "~/lib/api";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "~/components/ui/popover";
 import type { Route } from "./+types/applications";
 
 export async function clientLoader(_: Route.ClientLoaderArgs) {
@@ -299,9 +304,60 @@ export default function LandlordApplications({
 							</svg>
 							Share link
 						</button>
-						<span className="text-[10px] text-[#7A7268] tracking-widest uppercase">
-							Landlord
-						</span>
+						<Popover>
+							<PopoverTrigger asChild>
+								<button
+									type="button"
+									className="flex items-center gap-1.5 text-[10px] text-[#7A7268] tracking-widest uppercase hover:text-[#1C1A17] transition-colors group"
+								>
+									Landlord
+									<svg
+										width="8"
+										height="8"
+										viewBox="0 0 8 8"
+										fill="none"
+										className="opacity-40 group-hover:opacity-70 transition-opacity mt-px"
+									>
+										<path
+											d="M1.5 3L4 5.5L6.5 3"
+											stroke="currentColor"
+											strokeWidth="1.2"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										/>
+									</svg>
+								</button>
+							</PopoverTrigger>
+							<PopoverContent
+								align="end"
+								sideOffset={8}
+								className="w-auto min-w-[140px] p-1 bg-[#1C1A17] border-0 rounded-xl shadow-xl ring-0"
+							>
+								<Form action="/signout" method="post">
+									<button
+										type="submit"
+										className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#F5F0E8]/70 hover:text-[#F5F0E8] hover:bg-white/5 text-xs tracking-wide transition-colors"
+									>
+										<svg
+											width="12"
+											height="12"
+											viewBox="0 0 12 12"
+											fill="none"
+											className="shrink-0"
+										>
+											<path
+												d="M4.5 10.5H2.5a1 1 0 01-1-1v-7a1 1 0 011-1h2M8 8.5L10.5 6 8 3.5M10.5 6h-6"
+												stroke="currentColor"
+												strokeWidth="1.2"
+												strokeLinecap="round"
+												strokeLinejoin="round"
+											/>
+										</svg>
+										Sign out
+									</button>
+								</Form>
+							</PopoverContent>
+						</Popover>
 					</div>
 				</div>
 			</div>

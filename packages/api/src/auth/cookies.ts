@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 
 export function getSessionCookie(
 	c: Context,
@@ -36,4 +36,11 @@ export function setSessionCookie(
 		maxAge,
 		expires: expiresAtDate,
 	});
+}
+
+export function clearSessionCookie(
+	c: Context,
+	{ cookieName }: { cookieName: string },
+) {
+	deleteCookie(c, cookieName, { path: "/" });
 }

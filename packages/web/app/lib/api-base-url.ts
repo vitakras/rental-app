@@ -1,4 +1,4 @@
-const LOCAL_API_BASE_URL = "http://localhost:8787";
+const LOCAL_API_BASE_URL = "http://127.0.0.1:8787";
 
 function normalizeBaseUrl(url: string) {
 	return url.endsWith("/") ? url.slice(0, -1) : url;

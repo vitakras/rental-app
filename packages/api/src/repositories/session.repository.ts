@@ -27,6 +27,7 @@ export interface CreateSessionInput {
 export interface SessionRepository {
 	create(input: CreateSessionInput): Promise<SessionRecord>;
 	findById(id: string): Promise<SessionRecord | null>;
+	deleteById(id: string): Promise<void>;
 }
 
 export function sessionRepository(
@@ -56,6 +57,10 @@ export function sessionRepository(
 				.where(eq(sessionsTable.id, id));
 
 			return session ?? null;
+		},
+
+		async deleteById(id) {
+			await db.delete(sessionsTable).where(eq(sessionsTable.id, id));
 		},
 	};
 }

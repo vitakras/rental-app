@@ -290,6 +290,10 @@ export function createAuthService({
 			return createApplicantSignupLink(authConfig);
 		},
 
+		async signout(sessionId: string): Promise<void> {
+			await sessionRepository.deleteById(sessionId);
+		},
+
 		async getSessionUser(sessionId: string): Promise<GetSessionUserResult> {
 			const session = await sessionRepository.findById(sessionId);
 
