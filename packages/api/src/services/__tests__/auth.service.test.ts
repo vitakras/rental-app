@@ -55,6 +55,7 @@ function makeUserRepository(
 	overrides?: Partial<UserRepository>,
 ): UserRepository {
 	return {
+		findById: mock(async () => baseUser),
 		findByEmail: mock(async () => baseUser),
 		markEmailVerified: mock(async () => {}),
 		...overrides,
@@ -254,6 +255,51 @@ describe("createAuthService", () => {
 		expect(result).toEqual({
 			success: false,
 			reason: "invalid_or_expired_token",
+		});
+	});
+
+	it("returns the user for a valid session", async () => {
+		const userRepo = makeUserRepository();
+		const sessionRepo = makeSessionRepository();
+
+		const result = await createAuthService({
+			userRepository: userRepo,
+			emailLoginTokenRepository: makeTokenRepository(),
+			sessionRepository: sessionRepo,
+			authMailer: makeMailer(),
+			authConfig,
+		}).getSessionUser("session-1");
+
+		expect(result).toEqual({
+			success: true,
+			user: {
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+			session: baseSession,
+		});
+		expect(sessionRepo.findById).toHaveBeenCalledWith("session-1");
+		expect(userRepo.findById).toHaveBeenCalledWith("user-1");
+	});
+
+	it("rejects an expired session", async () => {
+		const result = await createAuthService({
+			userRepository: makeUserRepository(),
+			emailLoginTokenRepository: makeTokenRepository(),
+			sessionRepository: makeSessionRepository({
+				findById: mock(async () => ({
+					...baseSession,
+					expiresAt: "2020-01-01T00:00:00.000Z",
+				})),
+			}),
+			authMailer: makeMailer(),
+			authConfig,
+		}).getSessionUser("session-1");
+
+		expect(result).toEqual({
+			success: false,
+			reason: "invalid_or_expired_session",
 		});
 	});
 });

@@ -1,11 +1,39 @@
-import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Form, Link, redirect, useActionData, useNavigation, useSearchParams } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { apiClient } from "~/lib/api";
+import type { Route } from "./+types/login";
 
 export function meta() {
 	return [{ title: "Sign in — Rental Portal" }];
+}
+
+export async function clientAction({ request }: Route.ClientActionArgs) {
+	const formData = await request.formData();
+	const email = formData.get("email") as string;
+	const role = formData.get("role") as string;
+
+	const response = await apiClient.auth.email.request.$post({
+		json: { email },
+	});
+
+	if (response.status === 422) {
+		const result = await response.json();
+		const message =
+			"issues" in result
+				? (result.issues[0]?.message ?? "Invalid email address")
+				: "Invalid email address";
+		return { error: message };
+	}
+
+	if (!response.ok) {
+		return { error: "Something went wrong. Please try again." };
+	}
+
+	return redirect(
+		`/login/check-email?email=${encodeURIComponent(email)}&role=${encodeURIComponent(role)}`,
+	);
 }
 
 export default function Login() {
@@ -13,18 +41,9 @@ export default function Login() {
 	const role = searchParams.get("role") ?? "applicant";
 	const isLandlord = role === "landlord";
 
-	const [email, setEmail] = useState("");
-	const [loading, setLoading] = useState(false);
-	const navigate = useNavigate();
-
-	async function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
-		setLoading(true);
-		// TODO: call auth API → apiClient.auth["magic-link"].$post({ json: { email, role } })
-		navigate(
-			`/login/check-email?email=${encodeURIComponent(email)}&role=${role}`,
-		);
-	}
+	const actionData = useActionData<typeof clientAction>();
+	const navigation = useNavigation();
+	const submitting = navigation.state === "submitting";
 
 	return (
 		<div
@@ -75,30 +94,36 @@ export default function Login() {
 				</div>
 
 				{/* Form */}
-				<form onSubmit={handleSubmit}>
+				<Form method="post">
+					<input type="hidden" name="role" value={role} />
+
 					<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] mb-4">
 						<Label htmlFor="email" className="mb-1.5 block">
 							Email address
 						</Label>
 						<Input
 							id="email"
+							name="email"
 							type="email"
 							placeholder="you@example.com"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
 							required
 							autoFocus
+							aria-describedby={actionData?.error ? "email-error" : undefined}
 						/>
+						{actionData?.error && (
+							<p
+								id="email-error"
+								className="text-sm text-red-600 mt-2"
+							>
+								{actionData.error}
+							</p>
+						)}
 					</div>
 
-					<Button
-						variant="continue"
-						type="submit"
-						disabled={loading || !email.trim()}
-					>
-						{loading ? "Sending…" : "Send sign-in link"}
+					<Button variant="continue" type="submit" disabled={submitting}>
+						{submitting ? "Sending…" : "Send sign-in link"}
 					</Button>
-				</form>
+				</Form>
 
 				<p className="text-center text-xs text-[#7A7268] mt-4 leading-relaxed">
 					We'll only send a link if an account exists for that email.

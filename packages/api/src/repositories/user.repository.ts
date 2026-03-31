@@ -15,12 +15,22 @@ export interface UserRecord {
 }
 
 export interface UserRepository {
+	findById(userId: string): Promise<UserRecord | null>;
 	findByEmail(email: string): Promise<UserRecord | null>;
 	markEmailVerified(userId: string, verifiedAt: string): Promise<void>;
 }
 
 export function userRepository(db: DbInstance = defaultDb): UserRepository {
 	return {
+		async findById(userId) {
+			const [user] = await db
+				.select()
+				.from(usersTable)
+				.where(eq(usersTable.id, userId));
+
+			return user ?? null;
+		},
+
 		async findByEmail(email) {
 			const [user] = await db
 				.select()

@@ -93,10 +93,16 @@ function EnvelopeIcon() {
 	);
 }
 
+function getProvider(email: string) {
+	const domain = email.split("@")[1]?.toLowerCase() ?? "";
+	return EMAIL_PROVIDERS.find((p) => p.domains.includes(domain)) ?? null;
+}
+
 export default function CheckEmail() {
 	const [searchParams] = useSearchParams();
 	const email = searchParams.get("email") ?? "";
 	const role = searchParams.get("role") ?? "applicant";
+	const provider = getProvider(email);
 
 	return (
 		<div
@@ -137,31 +143,48 @@ export default function CheckEmail() {
 						Don't see it? Check your spam folder.
 					</p>
 
-					{/* Email providers */}
-					<p className="text-xs text-[#B8B0A6] uppercase tracking-widest font-medium mb-3">
-						Open your email app
-					</p>
-					<div className="grid grid-cols-3 gap-3 mb-10">
-						{EMAIL_PROVIDERS.map((provider) => (
+					{/* Email provider shortcut */}
+					{provider ? (
+						<div className="mb-10">
+							<p className="text-xs text-[#B8B0A6] uppercase tracking-widest font-medium mb-3">
+								Open your email app
+							</p>
 							<a
-								key={provider.name}
 								href={provider.href}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2.5 border border-[#E8E1D9] hover:border-[#C4714A] transition-colors group"
+								className="inline-flex items-center gap-3 bg-white rounded-2xl px-5 py-4 border border-[#E8E1D9] hover:border-[#C4714A] transition-colors group"
 							>
 								<div
-									className="w-9 h-9 rounded-xl flex items-center justify-center transition-opacity group-hover:opacity-90"
+									className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
 									style={{ background: provider.bg }}
 								>
 									{provider.icon}
 								</div>
-								<span className="text-xs text-[#1C1A17] font-medium">
-									{provider.name}
+								<span className="text-sm text-[#1C1A17] font-medium">
+									Open {provider.name}
 								</span>
+								<svg
+									width="16"
+									height="16"
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="#C4714A"
+									strokeWidth="1.5"
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									className="ml-1 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+									aria-hidden="true"
+								>
+									<path d="M3.75 8h8.5M8.25 4.5 11.75 8l-3.5 3.5" />
+								</svg>
 							</a>
-						))}
-					</div>
+						</div>
+					) : (
+						<p className="text-[#7A7268] text-sm mb-10">
+							Open your email app to find the sign-in link.
+						</p>
+					)}
 
 					{/* Back link */}
 					<Link

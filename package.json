@@ -9,6 +9,7 @@
 		"build": "bun run --filter web build",
 		"dev": "bun run --parallel --workspaces dev",
 		"start": "bun run --filter web start",
+		"seed:landlord": "bun run --filter api seed:landlord",
 		"typecheck": "bun run --filter web typecheck",
 		"db-generate": "bun run --filter api db-generate",
 		"db-migrate": "bun run --filter api db-migrate",

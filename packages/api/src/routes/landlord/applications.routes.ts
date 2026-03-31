@@ -1,15 +1,21 @@
+import { createRequireLandlordSession } from "~/auth/landlord-session";
 import { Hono } from "hono";
 import { services as defaultServices } from "~/container";
+import type { createAuthService } from "~/services/auth.service";
 import type { createApplicationService } from "~/services/application.service";
 
 type ApplicationService = ReturnType<typeof createApplicationService>;
+type AuthService = ReturnType<typeof createAuthService>;
 
 export function createLandlordApplicationsRoutes({
+	authService,
 	applicationService,
 }: {
+	authService: AuthService;
 	applicationService: ApplicationService;
 }) {
 	return new Hono()
+		.use("*", createRequireLandlordSession({ authService }))
 		.get("/", async (c) => {
 			const result = await applicationService.listSubmittedApplications();
 			return c.json({ applications: result.applications }, 200);
@@ -32,6 +38,7 @@ export function createLandlordApplicationsRoutes({
 }
 
 const applications = createLandlordApplicationsRoutes({
+	authService: defaultServices.authService,
 	applicationService: defaultServices.applicationService,
 });
 

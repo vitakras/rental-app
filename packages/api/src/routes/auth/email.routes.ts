@@ -8,7 +8,7 @@ import {
 	verifyEmailLoginSchema,
 	type createAuthService,
 } from "~/services/auth.service";
-import { setSessionCookie } from "~/auth/cookies";
+import { getSessionCookie, setSessionCookie } from "~/auth/cookies";
 import { getAuthConfig } from "~/auth/config";
 
 type AuthService = ReturnType<typeof createAuthService>;
@@ -25,6 +25,23 @@ export function createAuthEmailRoutes({
 	authService: AuthService;
 }) {
 	return new Hono()
+		.get("/session", async (c) => {
+			const sessionId = getSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+			});
+
+			if (!sessionId) {
+				return c.json({ error: "unauthorized" }, 401);
+			}
+
+			const result = await authService.getSessionUser(sessionId);
+
+			if (!result.success) {
+				return c.json({ error: result.reason }, 401);
+			}
+
+			return c.json({ user: result.user }, 200);
+		})
 		.post(
 			"/request",
 			zodJsonValidator(requestEmailLoginSchema),

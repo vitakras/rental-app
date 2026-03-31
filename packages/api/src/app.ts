@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { services as defaultServices } from "~/container";
 import { createApplicantApplicationsRoutes } from "~/routes/applicant/applications.routes";
 import { createApplicantUploadsRoutes } from "~/routes/applicant/uploads.routes";
@@ -18,6 +19,14 @@ export function createApp({
 	const storage = createStorageRoutes();
 
 	const routes = new Hono()
+		.use(
+			cors({
+				origin: (origin) => origin,
+				allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+				allowHeaders: ["Content-Type", "Authorization"],
+				credentials: true,
+			}),
+		)
 		.get("/", (c) => {
 			return c.text("Hello Hono!");
 		})

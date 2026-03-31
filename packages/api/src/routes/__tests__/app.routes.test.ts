@@ -13,6 +13,7 @@ import type {
 } from "~/services/application.service";
 import type {
 	RequestEmailLoginResult,
+	GetSessionUserResult,
 	VerifyEmailLoginResult,
 } from "~/services/auth.service";
 import type {
@@ -31,6 +32,26 @@ function makeServices() {
 			),
 			verifyEmailLogin: mock(
 				async (): Promise<VerifyEmailLoginResult> => ({
+					success: true,
+					user: {
+						id: "user-1",
+						email: "alex@example.com",
+						globalRole: "applicant",
+					},
+					session: {
+						id: "session-1",
+						userId: "user-1",
+						expiresAt: "2026-04-29T00:00:00.000Z",
+						lastAccessedAt: "2026-01-01T00:00:00.000Z",
+						ipAddress: "127.0.0.1",
+						userAgent: "bun-test",
+						createdAt: "2026-01-01T00:00:00.000Z",
+						updatedAt: "2026-01-01T00:00:00.000Z",
+					},
+				}),
+			),
+			getSessionUser: mock(
+				async (): Promise<GetSessionUserResult> => ({
 					success: true,
 					user: {
 						id: "user-1",
@@ -243,6 +264,38 @@ describe("API application flow routes", () => {
 			error: "invalid_or_expired_token",
 		});
 		expect(response.headers.get("set-cookie")).toBeNull();
+	});
+
+	it("returns the current session user when the session cookie is valid", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/session", {
+			headers: {
+				Cookie: "session=session-1",
+			},
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { user: { id: string } }).toEqual({
+			user: {
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+		});
+		expect(services.authService.getSessionUser).toHaveBeenCalledWith("session-1");
+	});
+
+	it("returns 401 for the current session user when the session cookie is missing", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/auth/email/session");
+
+		expect(response.status).toBe(401);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "unauthorized",
+		});
 	});
 
 	it("returns validation errors for invalid application creation", async () => {
@@ -606,6 +659,26 @@ describe("API application flow routes", () => {
 
 	it("keeps landlord application reads working", async () => {
 		const services = makeServices();
+		services.authService.getSessionUser = mock(
+			async (): Promise<GetSessionUserResult> => ({
+				success: true,
+				user: {
+					id: "user-2",
+					email: "landlord@example.com",
+					globalRole: "landlord",
+				},
+				session: {
+					id: "session-2",
+					userId: "user-2",
+					expiresAt: "2026-04-29T00:00:00.000Z",
+					lastAccessedAt: "2026-01-01T00:00:00.000Z",
+					ipAddress: "127.0.0.1",
+					userAgent: "bun-test",
+					createdAt: "2026-01-01T00:00:00.000Z",
+					updatedAt: "2026-01-01T00:00:00.000Z",
+				},
+			}),
+		);
 		const application: ApplicationWithDetails = {
 			id: 12,
 			status: "submitted",
@@ -624,11 +697,41 @@ describe("API application flow routes", () => {
 		);
 		const app = createApp({ services });
 
-		const response = await app.request("/landlord/applications/12");
+		const response = await app.request("/landlord/applications/12", {
+			headers: {
+				Cookie: "session=session-2",
+			},
+		});
 
 		expect(response.status).toBe(200);
 		expect((await response.json()) as { application: ApplicationWithDetails }).toEqual(
 			{ application },
 		);
+	});
+
+	it("returns 401 for landlord routes when the session cookie is missing", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/landlord/applications");
+
+		expect(response.status).toBe(401);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "unauthorized",
+		});
+	});
+
+	it("returns 403 for landlord routes when the session belongs to a non-landlord", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/landlord/applications", {
+			headers: {
+				Cookie: "session=session-1",
+			},
+		});
+
+		expect(response.status).toBe(403);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "forbidden",
+		});
 	});
 });

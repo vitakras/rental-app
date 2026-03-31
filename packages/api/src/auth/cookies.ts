@@ -1,5 +1,12 @@
 import type { Context } from "hono";
-import { setCookie } from "hono/cookie";
+import { getCookie, setCookie } from "hono/cookie";
+
+export function getSessionCookie(
+	c: Context,
+	{ cookieName }: { cookieName: string },
+) {
+	return getCookie(c, cookieName) ?? null;
+}
 
 export function setSessionCookie(
 	c: Context,

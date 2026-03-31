@@ -41,6 +41,10 @@ export type VerifyEmailLoginResult =
 	| { success: false; errors: z.ZodIssue[] }
 	| { success: false; reason: "invalid_or_expired_token" };
 
+export type GetSessionUserResult =
+	| { success: true; user: AuthUser; session: SessionRecord }
+	| { success: false; reason: "invalid_or_expired_session" };
+
 const noopLogger = pino({ level: "silent" });
 
 function normalizeEmail(email: string) {
@@ -120,7 +124,7 @@ export function createAuthService({
 				createdByIp: ipAddress ?? null,
 			});
 
-			const loginUrl = new URL("/login", authConfig.webBaseUrl);
+			const loginUrl = new URL("/login/verify", authConfig.webBaseUrl);
 			loginUrl.searchParams.set("email", email);
 			loginUrl.searchParams.set("token", rawToken);
 
@@ -191,6 +195,30 @@ export function createAuthService({
 			});
 
 			logger.info({ email, userId: user.id, sessionId: session.id }, "Created session");
+			return {
+				success: true,
+				user: toAuthUser(user),
+				session,
+			};
+		},
+
+		async getSessionUser(sessionId: string): Promise<GetSessionUserResult> {
+			const session = await sessionRepository.findById(sessionId);
+
+			if (!session) {
+				return { success: false, reason: "invalid_or_expired_session" };
+			}
+
+			if (new Date(session.expiresAt).getTime() <= Date.now()) {
+				return { success: false, reason: "invalid_or_expired_session" };
+			}
+
+			const user = await userRepository.findById(session.userId);
+
+			if (!user) {
+				return { success: false, reason: "invalid_or_expired_session" };
+			}
+
 			return {
 				success: true,
 				user: toAuthUser(user),
