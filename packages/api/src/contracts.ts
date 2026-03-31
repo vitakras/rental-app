@@ -3,6 +3,7 @@ export type {
 	ApplicationDocumentType,
 	ApplicationStatus,
 	IncomeSourceType,
+	UserGlobalRole,
 	ResidentRole,
 } from "~/db/schema";
 export type {
@@ -15,3 +16,8 @@ export type {
 	SubmittedApplicationSummary,
 	UpdateOccupantsData,
 } from "~/services/application.service";
+export type {
+	AuthUser,
+	RequestEmailLoginData,
+	VerifyEmailLoginData,
+} from "~/services/auth.service";

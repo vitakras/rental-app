@@ -9,13 +9,17 @@ export type {
 	ApplicationDocumentType,
 	ApplicationStatus,
 	ApplicationWithDetails,
+	AuthUser,
 	CreateApplicationData,
 	IncomeSourceDetail,
 	IncomeSourceType,
 	PetDetail,
+	RequestEmailLoginData,
 	ResidentDetail,
 	ResidentRole,
 	SubmittedApplicationSummary,
 	UpdateOccupantsData,
+	UserGlobalRole,
+	VerifyEmailLoginData,
 } from "~/contracts";
 export type { AppType } from "~/app";

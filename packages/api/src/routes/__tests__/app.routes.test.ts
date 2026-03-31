@@ -12,6 +12,10 @@ import type {
 	UpdateOccupantsResult,
 } from "~/services/application.service";
 import type {
+	RequestEmailLoginResult,
+	VerifyEmailLoginResult,
+} from "~/services/auth.service";
+import type {
 	AttachDocumentResult,
 	CompleteUploadResult,
 	PrepareDocumentUploadResult,
@@ -21,6 +25,31 @@ const uploadsDir = path.resolve("data/uploads");
 
 function makeServices() {
 	return {
+		authService: {
+			requestEmailLogin: mock(
+				async (): Promise<RequestEmailLoginResult> => ({ success: true }),
+			),
+			verifyEmailLogin: mock(
+				async (): Promise<VerifyEmailLoginResult> => ({
+					success: true,
+					user: {
+						id: "user-1",
+						email: "alex@example.com",
+						globalRole: "applicant",
+					},
+					session: {
+						id: "session-1",
+						userId: "user-1",
+						expiresAt: "2026-04-29T00:00:00.000Z",
+						lastAccessedAt: "2026-01-01T00:00:00.000Z",
+						ipAddress: "127.0.0.1",
+						userAgent: "bun-test",
+						createdAt: "2026-01-01T00:00:00.000Z",
+						updatedAt: "2026-01-01T00:00:00.000Z",
+					},
+				}),
+			),
+		},
 		applicationService: {
 			createApplication: mock(
 				async (): Promise<CreateApplicationResult> => ({
@@ -108,6 +137,112 @@ describe("API application flow routes", () => {
 			applicationId: 12,
 		});
 		expect(services.applicationService.createApplication).toHaveBeenCalledTimes(1);
+	});
+
+	it("returns success for a known login email request", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/request", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-forwarded-for": "127.0.0.1",
+			},
+			body: JSON.stringify({ email: "alex@example.com" }),
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+		expect(services.authService.requestEmailLogin).toHaveBeenCalledWith(
+			{ email: "alex@example.com" },
+			{ ipAddress: "127.0.0.1" },
+		);
+	});
+
+	it("returns success for an unknown login email request", async () => {
+		const services = makeServices();
+		services.authService.requestEmailLogin = mock(
+			async (): Promise<RequestEmailLoginResult> => ({ success: true }),
+		);
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/request", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email: "missing@example.com" }),
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+	});
+
+	it("verifies a login token and sets a session cookie", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/verify", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-forwarded-for": "127.0.0.1",
+				"user-agent": "bun-test",
+			},
+			body: JSON.stringify({
+				email: "alex@example.com",
+				token: "plain-token",
+			}),
+		});
+
+		expect(response.status).toBe(200);
+		expect(
+			(await response.json()) as {
+				success: boolean;
+				user: { id: string; email: string; globalRole: string };
+			},
+		).toEqual({
+			success: true,
+			user: {
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+		});
+		expect(services.authService.verifyEmailLogin).toHaveBeenCalledWith(
+			{ email: "alex@example.com", token: "plain-token" },
+			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
+		);
+		expect(response.headers.get("set-cookie")).toContain("session=session-1");
+	});
+
+	it("returns 401 without setting a cookie for an invalid login token", async () => {
+		const services = makeServices();
+		services.authService.verifyEmailLogin = mock(
+			async (): Promise<VerifyEmailLoginResult> => ({
+				success: false,
+				reason: "invalid_or_expired_token",
+			}),
+		);
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/email/verify", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				email: "alex@example.com",
+				token: "bad-token",
+			}),
+		});
+
+		expect(response.status).toBe(401);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "invalid_or_expired_token",
+		});
+		expect(response.headers.get("set-cookie")).toBeNull();
 	});
 
 	it("returns validation errors for invalid application creation", async () => {

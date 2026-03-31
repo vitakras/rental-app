@@ -9,7 +9,8 @@
 		"./app": "./src/app.ts"
 	},
 	"scripts": {
-		"dev": "wrangler dev",
+		"dev": "bun --watch src/server.ts",
+		"start": "bun src/server.ts",
 		"deploy": "wrangler deploy --minify",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		"db-generate": "drizzle-kit generate",
