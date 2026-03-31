@@ -1,3 +1,4 @@
+import { createRequireApplicantSession } from "~/auth/applicant-session";
 import { Hono } from "hono";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
@@ -10,6 +11,7 @@ import type {
 	UpdateOccupantsData,
 	createApplicationService,
 } from "~/services/application.service";
+import type { createAuthService } from "~/services/auth.service";
 import {
 	addIncomeSourcesSchema,
 	createApplicationSchema,
@@ -17,13 +19,17 @@ import {
 } from "~/services/application.service";
 
 type ApplicationService = ReturnType<typeof createApplicationService>;
+type AuthService = ReturnType<typeof createAuthService>;
 
 export function createApplicantApplicationsRoutes({
+	authService,
 	applicationService,
 }: {
+	authService: AuthService;
 	applicationService: ApplicationService;
 }) {
 	return new Hono()
+		.use("*", createRequireApplicantSession({ authService }))
 		.post("/", zodJsonValidator(createApplicationSchema), async (c) => {
 			const body = c.req.valid("json") as CreateApplicationData;
 			const result = await applicationService.createApplication(body);

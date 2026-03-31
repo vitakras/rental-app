@@ -25,6 +25,7 @@ import type {
 } from "~/services/file.service";
 
 const uploadsDir = path.resolve("data/uploads");
+const applicantSessionCookie = "session=session-1";
 
 function makeServices() {
 	return {
@@ -167,7 +168,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify({
 				desiredMoveInDate: "2026-06-01",
 				owner: {
@@ -187,6 +191,31 @@ describe("API application flow routes", () => {
 			applicationId: 12,
 		});
 		expect(services.applicationService.createApplication).toHaveBeenCalledTimes(1);
+	});
+
+	it("rejects applicant application routes without a session", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/applications", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				desiredMoveInDate: "2026-06-01",
+				owner: {
+					fullName: "Alex Johnson",
+					dateOfBirth: "1990-05-15",
+					email: "alex@example.com",
+					phone: "555-000-0001",
+				},
+				additionalAdults: [],
+				children: [],
+				pets: [],
+			}),
+		});
+
+		expect(response.status).toBe(401);
+		expect(services.applicationService.createApplication).not.toHaveBeenCalled();
 	});
 
 	it("returns success for a known login email request", async () => {
@@ -442,7 +471,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify({}),
 		});
 
@@ -458,7 +490,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/occupants", {
 			method: "PUT",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify({
 				smokes: false,
 				additionalAdults: [],
@@ -499,7 +534,9 @@ describe("API application flow routes", () => {
 		);
 		const app = createApp({ services });
 
-		const response = await app.request("/applications/12");
+		const response = await app.request("/applications/12", {
+			headers: { Cookie: applicantSessionCookie },
+		});
 
 		expect(response.status).toBe(200);
 		expect(
@@ -513,7 +550,9 @@ describe("API application flow routes", () => {
 	it("rejects an invalid application id for applicant reads", async () => {
 		const app = createApp({ services: makeServices() });
 
-		const response = await app.request("/applications/not-a-number");
+		const response = await app.request("/applications/not-a-number", {
+			headers: { Cookie: applicantSessionCookie },
+		});
 
 		expect(response.status).toBe(400);
 		expect((await response.json()) as { error: string }).toEqual({
@@ -524,7 +563,9 @@ describe("API application flow routes", () => {
 	it("returns 404 for a missing applicant application", async () => {
 		const app = createApp({ services: makeServices() });
 
-		const response = await app.request("/applications/12");
+		const response = await app.request("/applications/12", {
+			headers: { Cookie: applicantSessionCookie },
+		});
 
 		expect(response.status).toBe(404);
 		expect((await response.json()) as { error: string }).toEqual({
@@ -536,7 +577,10 @@ describe("API application flow routes", () => {
 		const app = createApp({ services: makeServices() });
 		const response = await app.request("/applications/not-a-number/occupants", {
 			method: "PUT",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify({}),
 		});
 
@@ -567,7 +611,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/income", {
 			method: "PUT",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify(payload),
 		});
 
@@ -593,7 +640,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/income", {
 			method: "PUT",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify([]),
 		});
 
@@ -621,7 +671,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/income", {
 			method: "PUT",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify([{}]),
 		});
 
@@ -637,6 +690,7 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/submit", {
 			method: "POST",
+			headers: { Cookie: applicantSessionCookie },
 		});
 
 		expect(response.status).toBe(200);
@@ -657,6 +711,7 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/submit", {
 			method: "POST",
+			headers: { Cookie: applicantSessionCookie },
 		});
 
 		expect(response.status).toBe(409);
@@ -671,7 +726,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/upload/prepare", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify({
 				filename: "lease.pdf",
 				contentType: "application/pdf",
@@ -700,7 +758,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/upload/complete", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify({
 				fileId: "file-1",
 				residentId: 8,
@@ -734,7 +795,10 @@ describe("API application flow routes", () => {
 
 		const response = await app.request("/applications/12/upload/complete", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
 			body: JSON.stringify({
 				fileId: "file-1",
 				residentId: 8,

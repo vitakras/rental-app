@@ -35,18 +35,63 @@ interface ShareLinkSheetProps {
 
 function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 	const [copied, setCopied] = useState(false);
-
-	const applyLink =
-		typeof window !== "undefined"
-			? `${window.location.origin}/apply`
-			: "/apply";
+	const [signupUrl, setSignupUrl] = useState("");
+	const [isLoadingLink, setIsLoadingLink] = useState(false);
+	const [linkError, setLinkError] = useState("");
 
 	useEffect(() => {
-		if (!open) setCopied(false);
+		if (!open) {
+			setCopied(false);
+			setSignupUrl("");
+			setIsLoadingLink(false);
+			setLinkError("");
+			return;
+		}
+
+		let cancelled = false;
+
+		async function loadSignupLink() {
+			setCopied(false);
+			setIsLoadingLink(true);
+			setLinkError("");
+
+			try {
+				const response = await apiClient.landlord["applicant-signup-url"].$get();
+
+				if (!response.ok) {
+					throw new Error(`Request failed with status ${response.status}`);
+				}
+
+				const { signupUrl } = (await response.json()) as {
+					signupUrl: string;
+				};
+
+				if (!cancelled) {
+					setSignupUrl(signupUrl);
+				}
+			} catch {
+				if (!cancelled) {
+					setSignupUrl("");
+					setLinkError("Unable to load the signup link right now.");
+				}
+			} finally {
+				if (!cancelled) {
+					setIsLoadingLink(false);
+				}
+			}
+		}
+
+		void loadSignupLink();
+
+		return () => {
+			cancelled = true;
+		};
 	}, [open]);
 
 	function copyLink() {
-		navigator.clipboard.writeText(applyLink).then(() => {
+		if (!signupUrl) return;
+
+		navigator.clipboard.writeText(signupUrl).then(() => {
 			setCopied(true);
 			setTimeout(() => setCopied(false), 2500);
 		});
@@ -138,17 +183,22 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 								Signup link
 							</p>
 							<p className="text-sm text-[#1C1A17] truncate font-mono tracking-tight">
-								{applyLink}
+								{isLoadingLink
+									? "Loading signup link..."
+									: linkError || signupUrl}
 							</p>
 						</div>
 						<button
 							type="button"
 							onClick={copyLink}
+							disabled={!signupUrl || isLoadingLink}
 							className={[
-								"shrink-0 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 active:scale-[0.96]",
+								"shrink-0 flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
 								copied
 									? "bg-[#E8F5EE] text-[#2D8A5E]"
-									: "bg-[#1C1A17] text-[#F5F0E8] hover:bg-[#2E2B27] shadow-[0_2px_8px_rgba(28,26,23,0.2)]",
+									: signupUrl && !isLoadingLink
+										? "bg-[#1C1A17] text-[#F5F0E8] hover:bg-[#2E2B27] shadow-[0_2px_8px_rgba(28,26,23,0.2)] active:scale-[0.96]"
+										: "bg-[#D9D1C7] text-[#7A7268] cursor-not-allowed",
 							].join(" ")}
 						>
 							{copied ? (

@@ -1,3 +1,4 @@
+import { createRequireApplicantSession } from "~/auth/applicant-session";
 import { Hono } from "hono";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
@@ -9,15 +10,20 @@ import {
 	prepareDocumentUploadRequestSchema,
 	type createFileService,
 } from "~/services/file.service";
+import type { createAuthService } from "~/services/auth.service";
 
 type FileService = ReturnType<typeof createFileService>;
+type AuthService = ReturnType<typeof createAuthService>;
 
 export function createApplicantUploadsRoutes({
+	authService,
 	fileService,
 }: {
+	authService: AuthService;
 	fileService: FileService;
 }) {
 	return new Hono()
+		.use("*", createRequireApplicantSession({ authService }))
 		.post(
 			"/:id/upload/prepare",
 			ensureValidApplicationId,
