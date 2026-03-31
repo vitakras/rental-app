@@ -9,6 +9,7 @@ export type {
 	ApplicationDocumentType,
 	ApplicationStatus,
 	ApplicationWithDetails,
+	ApplicantSignupLink,
 	AuthUser,
 	CreateApplicationData,
 	IncomeSourceDetail,

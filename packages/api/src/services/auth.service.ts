@@ -52,6 +52,11 @@ export type ApplicantSignupResult =
 	| { success: false; errors: z.ZodIssue[] }
 	| { success: false; reason: "invalid_signup_token" | "email_already_exists" };
 
+export interface ApplicantSignupLink {
+	signupToken: string;
+	signupUrl: string;
+}
+
 export type GetSessionUserResult =
 	| { success: true; user: AuthUser; session: SessionRecord }
 	| { success: false; reason: "invalid_or_expired_session" };
@@ -79,6 +84,17 @@ function toAuthUser(user: UserRecord): AuthUser {
 		id: user.id,
 		email: user.email,
 		globalRole: user.globalRole,
+	};
+}
+
+function createApplicantSignupLink(authConfig: AuthConfig): ApplicantSignupLink {
+	const signupUrl = new URL("/login", authConfig.webBaseUrl);
+	signupUrl.searchParams.set("role", "applicant");
+	signupUrl.searchParams.set("token", authConfig.applicantSignupToken);
+
+	return {
+		signupToken: authConfig.applicantSignupToken,
+		signupUrl: signupUrl.toString(),
 	};
 }
 
@@ -268,6 +284,10 @@ export function createAuthService({
 				user: toAuthUser(user),
 				session,
 			};
+		},
+
+		getApplicantSignupLink(): ApplicantSignupLink {
+			return createApplicantSignupLink(authConfig);
 		},
 
 		async getSessionUser(sessionId: string): Promise<GetSessionUserResult> {

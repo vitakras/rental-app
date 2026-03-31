@@ -13,6 +13,7 @@ import type {
 } from "~/services/application.service";
 import type {
 	ApplicantSignupResult,
+	ApplicantSignupLink,
 	RequestEmailLoginResult,
 	GetSessionUserResult,
 	VerifyEmailLoginResult,
@@ -49,6 +50,13 @@ function makeServices() {
 						createdAt: "2026-01-01T00:00:00.000Z",
 						updatedAt: "2026-01-01T00:00:00.000Z",
 					},
+				}),
+			),
+			getApplicantSignupLink: mock(
+				(): ApplicantSignupLink => ({
+					signupToken: "11111111-1111-4111-8111-111111111111",
+					signupUrl:
+						"http://localhost:5173/login?role=applicant&token=11111111-1111-4111-8111-111111111111",
 				}),
 			),
 			verifyEmailLogin: mock(
@@ -391,7 +399,11 @@ describe("API application flow routes", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect((await response.json()) as { user: { id: string } }).toEqual({
+		expect(
+			(await response.json()) as {
+				user: { id: string; email: string; globalRole: string };
+			},
+		).toEqual({
 			user: {
 				id: "user-1",
 				email: "alex@example.com",
@@ -821,6 +833,45 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { application: ApplicationWithDetails }).toEqual(
 			{ application },
 		);
+	});
+
+	it("returns the applicant signup url for landlords", async () => {
+		const services = makeServices();
+		services.authService.getSessionUser = mock(
+			async (): Promise<GetSessionUserResult> => ({
+				success: true,
+				user: {
+					id: "user-2",
+					email: "landlord@example.com",
+					globalRole: "landlord",
+				},
+				session: {
+					id: "session-2",
+					userId: "user-2",
+					expiresAt: "2026-04-29T00:00:00.000Z",
+					lastAccessedAt: "2026-01-01T00:00:00.000Z",
+					ipAddress: "127.0.0.1",
+					userAgent: "bun-test",
+					createdAt: "2026-01-01T00:00:00.000Z",
+					updatedAt: "2026-01-01T00:00:00.000Z",
+				},
+			}),
+		);
+		const app = createApp({ services });
+
+		const response = await app.request("/landlord/applicant-signup-url", {
+			headers: {
+				Cookie: "session=session-2",
+			},
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as ApplicantSignupLink).toEqual({
+			signupToken: "11111111-1111-4111-8111-111111111111",
+			signupUrl:
+				"http://localhost:5173/login?role=applicant&token=11111111-1111-4111-8111-111111111111",
+		});
+		expect(services.authService.getApplicantSignupLink).toHaveBeenCalledTimes(1);
 	});
 
 	it("returns 401 for landlord routes when the session cookie is missing", async () => {

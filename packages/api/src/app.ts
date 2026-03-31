@@ -5,6 +5,7 @@ import { createApplicantApplicationsRoutes } from "~/routes/applicant/applicatio
 import { createApplicantUploadsRoutes } from "~/routes/applicant/uploads.routes";
 import { createAuthEmailRoutes } from "~/routes/auth/email.routes";
 import { createLandlordApplicationsRoutes } from "~/routes/landlord/applications.routes";
+import { createLandlordSignupRoutes } from "~/routes/landlord/signup.routes";
 import { createStorageRoutes } from "~/routes/storage.routes";
 
 export function createApp({
@@ -36,6 +37,7 @@ export function createApp({
 			"/landlord/applications",
 			createLandlordApplicationsRoutes(services),
 		)
+		.route("/landlord", createLandlordSignupRoutes(services))
 		.route("/storage", storage)
 		.route("/storage/", storage);
 

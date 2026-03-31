@@ -18,6 +18,7 @@ export type {
 } from "~/services/application.service";
 export type {
 	ApplicantSignupData,
+	ApplicantSignupLink,
 	AuthUser,
 	RequestEmailLoginData,
 	VerifyEmailLoginData,
