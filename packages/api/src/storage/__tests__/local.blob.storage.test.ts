@@ -23,7 +23,7 @@ describe("createLocalBlobStorage", () => {
 		});
 
 		expect(uploadUrl).toBe(
-			"http://127.0.0.1:8787/storage/documents/app-6/file%20id/lease%20packet.pdf",
+			"http://localhost:8787/storage/documents/app-6/file%20id/lease%20packet.pdf",
 		);
 	});
 
@@ -38,7 +38,7 @@ describe("createLocalBlobStorage", () => {
 		const { downloadUrl } = await storage.createDownloadUrl(key);
 
 		expect(downloadUrl).toBe(
-			"http://127.0.0.1:8787/storage/documents/app-6/file%20id/lease%20packet.pdf",
+			"http://localhost:8787/storage/documents/app-6/file%20id/lease%20packet.pdf",
 		);
 	});
 });

@@ -21,7 +21,7 @@ bun run typecheck
 ## Environment
 
 - `API_BASE_URL` configures the backend origin used by server-side loaders/actions.
-- In local development and test, `web` defaults to `http://127.0.0.1:8787`.
+- In local development and test, `web` defaults to `http://localhost:8787`.
 
 ## Upload Flow
 

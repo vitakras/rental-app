@@ -24,11 +24,11 @@ describe("api base url", () => {
 		}
 	});
 
-	it("uses the same 127.0.0.1 dev default as the api package", () => {
+	it("uses the same localhost dev default as the api package", () => {
 		process.env.NODE_ENV = "development";
 		delete process.env.API_BASE_URL;
 
-		expect(getServerApiBaseUrl()).toBe("http://127.0.0.1:8787");
+		expect(getServerApiBaseUrl()).toBe("http://localhost:8787");
 	});
 
 	it("prefers the injected client api base url", () => {
