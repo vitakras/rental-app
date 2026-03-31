@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { data, redirect, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
+import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
@@ -610,11 +611,11 @@ export default function ApplicationOccupants() {
 								</div>
 
 								<div className="mb-4">
-									<TextInput
+									<DatePicker
 										label="Date of birth"
-										type="date"
 										value={adult.dob}
-										onChange={(e) => updateAdult(i, "dob", e.target.value)}
+										onChange={(value) => updateAdult(i, "dob", value)}
+										endMonth={new Date()}
 									/>
 								</div>
 
@@ -681,11 +682,11 @@ export default function ApplicationOccupants() {
 									/>
 								</div>
 
-								<TextInput
+								<DatePicker
 									label="Date of birth"
-									type="date"
 									value={child.dob}
-									onChange={(e) => updateChild(i, "dob", e.target.value)}
+									onChange={(value) => updateChild(i, "dob", value)}
+									endMonth={new Date()}
 								/>
 							</div>
 						))}

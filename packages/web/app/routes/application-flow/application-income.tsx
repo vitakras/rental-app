@@ -2,6 +2,7 @@ import type { ApplicationWithDetails } from "api";
 import { useState } from "react";
 import { data, redirect, useLoaderData, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
+import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
@@ -287,19 +288,16 @@ function ResidentIncomeSection({
 
 						{/* Dates */}
 						<div className="grid grid-cols-2 gap-3 mb-4">
-							<TextInput
+							<DatePicker
 								label="Start date"
-								type="date"
 								value={source.startDate}
-								onChange={(e) =>
-									onUpdate(source.id, "startDate", e.target.value)
-								}
+								onChange={(value) => onUpdate(source.id, "startDate", value)}
 							/>
-							<TextInput
+							<DatePicker
 								label="End date (optional)"
-								type="date"
 								value={source.endDate}
-								onChange={(e) => onUpdate(source.id, "endDate", e.target.value)}
+								onChange={(value) => onUpdate(source.id, "endDate", value)}
+								placeholder="No end date"
 							/>
 						</div>
 

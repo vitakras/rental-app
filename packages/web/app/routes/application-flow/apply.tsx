@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { redirect, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
+import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { apiClient } from "~/lib/api";
@@ -160,11 +161,11 @@ export default function Apply() {
 					</div>
 
 					<div className="mb-4">
-						<TextInput
+						<DatePicker
 							label="Date of birth"
-							type="date"
 							value={ownerDob}
-							onChange={(e) => setOwnerDob(e.target.value)}
+							onChange={setOwnerDob}
+							endMonth={new Date()}
 						/>
 					</div>
 
@@ -190,13 +191,11 @@ export default function Apply() {
 				{/* ── Move-in date card ── */}
 				<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
 					<SectionLabel>Move-in date</SectionLabel>
-					<Label className="block text-sm font-medium text-[#1C1A17] mb-3">
-						When would you like to move in?
-					</Label>
-					<Input
-						type="date"
+					<DatePicker
+						label="When would you like to move in?"
 						value={moveInDate}
-						onChange={(e) => setMoveInDate(e.target.value)}
+						onChange={setMoveInDate}
+						buttonClassName="text-sm"
 					/>
 					<p
 						className="text-xs text-[#7A7268] mt-2"
