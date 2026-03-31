@@ -1,6 +1,5 @@
 Next Steps
-- Use the hono API in the web package
-- Remove SSR from web package
+- Verify the app still works before all theses crazy refactors
 - Implement user session / auth 
 - Add co applicant support
 

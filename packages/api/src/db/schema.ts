@@ -3,7 +3,13 @@
 // camelCase property names to snake_case column names in the database.
 // Do NOT add explicit snake_case column name strings to column definitions.
 import { sql } from "drizzle-orm";
-import { int, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	index,
+	int,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 const timestamps = {
 	createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
@@ -23,11 +29,71 @@ export type ApplicationStatus =
 	| "approved"
 	| "rejected";
 
+export type UserGlobalRole = "landlord" | "applicant";
+
+export type EmailLoginTokenPurpose = "login";
+
+export type ApplicationAccessRole =
+	| "primary_applicant"
+	| "co_applicant"
+	| "landlord_viewer";
+
+export const usersTable = sqliteTable(
+	"users",
+	{
+		id: text().primaryKey(),
+		email: text().notNull(),
+		emailVerifiedAt: text(),
+		globalRole: text().$type<UserGlobalRole>().notNull().default("applicant"),
+		...timestamps,
+	},
+	(table) => [uniqueIndex("users_email_unique_idx").on(table.email)],
+);
+
+export const sessionsTable = sqliteTable(
+	"sessions",
+	{
+		id: text().primaryKey(),
+		userId: text()
+			.notNull()
+			.references(() => usersTable.id),
+		expiresAt: text().notNull(),
+		lastAccessedAt: text(),
+		ipAddress: text(),
+		userAgent: text(),
+		...timestamps,
+	},
+	(table) => [
+		index("sessions_user_id_idx").on(table.userId),
+		index("sessions_expires_at_idx").on(table.expiresAt),
+	],
+);
+
+export const emailLoginTokensTable = sqliteTable(
+	"email_login_tokens",
+	{
+		id: text().primaryKey(),
+		email: text().notNull(),
+		tokenHash: text().notNull(),
+		purpose: text().$type<EmailLoginTokenPurpose>().notNull().default("login"),
+		expiresAt: text().notNull(),
+		consumedAt: text(),
+		createdByIp: text(),
+		...timestamps,
+	},
+	(table) => [
+		index("email_login_tokens_email_idx").on(table.email),
+		index("email_login_tokens_expires_at_idx").on(table.expiresAt),
+		uniqueIndex("email_login_tokens_token_hash_unique_idx").on(table.tokenHash),
+	],
+);
+
 export const applicationsTable = sqliteTable("applications", {
 	id: int().primaryKey({ autoIncrement: true }),
 	status: text().$type<ApplicationStatus>().notNull().default("pending"),
 	desiredMoveInDate: text().notNull(),
 	smokes: int({ mode: "boolean" }).notNull().default(false),
+	createdByUserId: text().references(() => usersTable.id),
 	...timestamps,
 });
 
@@ -133,3 +199,30 @@ export const applicationDocumentsTable = sqliteTable("application_documents", {
 	notes: text(),
 	...timestamps,
 });
+
+export const applicationAccessTable = sqliteTable(
+	"application_access",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		applicationId: int()
+			.notNull()
+			.references(() => applicationsTable.id),
+		userId: text()
+			.notNull()
+			.references(() => usersTable.id),
+		residentId: int().references(() => residentsTable.id),
+		accessRole: text().$type<ApplicationAccessRole>().notNull(),
+		...timestamps,
+	},
+	(table) => [
+		index("application_access_application_id_idx").on(table.applicationId),
+		index("application_access_user_id_idx").on(table.userId),
+		uniqueIndex("application_access_application_user_unique_idx").on(
+			table.applicationId,
+			table.userId,
+		),
+		uniqueIndex("application_access_resident_id_unique_idx").on(
+			table.residentId,
+		),
+	],
+);
