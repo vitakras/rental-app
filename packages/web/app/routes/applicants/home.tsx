@@ -267,6 +267,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 									strokeWidth="1.5"
 									strokeLinecap="round"
 									strokeLinejoin="round"
+									aria-hidden="true"
 								>
 									<path d="M3 9.5L11 3l8 6.5V19a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
 									<path d="M8 20V13h6v7" />

@@ -38,7 +38,7 @@ export function createApplicantApplicationsRoutes({
 			const sessionId = getSessionCookie(c, {
 				cookieName: authConfig.cookieName,
 			});
-			const sessionResult = await authService.getSessionUser(sessionId!);
+			const sessionResult = await authService.getSessionUser(sessionId ?? "");
 			if (!sessionResult.success) {
 				return c.json({ error: "unauthorized" }, 401);
 			}
@@ -51,7 +51,7 @@ export function createApplicantApplicationsRoutes({
 			const sessionId = getSessionCookie(c, {
 				cookieName: authConfig.cookieName,
 			});
-			const sessionResult = await authService.getSessionUser(sessionId!);
+			const sessionResult = await authService.getSessionUser(sessionId ?? "");
 			const userId = sessionResult.success
 				? sessionResult.user.id
 				: undefined;
