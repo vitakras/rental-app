@@ -7,6 +7,7 @@ import { applicationDocumentRepository } from "~/repositories/application-docume
 import { emailLoginTokenRepository } from "~/repositories/email-login-token.repository";
 import { fileRepository } from "~/repositories/file.repository";
 import { incomeSourceRepository } from "~/repositories/income-source.repository";
+import { loginCodeRepository } from "~/repositories/login-code.repository";
 import { sessionRepository } from "~/repositories/session.repository";
 import { userRepository } from "~/repositories/user.repository";
 import { createApplicationService } from "~/services/application.service";
@@ -17,6 +18,7 @@ import { createLocalBlobStorage } from "~/storage/local.blob.storage";
 export const repositories = {
 	userRepository: userRepository(db),
 	emailLoginTokenRepository: emailLoginTokenRepository(db),
+	loginCodeRepository: loginCodeRepository(db),
 	sessionRepository: sessionRepository(db),
 	applicationRepository: applicationRepository(db),
 	incomeSourceRepository: incomeSourceRepository(db),
@@ -34,6 +36,7 @@ export const services = {
 	authService: createAuthService({
 		userRepository: repositories.userRepository,
 		emailLoginTokenRepository: repositories.emailLoginTokenRepository,
+		loginCodeRepository: repositories.loginCodeRepository,
 		sessionRepository: repositories.sessionRepository,
 		authMailer,
 		authConfig,

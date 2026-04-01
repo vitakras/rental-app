@@ -1,10 +1,15 @@
 import { describe, expect, it, mock } from "bun:test";
+import crypto from "node:crypto";
 import type { AuthConfig } from "~/auth/config";
 import type { AuthMailer } from "~/mailers/auth.mailer";
 import type {
 	EmailLoginTokenRecord,
 	EmailLoginTokenRepository,
 } from "~/repositories/email-login-token.repository";
+import type {
+	LoginCodeRecord,
+	LoginCodeRepository,
+} from "~/repositories/login-code.repository";
 import type {
 	SessionRecord,
 	SessionRepository,
@@ -17,10 +22,12 @@ import { createAuthService } from "../auth.service";
 
 const authConfig: AuthConfig = {
 	loginTokenTtlSeconds: 900,
+	loginCodeTtlSeconds: 14 * 24 * 60 * 60,
 	sessionTtlSeconds: 3600,
 	cookieName: "session",
 	webBaseUrl: "http://127.0.0.1:5173",
 	applicantSignupToken: "11111111-1111-4111-8111-111111111111",
+	loginCodePepper: "test-pepper",
 };
 
 const baseUser: UserRecord = {
@@ -55,6 +62,20 @@ const baseSession: SessionRecord = {
 	updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
+const baseLoginCode: LoginCodeRecord = {
+	id: "login-code-1",
+	userId: "user-1",
+	codeHash: "hash-1",
+	expiresAt: "2099-01-01T00:00:00.000Z",
+	invalidatedAt: null,
+	failedAttempts: 0,
+	successfulUses: 0,
+	lastUsedAt: null,
+	createdByIp: null,
+	createdAt: "2026-01-01T00:00:00.000Z",
+	updatedAt: "2026-01-01T00:00:00.000Z",
+};
+
 function makeUserRepository(
 	overrides?: Partial<UserRepository>,
 ): UserRepository {
@@ -84,6 +105,20 @@ function makeSessionRepository(
 	return {
 		create: mock(async () => baseSession),
 		findById: mock(async () => baseSession),
+		deleteById: mock(async () => {}),
+		...overrides,
+	};
+}
+
+function makeLoginCodeRepository(
+	overrides?: Partial<LoginCodeRepository>,
+): LoginCodeRepository {
+	return {
+		create: mock(async () => baseLoginCode),
+		findActiveByUserId: mock(async () => baseLoginCode),
+		invalidateActiveByUserId: mock(async () => {}),
+		recordSuccessfulUse: mock(async () => {}),
+		recordFailedAttempt: mock(async () => {}),
 		...overrides,
 	};
 }
@@ -99,12 +134,14 @@ describe("createAuthService", () => {
 	it("creates a token and sends login email for an existing user", async () => {
 		const userRepo = makeUserRepository();
 		const tokenRepo = makeTokenRepository();
+		const loginCodeRepo = makeLoginCodeRepository();
 		const sessionRepo = makeSessionRepository();
 		const mailer = makeMailer();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
 			emailLoginTokenRepository: tokenRepo,
+			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
 			authMailer: mailer,
 			authConfig,
@@ -136,11 +173,13 @@ describe("createAuthService", () => {
 			findByEmail: mock(async () => null),
 		});
 		const tokenRepo = makeTokenRepository();
+		const loginCodeRepo = makeLoginCodeRepository();
 		const mailer = makeMailer();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
 			emailLoginTokenRepository: tokenRepo,
+			loginCodeRepository: loginCodeRepo,
 			sessionRepository: makeSessionRepository(),
 			authMailer: mailer,
 			authConfig,
@@ -154,11 +193,13 @@ describe("createAuthService", () => {
 	it("creates a session and consumes the token on successful verification", async () => {
 		const userRepo = makeUserRepository();
 		const tokenRepo = makeTokenRepository();
+		const loginCodeRepo = makeLoginCodeRepository();
 		const sessionRepo = makeSessionRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
 			emailLoginTokenRepository: tokenRepo,
+			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
 			authMailer: makeMailer(),
 			authConfig,
@@ -194,10 +235,12 @@ describe("createAuthService", () => {
 			findByEmail: mock(async () => null),
 		});
 		const sessionRepo = makeSessionRepository();
+		const loginCodeRepo = makeLoginCodeRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
 			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
 			authMailer: makeMailer(),
 			authConfig,
@@ -232,10 +275,12 @@ describe("createAuthService", () => {
 			findByEmail: mock(async () => null),
 		});
 		const sessionRepo = makeSessionRepository();
+		const loginCodeRepo = makeLoginCodeRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
 			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
 			authMailer: makeMailer(),
 			authConfig,
@@ -255,10 +300,12 @@ describe("createAuthService", () => {
 	it("rejects applicant signup when the email already exists", async () => {
 		const userRepo = makeUserRepository();
 		const sessionRepo = makeSessionRepository();
+		const loginCodeRepo = makeLoginCodeRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
 			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
 			authMailer: makeMailer(),
 			authConfig,
@@ -281,6 +328,7 @@ describe("createAuthService", () => {
 			emailLoginTokenRepository: makeTokenRepository({
 				findActiveByEmailAndTokenHash: mock(async () => null),
 			}),
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: makeSessionRepository(),
 			authMailer: makeMailer(),
 			authConfig,
@@ -302,6 +350,7 @@ describe("createAuthService", () => {
 		const result = await createAuthService({
 			userRepository: makeUserRepository(),
 			emailLoginTokenRepository: tokenRepo,
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: makeSessionRepository(),
 			authMailer: makeMailer(),
 			authConfig,
@@ -319,6 +368,7 @@ describe("createAuthService", () => {
 			emailLoginTokenRepository: makeTokenRepository({
 				findActiveByEmailAndTokenHash: mock(async () => null),
 			}),
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: makeSessionRepository(),
 			authMailer: makeMailer(),
 			authConfig,
@@ -336,6 +386,7 @@ describe("createAuthService", () => {
 			emailLoginTokenRepository: makeTokenRepository({
 				findActiveByEmailAndTokenHash: mock(async () => null),
 			}),
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: makeSessionRepository(),
 			authMailer: makeMailer(),
 			authConfig,
@@ -349,11 +400,13 @@ describe("createAuthService", () => {
 
 	it("returns the user for a valid session", async () => {
 		const userRepo = makeUserRepository();
+		const loginCodeRepo = makeLoginCodeRepository();
 		const sessionRepo = makeSessionRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
 			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
 			authMailer: makeMailer(),
 			authConfig,
@@ -376,6 +429,7 @@ describe("createAuthService", () => {
 		const result = await createAuthService({
 			userRepository: makeUserRepository(),
 			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: makeSessionRepository({
 				findById: mock(async () => ({
 					...baseSession,
@@ -389,6 +443,157 @@ describe("createAuthService", () => {
 		expect(result).toEqual({
 			success: false,
 			reason: "invalid_or_expired_session",
+		});
+	});
+
+	it("creates a session and records a successful reusable code login", async () => {
+		const userRepo = makeUserRepository();
+		const loginCodeRepo = makeLoginCodeRepository({
+			findActiveByUserId: mock(async () => ({
+				...baseLoginCode,
+				codeHash: crypto
+					.createHmac("sha256", authConfig.loginCodePepper)
+					.update("123456")
+					.digest("hex"),
+			})),
+		});
+		const sessionRepo = makeSessionRepository();
+
+		const result = await createAuthService({
+			userRepository: userRepo,
+			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
+			sessionRepository: sessionRepo,
+			authMailer: makeMailer(),
+			authConfig,
+		}).verifyReusableLoginCode(
+			{ email: "Alex@Example.com", code: "123456" },
+			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
+		);
+
+		expect(result.success).toBe(true);
+		expect(loginCodeRepo.findActiveByUserId).toHaveBeenCalledWith(
+			"user-1",
+			expect.any(String),
+		);
+		expect(loginCodeRepo.recordSuccessfulUse).toHaveBeenCalledWith(
+			"login-code-1",
+			expect.any(String),
+		);
+		expect(sessionRepo.create).toHaveBeenCalledTimes(1);
+	});
+
+	it("increments failed attempts for a wrong reusable code", async () => {
+		const loginCodeRepo = makeLoginCodeRepository({
+			findActiveByUserId: mock(async () => baseLoginCode),
+		});
+
+		const result = await createAuthService({
+			userRepository: makeUserRepository(),
+			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
+			sessionRepository: makeSessionRepository(),
+			authMailer: makeMailer(),
+			authConfig,
+		}).verifyReusableLoginCode({ email: "alex@example.com", code: "123456" });
+
+		expect(result).toEqual({
+			success: false,
+			reason: "invalid_or_expired_code",
+		});
+		expect(loginCodeRepo.recordFailedAttempt).toHaveBeenCalledWith(
+			"login-code-1",
+			1,
+			expect.any(String),
+			null,
+		);
+	});
+
+	it("invalidates the reusable code on the fifth wrong attempt", async () => {
+		const loginCodeRepo = makeLoginCodeRepository({
+			findActiveByUserId: mock(async () => ({
+				...baseLoginCode,
+				failedAttempts: 4,
+			})),
+		});
+
+		const result = await createAuthService({
+			userRepository: makeUserRepository(),
+			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
+			sessionRepository: makeSessionRepository(),
+			authMailer: makeMailer(),
+			authConfig,
+		}).verifyReusableLoginCode({ email: "alex@example.com", code: "123456" });
+
+		expect(result).toEqual({
+			success: false,
+			reason: "invalid_or_expired_code",
+		});
+		expect(loginCodeRepo.recordFailedAttempt).toHaveBeenCalledWith(
+			"login-code-1",
+			5,
+			expect.any(String),
+			expect.any(String),
+		);
+	});
+
+	it("rotates a reusable login code", async () => {
+		const loginCodeRepo = makeLoginCodeRepository();
+
+		const result = await createAuthService({
+			userRepository: makeUserRepository(),
+			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
+			sessionRepository: makeSessionRepository(),
+			authMailer: makeMailer(),
+			authConfig,
+		}).rotateReusableLoginCode({
+			id: "user-1",
+			email: "alex@example.com",
+			globalRole: "applicant",
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.code).toMatch(/^\d{6}$/);
+		expect(loginCodeRepo.invalidateActiveByUserId).toHaveBeenCalledWith(
+			"user-1",
+			expect.any(String),
+		);
+		expect(loginCodeRepo.create).toHaveBeenCalledTimes(1);
+	});
+
+	it("returns reusable login code status for the active code", async () => {
+		const loginCodeRepo = makeLoginCodeRepository({
+			findActiveByUserId: mock(async () => ({
+				...baseLoginCode,
+				failedAttempts: 2,
+				successfulUses: 3,
+				lastUsedAt: "2026-01-02T00:00:00.000Z",
+			})),
+		});
+
+		const result = await createAuthService({
+			userRepository: makeUserRepository(),
+			emailLoginTokenRepository: makeTokenRepository(),
+			loginCodeRepository: loginCodeRepo,
+			sessionRepository: makeSessionRepository(),
+			authMailer: makeMailer(),
+			authConfig,
+		}).getReusableLoginCodeStatus({
+			id: "user-1",
+			email: "alex@example.com",
+			globalRole: "applicant",
+		});
+
+		expect(result).toEqual({
+			success: true,
+			status: {
+				expiresAt: "2099-01-01T00:00:00.000Z",
+				failedAttempts: 2,
+				successfulUses: 3,
+				lastUsedAt: "2026-01-02T00:00:00.000Z",
+			},
 		});
 	});
 });

@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
-import { emailLoginTokensTable, sessionsTable, usersTable } from "~/db/schema";
+import {
+	emailLoginTokensTable,
+	loginCodesTable,
+	sessionsTable,
+	usersTable,
+} from "~/db/schema";
 import { emailLoginTokenRepository } from "~/repositories/email-login-token.repository";
+import { loginCodeRepository } from "~/repositories/login-code.repository";
 import { sessionRepository } from "~/repositories/session.repository";
 import { userRepository } from "~/repositories/user.repository";
 import type { TestDb } from "./db.helper";
@@ -108,5 +114,54 @@ describe("auth repositories", () => {
 			.from(sessionsTable)
 			.where(eq(sessionsTable.id, "session-1"));
 		expect(stored?.userAgent).toBe("bun-test");
+	});
+
+	it("creates, rotates, and updates a reusable login code", async () => {
+		await testDb.db.insert(usersTable).values({
+			id: "user-1",
+			email: "alex@example.com",
+			globalRole: "applicant",
+		});
+
+		const repo = loginCodeRepository(testDb.db);
+		const record = await repo.create({
+			id: "code-1",
+			userId: "user-1",
+			codeHash: "hash-1",
+			expiresAt: "2099-01-01T00:00:00.000Z",
+			createdByIp: "127.0.0.1",
+		});
+
+		expect(record.id).toBe("code-1");
+
+		const active = await repo.findActiveByUserId(
+			"user-1",
+			"2026-01-01T00:00:00.000Z",
+		);
+		expect(active?.id).toBe("code-1");
+
+		await repo.recordSuccessfulUse("code-1", "2026-01-02T00:00:00.000Z");
+		await repo.recordFailedAttempt(
+			"code-1",
+			2,
+			"2026-01-03T00:00:00.000Z",
+			null,
+		);
+		await repo.invalidateActiveByUserId("user-1", "2026-01-04T00:00:00.000Z");
+
+		const inactive = await repo.findActiveByUserId(
+			"user-1",
+			"2026-01-05T00:00:00.000Z",
+		);
+		expect(inactive).toBeNull();
+
+		const [stored] = await testDb.db
+			.select()
+			.from(loginCodesTable)
+			.where(eq(loginCodesTable.id, "code-1"));
+		expect(stored?.failedAttempts).toBe(2);
+		expect(stored?.successfulUses).toBe(1);
+		expect(stored?.lastUsedAt).toBe("2026-01-02T00:00:00.000Z");
+		expect(stored?.invalidatedAt).toBe("2026-01-04T00:00:00.000Z");
 	});
 });
