@@ -133,19 +133,11 @@ export default function ApplicationApplicant({
 			<div className="max-lg mx-auto px-5 pt-24 pb-36 max-w-lg">
 				{/* Heading */}
 				<div className="mt-8 mb-8">
-					<p
-						className="text-xs text-[#C4714A] tracking-widest uppercase font-medium mb-3"
-						style={{ fontFamily: "'DM Sans', sans-serif" }}
-					>
-						Rental Application
-					</p>
 					<h1
-						className="text-[2.6rem] leading-[1.15] text-[#1C1A17] mb-3"
+						className="text-[1.55rem] leading-[1.25] text-[#1C1A17] mb-3"
 						style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
 					>
-						Let's start with
-						<br />
-						<em>the basics.</em>
+						Let's start with <em>the basics.</em>
 					</h1>
 					<p
 						className="text-[#7A7268] text-sm leading-relaxed"

@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate, useParams } from "react-router";
+import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router";
 import { cn } from "~/lib/utils";
 
 const STEPS = [
@@ -129,7 +129,29 @@ export default function ApplicationShell() {
 			style={{ fontFamily: "'DM Sans', sans-serif" }}
 		>
 			<div className="fixed top-0 left-0 right-0 z-30 bg-[#F5F0E8]/90 backdrop-blur-sm border-b border-[#E8E1D9]/60">
-				<div className="max-w-lg mx-auto px-5 py-4">
+				<div className="max-w-lg mx-auto px-5 pt-3 pb-4">
+					<div className="flex items-center justify-between mb-3">
+						<Link
+							to="/a"
+							className="flex items-center gap-1 text-xs text-[#7A7268] hover:text-[#1C1A17] transition-colors"
+							style={{ fontFamily: "'DM Sans', sans-serif" }}
+						>
+							<svg
+								width="13"
+								height="13"
+								viewBox="0 0 13 13"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="1.5"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								aria-hidden="true"
+							>
+								<path d="M8.5 2.5l-5 4 5 4" />
+							</svg>
+							My Applications
+						</Link>
+					</div>
 					<StepNavigator
 						currentIndex={currentIndex}
 						onNavigate={(slug) => navigate(`/a/applications/${id}/${slug}`)}

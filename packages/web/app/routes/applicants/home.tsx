@@ -1,4 +1,4 @@
-import { Link, redirect, useSubmit } from "react-router";
+import { Link, redirect, useFetcher, useSubmit } from "react-router";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/home";
 
@@ -207,6 +207,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 	const { applications } = loaderData;
 	const hasApplications = applications.length > 0;
 	const submit = useSubmit();
+	const signoutFetcher = useFetcher();
 
 	return (
 		<div
@@ -215,7 +216,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 		>
 			{/* ── Top bar ── */}
 			<div className="sticky top-0 z-30 bg-[#F5F0E8]/90 backdrop-blur-sm border-b border-[#E8E1D9]">
-				<div className="max-w-lg mx-auto px-5 py-4">
+				<div className="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">
 					<span
 						className="text-[#C4714A] text-sm"
 						style={{
@@ -226,6 +227,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 					>
 						Find Your Home
 					</span>
+					<signoutFetcher.Form method="post" action="/signout">
+						<button
+							type="submit"
+							className="text-xs text-[#7A7268] hover:text-[#1C1A17] transition-colors"
+							style={{ fontFamily: "'DM Sans', sans-serif" }}
+						>
+							Sign out
+						</button>
+					</signoutFetcher.Form>
 				</div>
 			</div>
 
