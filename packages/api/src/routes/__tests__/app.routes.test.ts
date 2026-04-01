@@ -1208,4 +1208,69 @@ describe("API application flow routes", () => {
 			error: "forbidden",
 		});
 	});
+
+	it("sets secure default headers for API responses", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/");
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Cross-Origin-Opener-Policy")).toBe(
+			"same-origin",
+		);
+		expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe(
+			"same-origin",
+		);
+		expect(response.headers.get("Origin-Agent-Cluster")).toBe("?1");
+		expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+		expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+		expect(response.headers.get("X-Frame-Options")).toBe("DENY");
+		expect(response.headers.get("Strict-Transport-Security")).toBeNull();
+		expect(response.headers.get("Permissions-Policy")).toContain("camera=()");
+		expect(response.headers.get("Permissions-Policy")).toContain(
+			"microphone=()",
+		);
+	});
+
+	it("only allows credentialed CORS for the configured web origin", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const allowedResponse = await app.request("/", {
+			headers: {
+				Origin: "http://localhost:5173",
+			},
+		});
+		const blockedResponse = await app.request("/", {
+			headers: {
+				Origin: "https://evil.example",
+			},
+		});
+
+		expect(allowedResponse.headers.get("Access-Control-Allow-Origin")).toBe(
+			"http://localhost:5173",
+		);
+		expect(allowedResponse.headers.get("Access-Control-Allow-Credentials")).toBe(
+			"true",
+		);
+		expect(allowedResponse.headers.get("Vary")).toContain("Origin");
+		expect(blockedResponse.headers.get("Access-Control-Allow-Origin")).toBeNull();
+	});
+
+	it("marks auth responses as non-cacheable", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/auth/email/request", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				email: "alex@example.com",
+			}),
+		});
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Cache-Control")).toBe("no-store");
+		expect(response.headers.get("Pragma")).toBe("no-cache");
+	});
 });
