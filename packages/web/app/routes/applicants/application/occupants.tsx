@@ -353,54 +353,6 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
 	);
 }
 
-// ── Icons ─────────────────────────────────────────────────────────────────────
-
-function PawIcon() {
-	return (
-		<svg
-			aria-hidden="true"
-			width="22"
-			height="22"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="1.5"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			className="text-[#C4714A]"
-		>
-			<path d="M11 20a2 2 0 0 0 2 0l5-3a2 2 0 0 0 1-1.73V13a2 2 0 0 0-1-1.73l-5-3a2 2 0 0 0-2 0l-5 3A2 2 0 0 0 5 13v2.27A2 2 0 0 0 6 17z" />
-			<circle cx="7.5" cy="5.5" r="1.5" />
-			<circle cx="16.5" cy="5.5" r="1.5" />
-			<circle cx="20.5" cy="10.5" r="1.5" />
-			<circle cx="3.5" cy="10.5" r="1.5" />
-		</svg>
-	);
-}
-
-function NoSmokingIcon() {
-	return (
-		<svg
-			aria-hidden="true"
-			width="22"
-			height="22"
-			viewBox="0 0 24 24"
-			fill="none"
-			stroke="currentColor"
-			strokeWidth="1.5"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			className="text-[#C4714A]"
-		>
-			<line x1="2" y1="2" x2="22" y2="22" />
-			<path d="M16 9h2a2 2 0 0 1 2 2v1" />
-			<path d="M4 14h12v4H4z" />
-			<path d="M12 14v4" />
-			<path d="M19 14h1v4h-1" />
-		</svg>
-	);
-}
-
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ApplicationOccupants({
@@ -828,7 +780,6 @@ export default function ApplicationOccupants({
 									Any furry, feathered, or scaly friends?
 								</p>
 							</div>
-							<PawIcon />
 						</div>
 						<YesNoToggle value={hasPets} onChange={setHasPets} />
 					</div>
@@ -844,7 +795,6 @@ export default function ApplicationOccupants({
 									Will anyone smoke in or near the unit?
 								</p>
 							</div>
-							<NoSmokingIcon />
 						</div>
 						<YesNoToggle value={smokes} onChange={setSmokes} />
 					</div>
