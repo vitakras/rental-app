@@ -1,6 +1,6 @@
 import { data, Form, useNavigation } from "react-router";
 import { apiClient } from "~/lib/api";
-import type { Route } from "./+types/application";
+import type { Route } from "./+types/index";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = Number(params.id);

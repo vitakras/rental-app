@@ -5,7 +5,7 @@ import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { apiClient } from "~/lib/api";
-import type { Route } from "./+types/application-applicant";
+import type { Route } from "./+types/applicant";
 
 export function meta() {
 	return [{ title: "Your Info — Rental Application" }];
@@ -128,54 +128,9 @@ export default function ApplicationApplicant({
 	const [moveInDate, setMoveInDate] = useState(loaderData.desiredMoveInDate);
 
 	return (
-		<div
-			className="min-h-screen bg-[#F5F0E8]"
-			style={{ fontFamily: "'DM Sans', sans-serif" }}
-		>
-			{/* ── Fixed top bar ── */}
-			<div className="fixed top-0 left-0 right-0 z-30">
-				<div className="h-[3px] bg-[#E8E1D9]">
-					<div
-						className="h-full bg-[#C4714A] transition-all duration-700"
-						style={{ width: "25%" }}
-					/>
-				</div>
-				<div className="bg-[#F5F0E8]/90 backdrop-blur-sm">
-					<div className="max-w-lg mx-auto px-5 py-3 flex items-center justify-between">
-						<Button
-							type="button"
-							variant="ghost-muted"
-							size="sm"
-							className="gap-1 py-1"
-						>
-							<svg
-								aria-hidden="true"
-								width="16"
-								height="16"
-								viewBox="0 0 16 16"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="1.5"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							>
-								<path d="M10 12L6 8l4-4" />
-							</svg>
-							Back
-						</Button>
-						<span
-							className="text-xs text-[#7A7268] tracking-widest uppercase"
-							style={{ fontFamily: "'DM Sans', sans-serif" }}
-						>
-							Step 1 of 4
-						</span>
-						<div className="w-12" />
-					</div>
-				</div>
-			</div>
-
+		<>
 			{/* ── Scrollable content ── */}
-			<div className="max-lg mx-auto px-5 pt-[72px] pb-36 max-w-lg">
+			<div className="max-lg mx-auto px-5 pt-24 pb-36 max-w-lg">
 				{/* Heading */}
 				<div className="mt-8 mb-8">
 					<p
@@ -294,6 +249,6 @@ export default function ApplicationApplicant({
 					</div>
 				</div>
 			</div>
-		</div>
+		</>
 	);
 }
