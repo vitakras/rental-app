@@ -50,79 +50,53 @@ export default function Home() {
 							className="text-[3rem] leading-[1.1] text-[#1C1A17] mb-3"
 							style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
 						>
-							Who are you
+							Your next home
 							<br />
-							<em>here today?</em>
+							<em>starts here.</em>
 						</h1>
 						<p className="text-[#7A7268] text-sm leading-relaxed">
-							Sign in to manage your rental experience.
+							Sign in to view and submit your rental application.
 						</p>
 					</div>
 
-					{/* Role cards */}
-					<div className="space-y-3">
-						{/* Landlord */}
-						<button
-							type="button"
-							onClick={() => navigate("/login?role=landlord")}
-							className="w-full bg-[#1C1A17] rounded-2xl p-6 text-left group transition-all hover:bg-[#2A2825] active:scale-[0.99]"
-						>
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-xs text-[#C4714A] tracking-widest uppercase font-medium mb-1.5">
-										I'm a
-									</p>
-									<p
-										className="text-[1.6rem] leading-tight text-[#F5F0E8] mb-1.5"
-										style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
-									>
-										Landlord
-									</p>
-									<p className="text-[#7A7268] text-sm">
-										Manage applications &amp; tenants
-									</p>
-								</div>
-								<span className="text-[#C4714A] opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
-									<ArrowRight />
-								</span>
+					{/* Applicant card */}
+					<button
+						type="button"
+						onClick={() => navigate("/login?role=applicant")}
+						className="w-full bg-white rounded-2xl p-6 text-left group border border-[#E8E1D9] transition-all hover:border-[#C4714A] active:scale-[0.99]"
+					>
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-xs text-[#C4714A] tracking-widest uppercase font-medium mb-1.5">
+									I'm an
+								</p>
+								<p
+									className="text-[1.6rem] leading-tight text-[#1C1A17] mb-1.5"
+									style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
+								>
+									Applicant
+								</p>
+								<p className="text-[#7A7268] text-sm">
+									Apply for a rental home
+								</p>
 							</div>
-						</button>
-
-						{/* Applicant */}
-						<button
-							type="button"
-							onClick={() => navigate("/login?role=applicant")}
-							className="w-full bg-white rounded-2xl p-6 text-left group border border-[#E8E1D9] transition-all hover:border-[#C4714A] active:scale-[0.99]"
-						>
-							<div className="flex items-center justify-between">
-								<div>
-									<p className="text-xs text-[#C4714A] tracking-widest uppercase font-medium mb-1.5">
-										I'm an
-									</p>
-									<p
-										className="text-[1.6rem] leading-tight text-[#1C1A17] mb-1.5"
-										style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
-									>
-										Applicant
-									</p>
-									<p className="text-[#7A7268] text-sm">
-										Apply for a rental home
-									</p>
-								</div>
-								<span className="text-[#C4714A] opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
-									<ArrowRight />
-								</span>
-							</div>
-						</button>
-					</div>
+							<span className="text-[#C4714A] opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
+								<ArrowRight />
+							</span>
+						</div>
+					</button>
 				</div>
 			</div>
 
 			{/* Footer */}
 			<div className="px-6 pb-8 text-center">
-				<p className="text-xs text-[#B8B0A6]">
-					Secure sign-in · No password needed
-				</p>
+				<button
+					type="button"
+					onClick={() => navigate("/login?role=landlord")}
+					className="text-xs text-[#B8B0A6] hover:text-[#7A7268] transition-colors underline underline-offset-2 decoration-[#D4CBBD]"
+				>
+					Landlord? Sign in here
+				</button>
 			</div>
 		</div>
 	);
