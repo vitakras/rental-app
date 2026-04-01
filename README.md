@@ -20,6 +20,6 @@ bun run db-push    # database commands target packages/api
 
 ## Environment
 
-- `API_BASE_URL` configures how `web` reaches `api`.
-- In local development and test, both packages default to `http://127.0.0.1:8787` when `API_BASE_URL` is unset.
+- `packages/web` reads `VITE_LOCAL_API_BASE_URL` for the backend origin.
+- `packages/api` uses its own `API_BASE_URL` when generating local upload URLs.
 - `DATABASE_URL` configures the API database and overrides the environment-specific SQLite defaults.

@@ -27,6 +27,7 @@ function makeRepo(
 		updateOccupants: mock(async () => {}),
 		findAllSubmitted: mock(async () => []),
 		findByIdWithDetails: mock(async () => null),
+		findAllByUserId: mock(async () => []),
 		...overrides,
 	};
 }

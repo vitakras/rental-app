@@ -44,6 +44,7 @@ export interface CreateApplicationInput {
 	additionalAdults: AdditionalAdultInput[];
 	children: ChildInput[];
 	pets: PetInput[];
+	createdByUserId?: string;
 }
 
 interface UpdateOccupantsInput {
@@ -65,6 +66,7 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 						status: "pending",
 						desiredMoveInDate: input.desiredMoveInDate,
 						smokes: false,
+						createdByUserId: input.createdByUserId ?? null,
 					})
 					.returning();
 
@@ -236,6 +238,27 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 					),
 				)
 				.where(eq(applicationsTable.status, "submitted"))
+				.orderBy(desc(applicationsTable.createdAt));
+		},
+
+		async findAllByUserId(userId: string) {
+			return db
+				.select({
+					id: applicationsTable.id,
+					status: applicationsTable.status,
+					desiredMoveInDate: applicationsTable.desiredMoveInDate,
+					createdAt: applicationsTable.createdAt,
+					primaryApplicantName: residentsTable.fullName,
+				})
+				.from(applicationsTable)
+				.innerJoin(
+					residentsTable,
+					and(
+						eq(residentsTable.applicationId, applicationsTable.id),
+						eq(residentsTable.role, "primary"),
+					),
+				)
+				.where(eq(applicationsTable.createdByUserId, userId))
 				.orderBy(desc(applicationsTable.createdAt));
 		},
 	};

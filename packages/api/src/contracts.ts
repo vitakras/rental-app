@@ -8,6 +8,7 @@ export type {
 } from "~/db/schema";
 export type {
 	AddIncomeSourcesData,
+	ApplicantApplicationSummary,
 	ApplicationWithDetails,
 	CreateApplicationData,
 	IncomeSourceDetail,

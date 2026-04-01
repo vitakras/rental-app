@@ -20,14 +20,13 @@ bun run typecheck
 
 ## Environment
 
-- `API_BASE_URL` configures the backend origin used by server-side loaders/actions.
-- In local development and test, `web` defaults to `http://localhost:8787`.
+- `VITE_LOCAL_API_BASE_URL` configures the backend origin used by the web app client.
 
 ## Upload Flow
 
 - Browser file uploads call the backend API directly for upload prepare/complete.
 - Raw file bytes go directly to the API storage route using the upload URL returned by the backend.
-- The API base URL is injected into the client from the root loader so browser uploads use the same backend origin as server-side loaders/actions.
+- The API base URL is read directly from the Vite client env in `app/config/env.ts`.
 
 ## Testing
 

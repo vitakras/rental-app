@@ -12,6 +12,7 @@ export default [
 	route("login/check-email", "routes/auth/check-email.tsx"),
 	route("signout", "routes/auth/signout.tsx"),
 	route("a", "routes/applicants/layout.tsx", [
+		index("routes/applicants/home.tsx"),
 		route("apply", "routes/applicants/apply.tsx"),
 		route("applications/:id", "routes/applicants/application-shell.tsx", [
 			index("routes/applicants/application.tsx"),

@@ -138,13 +138,24 @@ export type ApplicationWithDetails = {
 	pets: PetDetail[];
 };
 
+export type ApplicantApplicationSummary = {
+	id: number;
+	status: string;
+	desiredMoveInDate: string;
+	createdAt: string;
+	primaryApplicantName: string;
+};
+
 export interface ApplicationRepository {
-	create(input: CreateApplicationPayload): Promise<{ id: number }>;
+	create(
+		input: CreateApplicationPayload & { createdByUserId?: string },
+	): Promise<{ id: number }>;
 	findById(id: number): Promise<{ id: number; status: string } | null>;
 	submit(id: number): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
 	findAllSubmitted(): Promise<SubmittedApplicationSummary[]>;
 	findByIdWithDetails(id: number): Promise<ApplicationWithDetails | null>;
+	findAllByUserId(userId: string): Promise<ApplicantApplicationSummary[]>;
 }
 
 export interface IncomeSourceRepository {
@@ -181,6 +192,11 @@ export type ListSubmittedApplicationsResult = {
 	applications: SubmittedApplicationSummary[];
 };
 
+export type ListApplicationsByUserResult = {
+	success: true;
+	applications: ApplicantApplicationSummary[];
+};
+
 export type GetApplicationWithDetailsResult =
 	| { success: true; application: ApplicationWithDetails }
 	| { success: false; reason: "not_found" };
@@ -199,6 +215,7 @@ export function createApplicationService({
 	return {
 		async createApplication(
 			data: CreateApplicationData,
+			options?: { userId?: string },
 		): Promise<CreateApplicationResult> {
 			const parsed = createApplicationSchema.safeParse(data);
 
@@ -221,7 +238,12 @@ export function createApplicationService({
 				"Creating application",
 			);
 
-			const application = await applicationRepository.create(parsed.data);
+			const application = await applicationRepository.create({
+				...parsed.data,
+				...(options?.userId !== undefined
+					? { createdByUserId: options.userId }
+					: {}),
+			});
 
 			logger.info({ applicationId: application.id }, "Application created");
 			return { success: true, applicationId: application.id };
@@ -305,6 +327,13 @@ export function createApplicationService({
 
 			logger.info({ applicationId }, "Income sources added");
 			return { success: true };
+		},
+
+		async listApplicationsByUser(
+			userId: string,
+		): Promise<ListApplicationsByUserResult> {
+			const applications = await applicationRepository.findAllByUserId(userId);
+			return { success: true, applications };
 		},
 
 		async listSubmittedApplications(): Promise<ListSubmittedApplicationsResult> {

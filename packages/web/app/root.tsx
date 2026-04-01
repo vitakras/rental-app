@@ -5,9 +5,7 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
-	useRouteLoaderData,
 } from "react-router";
-import { getServerApiBaseUrl } from "~/lib/api-base-url";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -25,19 +23,7 @@ export const links: Route.LinksFunction = () => [
 	},
 ];
 
-export async function loader() {
-	return { apiBaseUrl: getServerApiBaseUrl() };
-}
-
-function serializeAppConfig(config: { apiBaseUrl: string }) {
-	return JSON.stringify(config).replace(/</g, "\\u003c");
-}
-
 export function Layout({ children }: { children: React.ReactNode }) {
-	const rootData = useRouteLoaderData("root") as
-		| Awaited<ReturnType<typeof loader>>
-		| undefined;
-
 	return (
 		<html lang="en">
 			<head>
@@ -48,13 +34,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 			</head>
 			<body>
 				{children}
-				<script
-					dangerouslySetInnerHTML={{
-						__html: `window.__APP_CONFIG__ = ${serializeAppConfig({
-							apiBaseUrl: rootData?.apiBaseUrl ?? "",
-						})};`,
-					}}
-				/>
 				<ScrollRestoration />
 				<Scripts />
 			</body>

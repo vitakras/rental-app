@@ -1,4 +1,6 @@
 import { createRequireApplicantSession } from "~/auth/applicant-session";
+import { getSessionCookie } from "~/auth/cookies";
+import { getAuthConfig } from "~/auth/config";
 import { Hono } from "hono";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
@@ -18,6 +20,8 @@ import {
 	updateOccupantsSchema,
 } from "~/services/application.service";
 
+const authConfig = getAuthConfig();
+
 type ApplicationService = ReturnType<typeof createApplicationService>;
 type AuthService = ReturnType<typeof createAuthService>;
 
@@ -30,9 +34,32 @@ export function createApplicantApplicationsRoutes({
 }) {
 	return new Hono()
 		.use("*", createRequireApplicantSession({ authService }))
+		.get("/", async (c) => {
+			const sessionId = getSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+			});
+			const sessionResult = await authService.getSessionUser(sessionId!);
+			if (!sessionResult.success) {
+				return c.json({ error: "unauthorized" }, 401);
+			}
+			const result = await applicationService.listApplicationsByUser(
+				sessionResult.user.id,
+			);
+			return c.json({ applications: result.applications }, 200);
+		})
 		.post("/", zodJsonValidator(createApplicationSchema), async (c) => {
+			const sessionId = getSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+			});
+			const sessionResult = await authService.getSessionUser(sessionId!);
+			const userId = sessionResult.success
+				? sessionResult.user.id
+				: undefined;
+
 			const body = c.req.valid("json") as CreateApplicationData;
-			const result = await applicationService.createApplication(body);
+			const result = await applicationService.createApplication(body, {
+				userId,
+			});
 
 			if (!result.success) {
 				return c.json(

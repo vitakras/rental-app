@@ -90,6 +90,14 @@ export type SubmittedApplicationSummary = {
 	primaryApplicantName: string;
 };
 
+export type ApplicantApplicationSummary = {
+	id: number;
+	status: string;
+	desiredMoveInDate: string;
+	createdAt: string;
+	primaryApplicantName: string;
+};
+
 export type IncomeSourceDetail = {
 	id: number;
 	residentId: number;
