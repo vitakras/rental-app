@@ -1,5 +1,4 @@
-import { db } from "~/db";
-import { usersTable } from "~/db/schema";
+import { services } from "~/container";
 import { userRepository } from "~/repositories/user.repository";
 
 function normalizeEmail(email: string) {
@@ -19,7 +18,7 @@ function getEmailArg() {
 
 async function main() {
 	const email = getEmailArg();
-	const repo = userRepository(db);
+	const repo = userRepository();
 	const existingUser = await repo.findByEmail(email);
 
 	if (existingUser) {
@@ -41,15 +40,17 @@ async function main() {
 		return;
 	}
 
-	const id = crypto.randomUUID();
-	const [createdUser] = await db
-		.insert(usersTable)
-		.values({
-			id,
-			email,
-			globalRole: "landlord",
-		})
-		.returning();
+	const createdUser = await repo.create({
+		id: crypto.randomUUID(),
+		email,
+		globalRole: "landlord",
+	});
+
+	const loginCodeResult = await services.authService.rotateReusableLoginCode({
+		id: createdUser.id,
+		email: createdUser.email,
+		globalRole: createdUser.globalRole,
+	});
 
 	console.log(
 		JSON.stringify(
@@ -59,6 +60,10 @@ async function main() {
 					id: createdUser.id,
 					email: createdUser.email,
 					globalRole: createdUser.globalRole,
+				},
+				loginCode: {
+					code: loginCodeResult.code,
+					expiresAt: loginCodeResult.status.expiresAt,
 				},
 			},
 			null,

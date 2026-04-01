@@ -89,6 +89,30 @@ export const emailLoginTokensTable = sqliteTable(
 	],
 );
 
+export const loginCodesTable = sqliteTable(
+	"login_codes",
+	{
+		id: text().primaryKey(),
+		userId: text()
+			.notNull()
+			.references(() => usersTable.id),
+		codeHash: text().notNull(),
+		expiresAt: text().notNull(),
+		invalidatedAt: text(),
+		failedAttempts: int().notNull().default(0),
+		successfulUses: int().notNull().default(0),
+		lastUsedAt: text(),
+		createdByIp: text(),
+		...timestamps,
+	},
+	(table) => [
+		index("login_codes_user_id_idx").on(table.userId),
+		index("login_codes_expires_at_idx").on(table.expiresAt),
+		index("login_codes_invalidated_at_idx").on(table.invalidatedAt),
+		uniqueIndex("login_codes_code_hash_unique_idx").on(table.codeHash),
+	],
+);
+
 export const applicationsTable = sqliteTable("applications", {
 	id: int().primaryKey({ autoIncrement: true }),
 	status: text().$type<ApplicationStatus>().notNull().default("draft"),

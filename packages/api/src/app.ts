@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { services as defaultServices } from "~/container";
 import { createApplicantApplicationsRoutes } from "~/routes/applicant/applications.routes";
 import { createApplicantUploadsRoutes } from "~/routes/applicant/uploads.routes";
+import { createAuthCodeRoutes } from "~/routes/auth/code.routes";
 import { createAuthEmailRoutes } from "~/routes/auth/email.routes";
 import { createLandlordApplicationsRoutes } from "~/routes/landlord/applications.routes";
 import { createLandlordSignupRoutes } from "~/routes/landlord/signup.routes";
@@ -31,6 +32,7 @@ export function createApp({
 		.get("/", (c) => {
 			return c.text("Hello Hono!");
 		})
+		.route("/auth/code", createAuthCodeRoutes(services))
 		.route("/auth/email", createAuthEmailRoutes(services))
 		.route("/applications", applicantRoutes)
 		.route("/landlord/applications", createLandlordApplicationsRoutes(services))

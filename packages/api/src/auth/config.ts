@@ -1,5 +1,6 @@
 const LOCAL_WEB_BASE_URL = "http://localhost:5173";
 const LOCAL_APPLICANT_SIGNUP_TOKEN = "11111111-1111-4111-8111-111111111111";
+const LOCAL_LOGIN_CODE_PEPPER = "development-login-code-pepper";
 const runtimeEnv = process.env.NODE_ENV ?? "development";
 
 function parsePositiveInt(value: string | undefined, fallback: number) {
@@ -35,6 +36,10 @@ export function getAuthConfig() {
 			process.env.AUTH_LOGIN_TOKEN_TTL_SECONDS,
 			15 * 60,
 		),
+		loginCodeTtlSeconds: parsePositiveInt(
+			process.env.AUTH_LOGIN_CODE_TTL_SECONDS,
+			14 * 24 * 60 * 60,
+		),
 		sessionTtlSeconds: parsePositiveInt(
 			process.env.AUTH_SESSION_TTL_SECONDS,
 			30 * 24 * 60 * 60,
@@ -47,6 +52,13 @@ export function getAuthConfig() {
 				? LOCAL_APPLICANT_SIGNUP_TOKEN
 				: (() => {
 						throw new Error("AUTH_APPLICANT_SIGNUP_TOKEN is required");
+					})()),
+		loginCodePepper:
+			process.env.AUTH_LOGIN_CODE_PEPPER?.trim() ||
+			(runtimeEnv === "development" || runtimeEnv === "test"
+				? LOCAL_LOGIN_CODE_PEPPER
+				: (() => {
+						throw new Error("AUTH_LOGIN_CODE_PEPPER is required");
 					})()),
 	};
 }

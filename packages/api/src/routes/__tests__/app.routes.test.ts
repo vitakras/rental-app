@@ -16,8 +16,11 @@ import type {
 	ApplicantSignupLink,
 	ApplicantSignupResult,
 	GetSessionUserResult,
+	GetReusableLoginCodeStatusResult,
 	RequestEmailLoginResult,
+	RotateReusableLoginCodeResult,
 	VerifyEmailLoginResult,
+	VerifyReusableLoginCodeResult,
 } from "~/services/auth.service";
 import type {
 	AttachDocumentResult,
@@ -81,6 +84,50 @@ function makeServices() {
 					},
 				}),
 			),
+			verifyReusableLoginCode: mock(
+				async (): Promise<VerifyReusableLoginCodeResult> => ({
+					success: true,
+					user: {
+						id: "user-1",
+						email: "alex@example.com",
+						globalRole: "applicant",
+					},
+					session: {
+						id: "session-1",
+						userId: "user-1",
+						expiresAt: "2026-04-29T00:00:00.000Z",
+						lastAccessedAt: "2026-01-01T00:00:00.000Z",
+						ipAddress: "127.0.0.1",
+						userAgent: "bun-test",
+						createdAt: "2026-01-01T00:00:00.000Z",
+						updatedAt: "2026-01-01T00:00:00.000Z",
+					},
+				}),
+			),
+			rotateReusableLoginCode: mock(
+				async (): Promise<RotateReusableLoginCodeResult> => ({
+					success: true,
+					code: "123456",
+					status: {
+						expiresAt: "2026-04-29T00:00:00.000Z",
+						failedAttempts: 0,
+						successfulUses: 0,
+						lastUsedAt: null,
+					},
+				}),
+			),
+			getReusableLoginCodeStatus: mock(
+				async (): Promise<GetReusableLoginCodeStatusResult> => ({
+					success: true,
+					status: {
+						expiresAt: "2026-04-29T00:00:00.000Z",
+						failedAttempts: 1,
+						successfulUses: 2,
+						lastUsedAt: "2026-01-02T00:00:00.000Z",
+					},
+				}),
+			),
+			signout: mock(async (): Promise<void> => {}),
 			getSessionUser: mock(
 				async (): Promise<GetSessionUserResult> => ({
 					success: true,
@@ -423,6 +470,149 @@ describe("API application flow routes", () => {
 			error: "invalid_or_expired_token",
 		});
 		expect(response.headers.get("set-cookie")).toBeNull();
+	});
+
+	it("verifies a reusable login code and sets a session cookie", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/code/verify", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-forwarded-for": "127.0.0.1",
+				"user-agent": "bun-test",
+			},
+			body: JSON.stringify({
+				email: "alex@example.com",
+				code: "123456",
+			}),
+		});
+
+		expect(response.status).toBe(200);
+		expect(
+			(await response.json()) as {
+				success: boolean;
+				user: { id: string; email: string; globalRole: string };
+			},
+		).toEqual({
+			success: true,
+			user: {
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+		});
+		expect(services.authService.verifyReusableLoginCode).toHaveBeenCalledWith(
+			{ email: "alex@example.com", code: "123456" },
+			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
+		);
+		expect(response.headers.get("set-cookie")).toContain("session=session-1");
+	});
+
+	it("returns 401 for an invalid reusable login code", async () => {
+		const services = makeServices();
+		services.authService.verifyReusableLoginCode = mock(
+			async (): Promise<VerifyReusableLoginCodeResult> => ({
+				success: false,
+				reason: "invalid_or_expired_code",
+			}),
+		);
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/code/verify", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				email: "alex@example.com",
+				code: "123456",
+			}),
+		});
+
+		expect(response.status).toBe(401);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "invalid_or_expired_code",
+		});
+		expect(response.headers.get("set-cookie")).toBeNull();
+	});
+
+	it("returns reusable login code status for an authenticated user", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/code", {
+			headers: {
+				Cookie: applicantSessionCookie,
+			},
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { status: unknown }).toEqual({
+			status: {
+				expiresAt: "2026-04-29T00:00:00.000Z",
+				failedAttempts: 1,
+				successfulUses: 2,
+				lastUsedAt: "2026-01-02T00:00:00.000Z",
+			},
+		});
+		expect(services.authService.getReusableLoginCodeStatus).toHaveBeenCalledWith(
+			{
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+		);
+	});
+
+	it("rotates a reusable login code for an authenticated user", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/auth/code/rotate", {
+			method: "POST",
+			headers: {
+				Cookie: applicantSessionCookie,
+				"x-forwarded-for": "127.0.0.1",
+			},
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { code: string }).toEqual({
+			success: true,
+			code: "123456",
+			status: {
+				expiresAt: "2026-04-29T00:00:00.000Z",
+				failedAttempts: 0,
+				successfulUses: 0,
+				lastUsedAt: null,
+			},
+		});
+		expect(services.authService.rotateReusableLoginCode).toHaveBeenCalledWith(
+			{
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+			{ ipAddress: "127.0.0.1" },
+		);
+	});
+
+	it("rejects reusable login code status requests without a session", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/auth/code");
+
+		expect(response.status).toBe(401);
+	});
+
+	it("rejects reusable login code rotation without a session", async () => {
+		const app = createApp({ services: makeServices() });
+
+		const response = await app.request("/auth/code/rotate", {
+			method: "POST",
+		});
+
+		expect(response.status).toBe(401);
 	});
 
 	it("returns the current session user when the session cookie is valid", async () => {
