@@ -1,95 +1,152 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to Codex when working with code in this repository.
 
 ## Commands
 
 ```bash
-# Development
-bun run dev          # Start dev server at http://localhost:5173
+# Workspace
+bun run dev            # Start both the web app and API in parallel
 
-# Build & Type checking
-bun run build        # Production build
-bun run typecheck    # Run react-router typegen + tsc
+# Web
+bun run build          # Build the React Router web app
+bun run typecheck      # Run React Router typegen + tsc for the web package
+bun run start          # Start the built web server
 
-# Testing
-bun run test         # Run all tests (sets NODE_ENV=test automatically)
-bun test --watch     # Watch mode (set NODE_ENV=test manually)
+# API
+bun run test           # Run API tests with NODE_ENV=test
+bun run seed:landlord  # Seed a landlord user in the API data store
 
 # Database
-bun run db-generate  # Generate Drizzle migrations from schema changes
-bun run db-migrate   # Apply migrations
-bun run db-push      # Push schema directly (no migration file)
+bun run db-generate    # Generate Drizzle migrations from schema changes
+bun run db-migrate     # Apply migrations
+bun run db-push        # Push schema directly (no migration file)
+
+# Quality
+bun run lint           # Run Biome checks
+bun run lint:fix       # Run Biome checks with fixes
+bun run format         # Format the repo with Biome
 ```
 
 ## Architecture
 
-Full-stack rental property management app using **React Router 7** (SSR enabled). The framework handles both client and server bundling in a single project.
+This is a Bun workspace with two packages:
 
-**Stack:**
-- React Router 7 with SSR (`react-router.config.ts`: `ssr: true`)
-- SQLite via `@libsql/client` + Drizzle ORM (async driver — swap to Turso or Postgres at launch by changing the client config in `app/db/index.ts`)
-- TailwindCSS 4 with Vite
-- TypeScript with path alias `~/*` → `./app/*`
+- `packages/web` — React Router 7 frontend
+- `packages/api` — Hono API, auth, repositories, storage, and database access
 
-**Data flow:** Routes in `app/routes/` use React Router's `loader`/`action` pattern for server-side data fetching and mutations. The DB client is initialized in `app/db/index.ts` with WAL mode and snake_case casing.
+### Stack
 
-**Database schema** (`app/db/schema.ts`):
-- `applications` — rental applications with `status`, `desiredMoveInDate`, and `smokes`
-- `residents` — linked to applications via `applicationId`, tracks `fullName`, `dateOfBirth`, `email`, `phone`, and `role` (`"primary"` | `"co-applicant"` | `"dependent"` | `"child"`)
-- `pets` — linked to applications via `applicationId`, tracks `type`, `breed`, `name`, and `notes`
+- React Router 7 in `packages/web`
+- Hono in `packages/api`
+- SQLite via `@libsql/client` + Drizzle ORM
+- TailwindCSS 4 + Vite in the web package
+- TypeScript with `~/*` path aliases
 
-**Server layer** (`app/server/`):
-- `repositories/` — repositories use the **factory function pattern**: `export function applicationRepository(db: DbInstance)` returns a plain object of methods. The `db` instance is injected once at construction via closure. In production, call with the default db; in tests, pass the in-memory db from `createTestDb()`.
+### Current app shape
+
+- `packages/web/react-router.config.ts` currently has `ssr: false`
+- Route configuration lives in `packages/web/app/routes.ts`
+- The database client lives in `packages/api/src/db/index.ts`
+- Database config lives in `packages/api/src/db/config.ts`
+- The schema lives in `packages/api/src/db/schema.ts`
+
+### Path aliases
+
+- In `packages/api`, `~/*` maps to `packages/api/src/*`
+- In `packages/web`, `~/*` maps to both `packages/web/app/*` and `packages/api/src/*`
+
+## Database
+
+The schema is defined in `packages/api/src/db/schema.ts`.
+
+Core tables include:
+
+- `applications`
+- `residents`
+- `income_sources`
+- `pets`
+- `users`
+- `sessions`
+- `email_login_tokens`
+- `files`
+- `application_documents`
+- `application_access`
+
+### Date and timestamp storage
+
+SQLite does not have a dedicated datetime type in this project. The schema currently stores dates and timestamps as `text`.
+
+Use these conventions:
+
+- Date-only values as ISO strings: `YYYY-MM-DD`
+- Timestamps as UTC ISO strings when set in application code: `YYYY-MM-DDTHH:mm:ss.sssZ`
+- Keep date-only fields such as `desiredMoveInDate`, `dateOfBirth`, `startDate`, and `endDate` as strings rather than Unix epoch integers
+
+The existing schema already follows this pattern for fields like:
+
+- `desiredMoveInDate`
+- `dateOfBirth`
+- `expiresAt`
+- `createdAt`
+- `updatedAt`
+
+## Data flow
+
+- The web package renders the UI and defines route modules under `packages/web/app/routes/`
+- The API package exposes route handlers under `packages/api/src/routes/`
+- Database operations are implemented in repositories under `packages/api/src/repositories/`
+- Validation and orchestration logic lives in `packages/api/src/services/`
+
+## Repository pattern
+
+Repositories use the factory-function pattern and accept a DB instance, defaulting to the production DB:
 
 ```ts
-// production (route action/loader)
-const repo = applicationRepository(db);
-repo.create(input);
+const repo = applicationRepository();
 
-// test
-const repo = applicationRepository(await createTestDb());
-repo.create(input);
+const testDb = await createTestDb();
+const repoForTest = applicationRepository(testDb.db);
 ```
 
-**Route configuration:** `app/routes.ts` defines the route tree. React Router generates types automatically (run `typecheck` to regenerate after adding routes).
+This pattern makes tests straightforward without module mocking.
 
-**Environment / database URLs** (`app/db/config.ts`):
+## Environment / database URLs
 
-| `NODE_ENV`    | Default database URL                          |
-|---------------|-----------------------------------------------|
-| `development` | `file:data/rental_app_development.sqlite`     |
-| `test`        | `file:data/rental_app_test.sqlite`            |
-| `production`  | `DATABASE_URL` env var (required)             |
+Defined in `packages/api/src/db/config.ts`:
 
-Override any environment by setting `DATABASE_URL` in `.env`. The `data/` directory is created automatically if it doesn't exist.
+| `NODE_ENV`    | Default database URL                      |
+|---------------|-------------------------------------------|
+| `development` | `file:data/rental_app_development.sqlite` |
+| `test`        | `file:data/rental_app_test.sqlite`        |
+| `production`  | `DATABASE_URL` env var (required)         |
+
+`DATABASE_URL` can override the default in any environment. The `data/` directory is created automatically for local file-based SQLite databases.
 
 ## Testing
 
-Tests live in `__tests__/` co-located next to the logic they cover:
+Most backend tests are colocated in `packages/api/src/**/__tests__/`.
 
-```
-app/server/repositories/
+Useful examples:
+
+```text
+packages/api/src/repositories/
   application.repository.ts
   __tests__/
-    test-db.ts                        # creates a temp-file SQLite db with schema applied
+    db.helper.ts
     application.repository.test.ts
 ```
 
-**Pattern:** Repository factory functions accept an injected `db` instance. Tests create an isolated db via `createTestDb()` and pass it in — no module mocking required.
+`createTestDb()` is defined in `packages/api/src/repositories/__tests__/db.helper.ts` and returns:
 
 ```ts
-// in a test
 const testDb = await createTestDb();
-const repo = applicationRepository(testDb.db);
+testDb.db;
+testDb.cleanup();
 ```
 
-`createTestDb()` returns `{ db, cleanup }`. It uses `generateSQLiteDrizzleJson` + `generateSQLiteMigration` from `drizzle-kit/api` to derive CREATE TABLE statements from `~/db/schema` — no duplicated SQL.
+The helper derives SQLite DDL from the Drizzle schema using `drizzle-kit/api`, so the test database matches the source of truth without duplicated SQL.
 
-**Why temp files instead of `:memory:`:** `@libsql/client` sets `this.#db = null` after every `transaction()` call so it can lazily reconnect. For `:memory:` that creates a brand-new empty database. Temp files reopen the same file on reconnect, so committed data persists across the transaction boundary.
+### Why temp files instead of `:memory:`
 
-```ts
-let testDb: TestDb;
-beforeEach(async () => { testDb = await createTestDb(); });
-afterEach(() => { testDb.cleanup(); }); // deletes the temp file
-```
+`@libsql/client` may reopen a fresh connection after transactions. Using a temp-file SQLite database ensures the schema and committed data persist across reconnects during tests.
