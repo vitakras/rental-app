@@ -1,5 +1,6 @@
+import type { ApplicationWithDetails } from "api";
 import { useState } from "react";
-import { data, redirect, useSubmit } from "react-router";
+import { data, redirect, useNavigate, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
@@ -22,7 +23,48 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	if (response.status === 404) throw data(null, { status: 404 });
 	if (!response.ok) throw data(null, { status: response.status });
 
-	return { applicationId: id };
+	const { application } = (await response.json()) as {
+		application: ApplicationWithDetails;
+	};
+
+	const additionalAdults = application.residents
+		.filter((resident) =>
+			resident.role === "co-applicant" || resident.role === "dependent",
+		)
+		.map((resident) => ({
+			id: Math.random().toString(36).slice(2),
+			existingId: resident.id,
+			name: resident.fullName,
+			role: resident.role as AdultRole,
+			email: resident.email ?? "",
+			dob: resident.dateOfBirth,
+		}));
+
+	const children = application.residents
+		.filter((resident) => resident.role === "child")
+		.map((resident) => ({
+			id: Math.random().toString(36).slice(2),
+			existingId: resident.id,
+			name: resident.fullName,
+			dob: resident.dateOfBirth,
+		}));
+
+	const pets = application.pets.map((pet) => ({
+		id: Math.random().toString(36).slice(2),
+		type: pet.type,
+		name: pet.name ?? "",
+		breed: pet.breed ?? "",
+		notes: pet.notes ?? "",
+	}));
+
+	return {
+		applicationId: id,
+		smokes: application.smokes as boolean | null,
+		additionalAdults,
+		children,
+		pets,
+		hasPets: pets.length > 0 ? true : null,
+	};
 }
 
 export async function clientAction({
@@ -32,6 +74,19 @@ export async function clientAction({
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
 	const formData = await request.formData();
+	const intent = formData.get("intent");
+
+	if (intent === "remove_resident") {
+		const residentId = formData.get("residentId");
+		const response =
+			await apiClient.applications[":id"].residents[":residentId"].$delete({
+				param: { id: String(id), residentId: String(residentId) },
+			});
+
+		if (!response.ok) throw data(null, { status: response.status });
+		return { removed: true };
+	}
+
 	const raw = JSON.parse(formData.get("data") as string);
 	const response = await apiClient.applications[":id"].occupants.$put({
 		param: { id: String(id) },
@@ -53,6 +108,7 @@ type AdultRole = "co-applicant" | "dependent";
 
 interface AdditionalAdult {
 	id: string;
+	existingId?: number;
 	name: string;
 	role: AdultRole | null;
 	email: string;
@@ -61,6 +117,7 @@ interface AdditionalAdult {
 
 interface Child {
 	id: string;
+	existingId?: number;
 	name: string;
 	dob: string;
 }
@@ -344,21 +401,25 @@ function NoSmokingIcon() {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function ApplicationOccupants() {
+export default function ApplicationOccupants({
+	loaderData,
+}: Route.ComponentProps) {
 	const submit = useSubmit();
+	const navigate = useNavigate();
 
 	// Occupants
-	const [adults, setAdults] = useState(1);
+	const [adults, setAdults] = useState(1 + loaderData.additionalAdults.length);
 	const [additionalAdults, setAdditionalAdults] = useState<AdditionalAdult[]>(
-		[],
+		loaderData.additionalAdults,
 	);
-	const [children, setChildren] = useState(0);
-	const [childList, setChildList] = useState<Child[]>([]);
+	const [children, setChildren] = useState(loaderData.children.length);
+	const [childList, setChildList] = useState<Child[]>(loaderData.children);
 
 	// Lifestyle
-	const [hasPets, setHasPets] = useState<boolean | null>(null);
-	const [pets, setPets] = useState<Pet[]>([]);
-	const [smokes, setSmokes] = useState<boolean | null>(null);
+	const [hasPets, setHasPets] = useState<boolean | null>(loaderData.hasPets);
+	const [pets, setPets] = useState<Pet[]>(loaderData.pets);
+	const [smokes, setSmokes] = useState<boolean | null>(loaderData.smokes);
+	const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
 
 	// ── Handlers ──
 
@@ -430,6 +491,32 @@ export default function ApplicationOccupants() {
 		if (pets.length === 1) setHasPets(null);
 	}
 
+	function removeAdult(adult: AdditionalAdult) {
+		setAdditionalAdults((prev) => prev.filter((entry) => entry.id !== adult.id));
+		setAdults((prev) => prev - 1);
+		setConfirmingRemove(null);
+
+		if (adult.existingId) {
+			const formData = new FormData();
+			formData.set("intent", "remove_resident");
+			formData.set("residentId", String(adult.existingId));
+			submit(formData, { method: "post" });
+		}
+	}
+
+	function removeChild(child: Child) {
+		setChildList((prev) => prev.filter((entry) => entry.id !== child.id));
+		setChildren((prev) => prev - 1);
+		setConfirmingRemove(null);
+
+		if (child.existingId) {
+			const formData = new FormData();
+			formData.set("intent", "remove_resident");
+			formData.set("residentId", String(child.existingId));
+			submit(formData, { method: "post" });
+		}
+	}
+
 	const totalPeople = adults + children;
 	const occupantSummary =
 		totalPeople === 1
@@ -460,6 +547,9 @@ export default function ApplicationOccupants() {
 							variant="ghost-muted"
 							size="sm"
 							className="gap-1 py-1"
+							onClick={() =>
+								navigate(`/a/applications/${loaderData.applicationId}/applicant`)
+							}
 						>
 							<svg
 								aria-hidden="true"
@@ -598,46 +688,87 @@ export default function ApplicationOccupants() {
 											</p>
 										)}
 									</div>
-								</div>
-
-								<div className="mb-4">
-									<TextInput
-										label="Full name"
-										type="text"
-										placeholder="Jane Smith"
-										value={adult.name}
-										onChange={(e) => updateAdult(i, "name", e.target.value)}
+									<RemoveButton
+										onClick={() => setConfirmingRemove(adult.id)}
 									/>
 								</div>
 
-								<div className="mb-4">
-									<DatePicker
-										label="Date of birth"
-										value={adult.dob}
-										onChange={(value) => updateAdult(i, "dob", value)}
-										endMonth={new Date()}
-									/>
-								</div>
+								{confirmingRemove === adult.id ? (
+									<div className="rounded-xl bg-[#FDF0E9] border-2 border-[#C4714A] p-4">
+										<p className="text-sm font-medium text-[#1C1A17] mb-1">
+											Remove {adult.name || "this person"}?
+										</p>
+										{adult.existingId ? (
+											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">
+												This will permanently delete their income sources and
+												any other information they&apos;ve submitted. This cannot
+												be undone.
+											</p>
+										) : (
+											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">
+												This person hasn&apos;t been saved yet, so removing them
+												will only clear this card.
+											</p>
+										)}
+										<div className="flex gap-2">
+											<button
+												type="button"
+												onClick={() => setConfirmingRemove(null)}
+												className="flex-1 py-2 rounded-xl border-2 border-[#E8E1D9] text-sm text-[#7A7268]"
+											>
+												Cancel
+											</button>
+											<button
+												type="button"
+												onClick={() => removeAdult(adult)}
+												className="flex-1 py-2 rounded-xl bg-[#C4714A] text-white text-sm font-medium"
+											>
+												Remove
+											</button>
+										</div>
+									</div>
+								) : (
+									<>
+										<div className="mb-4">
+											<TextInput
+												label="Full name"
+												type="text"
+												placeholder="Jane Smith"
+												value={adult.name}
+												onChange={(e) => updateAdult(i, "name", e.target.value)}
+											/>
+										</div>
 
-								<div className="mb-4">
-									<Label className="mb-2 block">
-										What's their role in this application?
-									</Label>
-									<RoleSelector
-										value={adult.role}
-										onChange={(role) => updateAdult(i, "role", role)}
-									/>
-								</div>
+										<div className="mb-4">
+											<DatePicker
+												label="Date of birth"
+												value={adult.dob}
+												onChange={(value) => updateAdult(i, "dob", value)}
+												endMonth={new Date()}
+											/>
+										</div>
 
-								{adult.role === "co-applicant" && (
-									<TextInput
-										label="Email address"
-										type="email"
-										placeholder="jane@email.com"
-										value={adult.email}
-										onChange={(e) => updateAdult(i, "email", e.target.value)}
-										hint="We'll send them a link to complete their own section of this application."
-									/>
+										<div className="mb-4">
+											<Label className="mb-2 block">
+												What&apos;s their role in this application?
+											</Label>
+											<RoleSelector
+												value={adult.role}
+												onChange={(role) => updateAdult(i, "role", role)}
+											/>
+										</div>
+
+										{adult.role === "co-applicant" && (
+											<TextInput
+												label="Email address"
+												type="email"
+												placeholder="jane@email.com"
+												value={adult.email}
+												onChange={(e) => updateAdult(i, "email", e.target.value)}
+												hint="We'll send them a link to complete their own section of this application."
+											/>
+										)}
+									</>
 								)}
 							</div>
 						))}
@@ -670,24 +801,66 @@ export default function ApplicationOccupants() {
 										</p>
 										<p className="text-xs text-[#7A7268] mt-0.5">Under 18</p>
 									</div>
+									<div className="ml-auto">
+										<RemoveButton
+											onClick={() => setConfirmingRemove(child.id)}
+										/>
+									</div>
 								</div>
 
-								<div className="mb-4">
-									<TextInput
-										label="Full name"
-										type="text"
-										placeholder="Sam Johnson"
-										value={child.name}
-										onChange={(e) => updateChild(i, "name", e.target.value)}
-									/>
-								</div>
+								{confirmingRemove === child.id ? (
+									<div className="rounded-xl bg-[#FDF0E9] border-2 border-[#C4714A] p-4">
+										<p className="text-sm font-medium text-[#1C1A17] mb-1">
+											Remove {child.name || "this child"}?
+										</p>
+										{child.existingId ? (
+											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">
+												This will permanently delete their income sources and
+												any other information tied to them. This cannot be undone.
+											</p>
+										) : (
+											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">
+												This child hasn&apos;t been saved yet, so removing them
+												will only clear this card.
+											</p>
+										)}
+										<div className="flex gap-2">
+											<button
+												type="button"
+												onClick={() => setConfirmingRemove(null)}
+												className="flex-1 py-2 rounded-xl border-2 border-[#E8E1D9] text-sm text-[#7A7268]"
+											>
+												Cancel
+											</button>
+											<button
+												type="button"
+												onClick={() => removeChild(child)}
+												className="flex-1 py-2 rounded-xl bg-[#C4714A] text-white text-sm font-medium"
+											>
+												Remove
+											</button>
+										</div>
+									</div>
+								) : (
+									<>
+										<div className="mb-4">
+											<TextInput
+												label="Full name"
+												type="text"
+												placeholder="Sam Johnson"
+												value={child.name}
+												onChange={(e) => updateChild(i, "name", e.target.value)}
+											/>
+										</div>
 
-								<DatePicker
-									label="Date of birth"
-									value={child.dob}
-									onChange={(value) => updateChild(i, "dob", value)}
-									endMonth={new Date()}
-								/>
+										<DatePicker
+											label="Date of birth"
+											value={child.dob}
+											onChange={(value) => updateChild(i, "dob", value)}
+											endMonth={new Date()}
+										/>
+									</>
+								)}
 							</div>
 						))}
 					</div>
@@ -858,12 +1031,14 @@ export default function ApplicationOccupants() {
 										data: JSON.stringify({
 											smokes: smokes ?? false,
 											additionalAdults: additionalAdults.map((a) => ({
+												existingId: a.existingId,
 												fullName: a.name,
 												dateOfBirth: a.dob,
 												role: a.role,
 												email: a.email || undefined,
 											})),
 											children: childList.map((c) => ({
+												existingId: c.existingId,
 												fullName: c.name,
 												dateOfBirth: c.dob,
 											})),

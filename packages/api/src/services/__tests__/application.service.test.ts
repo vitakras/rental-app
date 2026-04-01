@@ -25,6 +25,7 @@ function makeRepo(
 		findById: mock(async () => ({ id: 1, status: "pending" })),
 		submit: mock(async () => ({ id: 1 })),
 		updateOccupants: mock(async () => {}),
+		deleteResident: mock(async () => {}),
 		findAllSubmitted: mock(async () => []),
 		findByIdWithDetails: mock(async () => null),
 		findAllByUserId: mock(async () => []),
@@ -331,12 +332,31 @@ describe("updateOccupants", () => {
 
 	it("calls repo.updateOccupants with validated data", async () => {
 		const repo = makeRepo();
+		const occupants = {
+			...baseOccupants,
+			additionalAdults: [
+				{
+					existingId: 7,
+					fullName: "Jane Smith",
+					dateOfBirth: "1992-03-20",
+					role: "co-applicant" as const,
+					email: "jane@example.com",
+				},
+			],
+			children: [
+				{
+					existingId: 11,
+					fullName: "Sam Smith",
+					dateOfBirth: "2019-06-15",
+				},
+			],
+		};
 		const result = await createApplicationService({
 			applicationRepository: repo,
-		}).updateOccupants(1, baseOccupants);
+		}).updateOccupants(1, occupants);
 
 		expect(result.success).toBe(true);
-		expect(repo.updateOccupants).toHaveBeenCalledWith(1, baseOccupants);
+		expect(repo.updateOccupants).toHaveBeenCalledWith(1, occupants);
 	});
 
 	it("returns success false for invalid adult role", async () => {
@@ -399,6 +419,32 @@ describe("updateOccupants", () => {
 				1,
 				baseOccupants,
 			),
+		).rejects.toThrow("DB error");
+	});
+});
+
+describe("deleteResident", () => {
+	it("calls repo.deleteResident and returns success", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).deleteResident(12, 44);
+
+		expect(result).toEqual({ success: true });
+		expect(repo.deleteResident).toHaveBeenCalledWith(12, 44);
+	});
+
+	it("propagates errors thrown by repo.deleteResident", async () => {
+		const repo = makeRepo({
+			deleteResident: mock(async () => {
+				throw new Error("DB error");
+			}),
+		});
+
+		await expect(
+			createApplicationService({
+				applicationRepository: repo,
+			}).deleteResident(12, 44),
 		).rejects.toThrow("DB error");
 	});
 });

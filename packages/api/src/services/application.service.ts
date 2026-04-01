@@ -17,6 +17,7 @@ const ownerSchema = z.object({
 });
 
 const additionalAdultSchema = z.object({
+	existingId: z.number().int().positive().optional(),
 	fullName: z.string().min(1, { error: "Full name is required" }),
 	dateOfBirth: dateString,
 	role: z.enum(["co-applicant", "dependent"]),
@@ -24,6 +25,7 @@ const additionalAdultSchema = z.object({
 });
 
 const childSchema = z.object({
+	existingId: z.number().int().positive().optional(),
 	fullName: z.string().min(1, { error: "Full name is required" }),
 	dateOfBirth: dateString,
 });
@@ -167,6 +169,7 @@ export interface ApplicationRepository {
 	findById(id: number): Promise<{ id: number; status: string } | null>;
 	submit(id: number): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
+	deleteResident(applicationId: number, residentId: number): Promise<void>;
 	findAllSubmitted(): Promise<SubmittedApplicationSummary[]>;
 	findByIdWithDetails(id: number): Promise<ApplicationWithDetails | null>;
 	findAllByUserId(userId: string): Promise<ApplicantApplicationSummary[]>;
@@ -205,6 +208,8 @@ export type UpsertApplicantInfoResult =
 	| { success: true }
 	| { success: false; reason: "not_found" }
 	| { success: false; errors: z.ZodIssue[] };
+
+export type DeleteResidentResult = { success: true };
 
 export type ListSubmittedApplicationsResult = {
 	success: true;
@@ -312,6 +317,16 @@ export function createApplicationService({
 			await applicationRepository.updateOccupants(applicationId, parsed.data);
 
 			logger.info({ applicationId }, "Occupants updated");
+			return { success: true };
+		},
+
+		async deleteResident(
+			applicationId: number,
+			residentId: number,
+		): Promise<DeleteResidentResult> {
+			logger.info({ applicationId, residentId }, "Deleting resident");
+			await applicationRepository.deleteResident(applicationId, residentId);
+			logger.info({ applicationId, residentId }, "Resident deleted");
 			return { success: true };
 		},
 

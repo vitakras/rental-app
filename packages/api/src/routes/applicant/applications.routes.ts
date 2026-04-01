@@ -52,6 +52,9 @@ export function createApplicantApplicationsRoutes({
 			const userId = sessionResult.success ? sessionResult.user.id : undefined;
 
 			const result = await applicationService.createApplication({ userId });
+			if (!result.success) {
+				return c.json({ error: "validation_failed", issues: result.errors }, 422);
+			}
 
 			return c.json({ applicationId: result.applicationId }, 201);
 		})
@@ -156,6 +159,17 @@ export function createApplicantApplicationsRoutes({
 				return c.json({ success: true }, 200);
 			},
 		)
+		.delete("/:id/residents/:residentId", ensureValidApplicationId, async (c) => {
+			const id = parseApplicationId(c.req.param("id"));
+			const residentId = Number(c.req.param("residentId"));
+
+			if (!id || !Number.isInteger(residentId) || residentId <= 0) {
+				return c.json({ error: "invalid_id" }, 400);
+			}
+
+			await applicationService.deleteResident(id, residentId);
+			return c.json({ success: true }, 200);
+		})
 		.post("/:id/submit", async (c) => {
 			const id = parseApplicationId(c.req.param("id"));
 

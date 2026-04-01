@@ -3,6 +3,8 @@ import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
 import {
 	applicationsTable,
+	applicationAccessTable,
+	applicationDocumentsTable,
 	incomeSourcesTable,
 	petsTable,
 	residentsTable,
@@ -13,6 +15,7 @@ type DbInstance = typeof defaultDb;
 // ── Input types ───────────────────────────────────────────────────────────────
 
 interface AdditionalAdultInput {
+	existingId?: number;
 	fullName: string;
 	dateOfBirth: string;
 	role: "co-applicant" | "dependent";
@@ -20,6 +23,7 @@ interface AdditionalAdultInput {
 }
 
 interface ChildInput {
+	existingId?: number;
 	fullName: string;
 	dateOfBirth: string;
 }
@@ -116,36 +120,46 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 					.set({ smokes: input.smokes })
 					.where(eq(applicationsTable.id, id));
 
-				await tx
-					.delete(residentsTable)
-					.where(
-						and(
-							eq(residentsTable.applicationId, id),
-							not(eq(residentsTable.role, "primary")),
-						),
-					);
-
-				const newResidents = [
+				const allResidents = [
 					...input.additionalAdults.map((adult) => ({
-						applicationId: id,
+						...adult,
 						role: adult.role as ResidentRole,
-						fullName: adult.fullName,
-						dateOfBirth: adult.dateOfBirth,
 						email: adult.email ?? null,
-						phone: null,
 					})),
 					...input.children.map((child) => ({
-						applicationId: id,
+						...child,
 						role: "child" as ResidentRole,
-						fullName: child.fullName,
-						dateOfBirth: child.dateOfBirth,
 						email: null,
-						phone: null,
 					})),
 				];
 
-				if (newResidents.length > 0) {
-					await tx.insert(residentsTable).values(newResidents);
+				for (const resident of allResidents) {
+					if (resident.existingId) {
+						await tx
+							.update(residentsTable)
+							.set({
+								fullName: resident.fullName,
+								dateOfBirth: resident.dateOfBirth,
+								role: resident.role,
+								email: resident.email,
+							})
+							.where(
+								and(
+									eq(residentsTable.id, resident.existingId),
+									eq(residentsTable.applicationId, id),
+								),
+							);
+						continue;
+					}
+
+					await tx.insert(residentsTable).values({
+						applicationId: id,
+						role: resident.role,
+						fullName: resident.fullName,
+						dateOfBirth: resident.dateOfBirth,
+						email: resident.email,
+						phone: null,
+					});
 				}
 
 				await tx.delete(petsTable).where(eq(petsTable.applicationId, id));
@@ -161,6 +175,33 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 						})),
 					);
 				}
+			});
+		},
+
+		async deleteResident(applicationId: number, residentId: number) {
+			return db.transaction(async (tx) => {
+				await tx
+					.delete(incomeSourcesTable)
+					.where(eq(incomeSourcesTable.residentId, residentId));
+
+				await tx
+					.update(applicationDocumentsTable)
+					.set({ residentId: null })
+					.where(eq(applicationDocumentsTable.residentId, residentId));
+
+				await tx
+					.delete(applicationAccessTable)
+					.where(eq(applicationAccessTable.residentId, residentId));
+
+				await tx
+					.delete(residentsTable)
+					.where(
+						and(
+							eq(residentsTable.id, residentId),
+							eq(residentsTable.applicationId, applicationId),
+							not(eq(residentsTable.role, "primary")),
+						),
+					);
 			});
 		},
 

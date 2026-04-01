@@ -6,6 +6,7 @@ import type {
 	AddIncomeSourcesResult,
 	ApplicationWithDetails,
 	CreateApplicationResult,
+	DeleteResidentResult,
 	GetApplicationWithDetailsResult,
 	ListSubmittedApplicationsResult,
 	SubmitApplicationResult,
@@ -110,6 +111,9 @@ function makeServices() {
 			),
 			updateOccupants: mock(
 				async (): Promise<UpdateOccupantsResult> => ({ success: true }),
+			),
+			deleteResident: mock(
+				async (): Promise<DeleteResidentResult> => ({ success: true }),
 			),
 			addIncomeSources: mock(
 				async (): Promise<AddIncomeSourcesResult> => ({ success: true }),
@@ -514,6 +518,25 @@ describe("API application flow routes", () => {
 		});
 	});
 
+	it("deletes a resident", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/applications/12/residents/77", {
+			method: "DELETE",
+			headers: { Cookie: applicantSessionCookie },
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+		expect(services.applicationService.deleteResident).toHaveBeenCalledWith(
+			12,
+			77,
+		);
+	});
+
 	it("returns an applicant application detail payload", async () => {
 		const services = makeServices();
 		const application: ApplicationWithDetails = {
@@ -588,6 +611,22 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { error: string }).toEqual({
 			error: "invalid_application_id",
 		});
+	});
+
+	it("rejects an invalid resident id for deletes", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const response = await app.request("/applications/12/residents/not-a-number", {
+			method: "DELETE",
+			headers: { Cookie: applicantSessionCookie },
+		});
+
+		expect(response.status).toBe(400);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "invalid_id",
+		});
+		expect(services.applicationService.deleteResident).not.toHaveBeenCalled();
 	});
 
 	it("adds income sources", async () => {
