@@ -61,7 +61,7 @@ function makeServices() {
 				(): ApplicantSignupLink => ({
 					signupToken: "11111111-1111-4111-8111-111111111111",
 					signupUrl:
-						"http://localhost:5173/login?role=applicant&token=11111111-1111-4111-8111-111111111111",
+						"http://localhost:5173/signup?token=11111111-1111-4111-8111-111111111111",
 				}),
 			),
 			verifyEmailLogin: mock(
@@ -1176,7 +1176,7 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as ApplicantSignupLink).toEqual({
 			signupToken: "11111111-1111-4111-8111-111111111111",
 			signupUrl:
-				"http://localhost:5173/login?role=applicant&token=11111111-1111-4111-8111-111111111111",
+				"http://localhost:5173/signup?token=11111111-1111-4111-8111-111111111111",
 		});
 		expect(services.authService.getApplicantSignupLink).toHaveBeenCalledTimes(
 			1,

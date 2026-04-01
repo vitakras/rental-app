@@ -146,8 +146,7 @@ function toAuthUser(user: UserRecord): AuthUser {
 function createApplicantSignupLink(
 	authConfig: AuthConfig,
 ): ApplicantSignupLink {
-	const signupUrl = new URL("/login", authConfig.webBaseUrl);
-	signupUrl.searchParams.set("role", "applicant");
+	const signupUrl = new URL("/signup", authConfig.webBaseUrl);
 	signupUrl.searchParams.set("token", authConfig.applicantSignupToken);
 
 	return {
