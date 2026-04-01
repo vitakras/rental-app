@@ -15,14 +15,15 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
 
-	const response = await apiClient.applications[":id"].$get({
-		param: { id: String(id) },
-	});
+	const [applicationResponse, sessionResponse] = await Promise.all([
+		apiClient.applications[":id"].$get({ param: { id: String(id) } }),
+		apiClient.auth.email.session.$get(),
+	]);
 
-	if (response.status === 404) throw data(null, { status: 404 });
-	if (!response.ok) throw data(null, { status: response.status });
+	if (applicationResponse.status === 404) throw data(null, { status: 404 });
+	if (!applicationResponse.ok) throw data(null, { status: applicationResponse.status });
 
-	const { application } = (await response.json()) as {
+	const { application } = (await applicationResponse.json()) as {
 		application: {
 			id: number;
 			desiredMoveInDate: string | null;
@@ -36,15 +37,20 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 		};
 	};
 
+	const sessionEmail = sessionResponse.ok
+		? ((await sessionResponse.json()) as { user: { email: string } }).user.email
+		: null;
+
 	const primary = application.residents.find((r) => r.role === "primary");
 
 	return {
 		applicationId: id,
 		fullName: primary?.fullName ?? "",
 		dateOfBirth: primary?.dateOfBirth ?? "",
-		email: primary?.email ?? "",
+		email: primary?.email || sessionEmail || "",
 		phone: primary?.phone ?? "",
 		desiredMoveInDate: application.desiredMoveInDate ?? "",
+		sessionEmail,
 	};
 }
 
@@ -115,7 +121,7 @@ export default function ApplicationApplicant({
 	const submit = useSubmit();
 
 	const [fullName, setFullName] = useState(loaderData.fullName);
-	const [email, setEmail] = useState(loaderData.email);
+	const email = loaderData.email;
 	const [phone, setPhone] = useState(loaderData.phone);
 	const [ownerDob, setOwnerDob] = useState(loaderData.dateOfBirth);
 	const [moveInDate, setMoveInDate] = useState(loaderData.desiredMoveInDate);
@@ -220,9 +226,10 @@ export default function ApplicationApplicant({
 						<TextInput
 							label="Email address"
 							type="email"
-							placeholder="alex@email.com"
 							value={email}
-							onChange={(e) => setEmail(e.target.value)}
+							readOnly
+							autoComplete="off"
+							className="bg-[#F5F0E8] text-[#7A7268] cursor-default"
 						/>
 					</div>
 
