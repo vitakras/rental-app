@@ -1,16 +1,13 @@
-import { createRequireApplicantSession } from "~/auth/applicant-session";
 import { Hono } from "hono";
+import { createRequireApplicantSession } from "~/auth/applicant-session";
 import { zodJsonValidator } from "~/lib/zod-validator";
-import {
-	ensureValidApplicationId,
-	parseApplicationId,
-} from "~/routes/shared";
+import { ensureValidApplicationId, parseApplicationId } from "~/routes/shared";
+import type { createAuthService } from "~/services/auth.service";
 import {
 	attachDocumentToApplicationSchema,
-	prepareDocumentUploadRequestSchema,
 	type createFileService,
+	prepareDocumentUploadRequestSchema,
 } from "~/services/file.service";
-import type { createAuthService } from "~/services/auth.service";
 
 type FileService = ReturnType<typeof createFileService>;
 type AuthService = ReturnType<typeof createAuthService>;
@@ -51,7 +48,10 @@ export function createApplicantUploadsRoutes({
 					);
 				}
 
-				return c.json({ fileId: result.fileId, uploadUrl: result.uploadUrl }, 200);
+				return c.json(
+					{ fileId: result.fileId, uploadUrl: result.uploadUrl },
+					200,
+				);
 			},
 		)
 		.post(

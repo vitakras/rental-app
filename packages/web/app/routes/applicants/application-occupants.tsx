@@ -28,8 +28,9 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	};
 
 	const additionalAdults = application.residents
-		.filter((resident) =>
-			resident.role === "co-applicant" || resident.role === "dependent",
+		.filter(
+			(resident) =>
+				resident.role === "co-applicant" || resident.role === "dependent",
 		)
 		.map((resident) => ({
 			id: Math.random().toString(36).slice(2),
@@ -78,10 +79,11 @@ export async function clientAction({
 
 	if (intent === "remove_resident") {
 		const residentId = formData.get("residentId");
-		const response =
-			await apiClient.applications[":id"].residents[":residentId"].$delete({
-				param: { id: String(id), residentId: String(residentId) },
-			});
+		const response = await apiClient.applications[":id"].residents[
+			":residentId"
+		].$delete({
+			param: { id: String(id), residentId: String(residentId) },
+		});
 
 		if (!response.ok) throw data(null, { status: response.status });
 		return { removed: true };
@@ -492,7 +494,9 @@ export default function ApplicationOccupants({
 	}
 
 	function removeAdult(adult: AdditionalAdult) {
-		setAdditionalAdults((prev) => prev.filter((entry) => entry.id !== adult.id));
+		setAdditionalAdults((prev) =>
+			prev.filter((entry) => entry.id !== adult.id),
+		);
 		setAdults((prev) => prev - 1);
 		setConfirmingRemove(null);
 
@@ -548,7 +552,9 @@ export default function ApplicationOccupants({
 							size="sm"
 							className="gap-1 py-1"
 							onClick={() =>
-								navigate(`/a/applications/${loaderData.applicationId}/applicant`)
+								navigate(
+									`/a/applications/${loaderData.applicationId}/applicant`,
+								)
 							}
 						>
 							<svg
@@ -688,9 +694,7 @@ export default function ApplicationOccupants({
 											</p>
 										)}
 									</div>
-									<RemoveButton
-										onClick={() => setConfirmingRemove(adult.id)}
-									/>
+									<RemoveButton onClick={() => setConfirmingRemove(adult.id)} />
 								</div>
 
 								{confirmingRemove === adult.id ? (
@@ -701,8 +705,8 @@ export default function ApplicationOccupants({
 										{adult.existingId ? (
 											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">
 												This will permanently delete their income sources and
-												any other information they&apos;ve submitted. This cannot
-												be undone.
+												any other information they&apos;ve submitted. This
+												cannot be undone.
 											</p>
 										) : (
 											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">
@@ -764,7 +768,9 @@ export default function ApplicationOccupants({
 												type="email"
 												placeholder="jane@email.com"
 												value={adult.email}
-												onChange={(e) => updateAdult(i, "email", e.target.value)}
+												onChange={(e) =>
+													updateAdult(i, "email", e.target.value)
+												}
 												hint="We'll send them a link to complete their own section of this application."
 											/>
 										)}
@@ -816,7 +822,8 @@ export default function ApplicationOccupants({
 										{child.existingId ? (
 											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">
 												This will permanently delete their income sources and
-												any other information tied to them. This cannot be undone.
+												any other information tied to them. This cannot be
+												undone.
 											</p>
 										) : (
 											<p className="text-xs text-[#7A7268] mb-4 leading-relaxed">

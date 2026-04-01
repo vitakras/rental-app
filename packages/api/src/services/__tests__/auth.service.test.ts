@@ -9,7 +9,10 @@ import type {
 	SessionRecord,
 	SessionRepository,
 } from "~/repositories/session.repository";
-import type { UserRecord, UserRepository } from "~/repositories/user.repository";
+import type {
+	UserRecord,
+	UserRepository,
+} from "~/repositories/user.repository";
 import { createAuthService } from "../auth.service";
 
 const authConfig: AuthConfig = {
@@ -165,9 +168,7 @@ describe("createAuthService", () => {
 		);
 
 		expect(result.success).toBe(true);
-		expect(
-			tokenRepo.findActiveByEmailAndTokenHash,
-		).toHaveBeenCalledWith(
+		expect(tokenRepo.findActiveByEmailAndTokenHash).toHaveBeenCalledWith(
 			"alex@example.com",
 			expect.any(String),
 			expect.any(String),

@@ -5,7 +5,7 @@ import type { Route } from "./+types/application";
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = Number(params.id);
-	if (isNaN(id)) throw new Response("Not Found", { status: 404 });
+	if (Number.isNaN(id)) throw new Response("Not Found", { status: 404 });
 	const response = await apiClient.landlord.applications[":id"].$get({
 		param: { id: String(id) },
 	});
@@ -95,7 +95,7 @@ function IncomeSection({
 						)}
 						<Field
 							label="Monthly income"
-							value={formatCurrency(source.monthlyAmountCents) + "/mo"}
+							value={`${formatCurrency(source.monthlyAmountCents)}/mo`}
 						/>
 					</div>
 				))}
@@ -146,7 +146,13 @@ export default function LandlordApplicationDetail({
 						className="text-[#7A7268] hover:text-[#1C1A17] transition-colors"
 						aria-label="Back to applications"
 					>
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+						<svg
+							aria-hidden="true"
+							width="20"
+							height="20"
+							viewBox="0 0 20 20"
+							fill="none"
+						>
 							<path
 								d="M12.5 15L7.5 10L12.5 5"
 								stroke="currentColor"

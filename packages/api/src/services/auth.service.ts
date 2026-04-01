@@ -5,14 +5,15 @@ import type { AuthConfig } from "~/auth/config";
 import type { UserGlobalRole } from "~/db/schema";
 import type { Logger } from "~/logger";
 import type { AuthMailer } from "~/mailers/auth.mailer";
-import type {
-	EmailLoginTokenRepository,
-} from "~/repositories/email-login-token.repository";
+import type { EmailLoginTokenRepository } from "~/repositories/email-login-token.repository";
 import type {
 	SessionRecord,
 	SessionRepository,
 } from "~/repositories/session.repository";
-import type { UserRecord, UserRepository } from "~/repositories/user.repository";
+import type {
+	UserRecord,
+	UserRepository,
+} from "~/repositories/user.repository";
 
 export const requestEmailLoginSchema = z.object({
 	email: z.string().trim().email({ error: "Invalid email address" }),
@@ -87,7 +88,9 @@ function toAuthUser(user: UserRecord): AuthUser {
 	};
 }
 
-function createApplicantSignupLink(authConfig: AuthConfig): ApplicantSignupLink {
+function createApplicantSignupLink(
+	authConfig: AuthConfig,
+): ApplicantSignupLink {
 	const signupUrl = new URL("/login", authConfig.webBaseUrl);
 	signupUrl.searchParams.set("role", "applicant");
 	signupUrl.searchParams.set("token", authConfig.applicantSignupToken);
@@ -221,7 +224,10 @@ export function createAuthService({
 				userAgent: userAgent ?? null,
 			});
 
-			logger.info({ email, userId: user.id, sessionId: session.id }, "Created session");
+			logger.info(
+				{ email, userId: user.id, sessionId: session.id },
+				"Created session",
+			);
 			return {
 				success: true,
 				user: toAuthUser(user),

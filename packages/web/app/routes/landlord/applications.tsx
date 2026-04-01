@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
 import type { SubmittedApplicationSummary } from "api";
+import { useEffect, useState } from "react";
 import { Form, Link } from "react-router";
-import { apiClient } from "~/lib/api";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "~/components/ui/popover";
+import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/applications";
 
 export async function clientLoader(_: Route.ClientLoaderArgs) {
@@ -61,7 +61,8 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 			setLinkError("");
 
 			try {
-				const response = await apiClient.landlord["applicant-signup-url"].$get();
+				const response =
+					await apiClient.landlord["applicant-signup-url"].$get();
 
 				if (!response.ok) {
 					throw new Error(`Request failed with status ${response.status}`);
@@ -127,8 +128,10 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 			`}</style>
 
 			{/* Backdrop */}
-			<div
-				className="fixed inset-0 z-40 bg-[#1C1A17]/25 backdrop-blur-[3px]"
+			<button
+				type="button"
+				aria-label="Close"
+				className="fixed inset-0 z-40 w-full cursor-default border-0 bg-[#1C1A17]/25 backdrop-blur-[3px]"
 				style={{ animation: "sl-fade-in 0.2s ease" }}
 				onClick={onClose}
 			/>
@@ -165,7 +168,13 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 							className="mt-1.5 w-8 h-8 flex items-center justify-center rounded-full bg-[#EDE8E2] text-[#7A7268] hover:bg-[#E2DBD3] transition-colors"
 							aria-label="Close"
 						>
-							<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+							<svg
+								aria-hidden="true"
+								width="12"
+								height="12"
+								viewBox="0 0 12 12"
+								fill="none"
+							>
 								<path
 									d="M1 1l10 10M11 1L1 11"
 									stroke="currentColor"
@@ -178,7 +187,8 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 
 					{/* Description */}
 					<p className="text-sm text-[#7A7268] leading-relaxed mb-5">
-						Send this link to anyone you'd like to apply. They'll create an account and fill out the application on their end.
+						Send this link to anyone you'd like to apply. They'll create an
+						account and fill out the application on their end.
 					</p>
 
 					{/* Link display + copy */}
@@ -209,6 +219,7 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 							{copied ? (
 								<>
 									<svg
+										aria-hidden="true"
 										width="14"
 										height="14"
 										viewBox="0 0 14 14"
@@ -229,7 +240,13 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 								</>
 							) : (
 								<>
-									<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+									<svg
+										aria-hidden="true"
+										width="14"
+										height="14"
+										viewBox="0 0 14 14"
+										fill="none"
+									>
 										<rect
 											x="4.5"
 											y="4.5"
@@ -288,7 +305,13 @@ export default function LandlordApplications({
 							onClick={() => setInviteOpen(true)}
 							className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1A17] text-[#F5F0E8] text-xs font-medium hover:bg-[#2E2B27] active:scale-[0.97] transition-all"
 						>
-							<svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+							<svg
+								aria-hidden="true"
+								width="11"
+								height="11"
+								viewBox="0 0 11 11"
+								fill="none"
+							>
 								<path
 									d="M4.5 6.5a2.5 2.5 0 003.536 0l1.25-1.25a2.5 2.5 0 00-3.536-3.536L5.208 2.25"
 									stroke="currentColor"
@@ -312,6 +335,7 @@ export default function LandlordApplications({
 								>
 									Landlord
 									<svg
+										aria-hidden="true"
 										width="8"
 										height="8"
 										viewBox="0 0 8 8"
@@ -339,6 +363,7 @@ export default function LandlordApplications({
 										className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#F5F0E8]/70 hover:text-[#F5F0E8] hover:bg-white/5 text-xs tracking-wide transition-colors"
 									>
 										<svg
+											aria-hidden="true"
 											width="12"
 											height="12"
 											viewBox="0 0 12 12"
@@ -388,7 +413,13 @@ export default function LandlordApplications({
 							onClick={() => setInviteOpen(true)}
 							className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F5E8DF] text-[#C4714A] text-sm font-medium hover:bg-[#EDD9CC] active:scale-[0.97] transition-all"
 						>
-							<svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+							<svg
+								aria-hidden="true"
+								width="13"
+								height="13"
+								viewBox="0 0 13 13"
+								fill="none"
+							>
 								<path
 									d="M5.5 7.5a3 3 0 004.243 0l1.5-1.5a3 3 0 00-4.243-4.243L6.25 2.5"
 									stroke="currentColor"

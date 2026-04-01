@@ -56,7 +56,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 		}
 
 		if (response.status === 409) {
-			return { error: "An account already exists for this email. Please sign in." };
+			return {
+				error: "An account already exists for this email. Please sign in.",
+			};
 		}
 
 		if (!response.ok) {
@@ -169,10 +171,7 @@ export default function Login({ loaderData }: Route.ComponentProps) {
 							aria-describedby={error ? "email-error" : undefined}
 						/>
 						{error && (
-							<p
-								id="email-error"
-								className="text-sm text-red-600 mt-2"
-							>
+							<p id="email-error" className="text-sm text-red-600 mt-2">
 								{error}
 							</p>
 						)}

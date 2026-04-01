@@ -13,10 +13,10 @@ import type {
 	UpdateOccupantsResult,
 } from "~/services/application.service";
 import type {
-	ApplicantSignupResult,
 	ApplicantSignupLink,
-	RequestEmailLoginResult,
+	ApplicantSignupResult,
 	GetSessionUserResult,
+	RequestEmailLoginResult,
 	VerifyEmailLoginResult,
 } from "~/services/auth.service";
 import type {
@@ -194,7 +194,9 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { applicationId: number }).toEqual({
 			applicationId: 12,
 		});
-		expect(services.applicationService.createApplication).toHaveBeenCalledTimes(1);
+		expect(services.applicationService.createApplication).toHaveBeenCalledTimes(
+			1,
+		);
 	});
 
 	it("rejects applicant application routes without a session", async () => {
@@ -219,7 +221,9 @@ describe("API application flow routes", () => {
 		});
 
 		expect(response.status).toBe(401);
-		expect(services.applicationService.createApplication).not.toHaveBeenCalled();
+		expect(
+			services.applicationService.createApplication,
+		).not.toHaveBeenCalled();
 	});
 
 	it("returns success for a known login email request", async () => {
@@ -443,7 +447,9 @@ describe("API application flow routes", () => {
 				globalRole: "applicant",
 			},
 		});
-		expect(services.authService.getSessionUser).toHaveBeenCalledWith("session-1");
+		expect(services.authService.getSessionUser).toHaveBeenCalledWith(
+			"session-1",
+		);
 	});
 
 	it("returns 401 for the current session user when the session cookie is missing", async () => {
@@ -483,9 +489,9 @@ describe("API application flow routes", () => {
 		});
 
 		expect(response.status).toBe(422);
-		expect(
-			((await response.json()) as { error: string }).error,
-		).toBe("validation_failed");
+		expect(((await response.json()) as { error: string }).error).toBe(
+			"validation_failed",
+		);
 	});
 
 	it("updates occupants", async () => {
@@ -510,12 +516,15 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { success: boolean }).toEqual({
 			success: true,
 		});
-		expect(services.applicationService.updateOccupants).toHaveBeenCalledWith(12, {
-			smokes: false,
-			additionalAdults: [],
-			children: [],
-			pets: [],
-		});
+		expect(services.applicationService.updateOccupants).toHaveBeenCalledWith(
+			12,
+			{
+				smokes: false,
+				additionalAdults: [],
+				children: [],
+				pets: [],
+			},
+		);
 	});
 
 	it("deletes a resident", async () => {
@@ -617,10 +626,13 @@ describe("API application flow routes", () => {
 		const services = makeServices();
 		const app = createApp({ services });
 
-		const response = await app.request("/applications/12/residents/not-a-number", {
-			method: "DELETE",
-			headers: { Cookie: applicantSessionCookie },
-		});
+		const response = await app.request(
+			"/applications/12/residents/not-a-number",
+			{
+				method: "DELETE",
+				headers: { Cookie: applicantSessionCookie },
+			},
+		);
 
 		expect(response.status).toBe(400);
 		expect((await response.json()) as { error: string }).toEqual({
@@ -718,9 +730,9 @@ describe("API application flow routes", () => {
 		});
 
 		expect(response.status).toBe(422);
-		expect(
-			((await response.json()) as { error: string }).error,
-		).toBe("validation_failed");
+		expect(((await response.json()) as { error: string }).error).toBe(
+			"validation_failed",
+		);
 	});
 
 	it("submits an application", async () => {
@@ -777,12 +789,12 @@ describe("API application flow routes", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect((await response.json()) as { fileId: string; uploadUrl: string }).toEqual(
-			{
+		expect(
+			(await response.json()) as { fileId: string; uploadUrl: string },
+		).toEqual({
 			fileId: "file-1",
 			uploadUrl: "/storage/documents/app-12/file.pdf",
-			},
-		);
+		});
 		expect(services.fileService.prepareDocumentUpload).toHaveBeenCalledWith({
 			originalFilename: "lease.pdf",
 			contentType: "application/pdf",
@@ -813,7 +825,9 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { success: boolean }).toEqual({
 			success: true,
 		});
-		expect(services.fileService.attachDocumentToApplication).toHaveBeenCalledWith({
+		expect(
+			services.fileService.attachDocumentToApplication,
+		).toHaveBeenCalledWith({
 			fileId: "file-1",
 			applicationId: 12,
 			residentId: 8,
@@ -847,9 +861,9 @@ describe("API application flow routes", () => {
 		});
 
 		expect(response.status).toBe(422);
-		expect(
-			((await response.json()) as { error: string }).error,
-		).toBe("attach_failed");
+		expect(((await response.json()) as { error: string }).error).toBe(
+			"attach_failed",
+		);
 	});
 
 	it("serves and stores files through the storage route", async () => {
@@ -933,9 +947,9 @@ describe("API application flow routes", () => {
 		});
 
 		expect(response.status).toBe(200);
-		expect((await response.json()) as { application: ApplicationWithDetails }).toEqual(
-			{ application },
-		);
+		expect(
+			(await response.json()) as { application: ApplicationWithDetails },
+		).toEqual({ application });
 	});
 
 	it("returns the applicant signup url for landlords", async () => {
@@ -974,7 +988,9 @@ describe("API application flow routes", () => {
 			signupUrl:
 				"http://localhost:5173/login?role=applicant&token=11111111-1111-4111-8111-111111111111",
 		});
-		expect(services.authService.getApplicantSignupLink).toHaveBeenCalledTimes(1);
+		expect(services.authService.getApplicantSignupLink).toHaveBeenCalledTimes(
+			1,
+		);
 	});
 
 	it("returns 401 for landlord routes when the session cookie is missing", async () => {

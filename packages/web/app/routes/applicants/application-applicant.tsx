@@ -21,7 +21,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	]);
 
 	if (applicationResponse.status === 404) throw data(null, { status: 404 });
-	if (!applicationResponse.ok) throw data(null, { status: applicationResponse.status });
+	if (!applicationResponse.ok)
+		throw data(null, { status: applicationResponse.status });
 
 	const { application } = (await applicationResponse.json()) as {
 		application: {

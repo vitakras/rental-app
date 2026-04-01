@@ -1,5 +1,5 @@
-import type { z } from "zod";
 import { validator } from "hono/validator";
+import type { z } from "zod";
 
 export function zodJsonValidator<TSchema extends z.ZodType>(schema: TSchema) {
 	return validator("json", (value, c) => {

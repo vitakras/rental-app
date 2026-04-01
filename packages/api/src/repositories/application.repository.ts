@@ -2,9 +2,9 @@ import { and, desc, eq, inArray, not } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
 import {
-	applicationsTable,
 	applicationAccessTable,
 	applicationDocumentsTable,
+	applicationsTable,
 	incomeSourcesTable,
 	petsTable,
 	residentsTable,

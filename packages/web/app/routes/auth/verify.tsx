@@ -12,7 +12,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	const token = url.searchParams.get("token");
 
 	if (!email || !token) {
-		return { error: "This sign-in link is incomplete. Please request a new one." };
+		return {
+			error: "This sign-in link is incomplete. Please request a new one.",
+		};
 	}
 
 	const response = await apiClient.auth.email.verify.$post({
@@ -21,7 +23,8 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
 	if (response.status === 401 || response.status === 422) {
 		return {
-			error: "This sign-in link has expired or already been used. Please request a new one.",
+			error:
+				"This sign-in link has expired or already been used. Please request a new one.",
 		};
 	}
 

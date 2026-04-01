@@ -36,7 +36,13 @@ const EMAIL_PROVIDERS: {
 		name: "Outlook",
 		href: "https://outlook.live.com/mail/inbox",
 		bg: "#0078D4",
-		domains: ["outlook.com", "hotmail.com", "hotmail.co.uk", "live.com", "msn.com"],
+		domains: [
+			"outlook.com",
+			"hotmail.com",
+			"hotmail.co.uk",
+			"live.com",
+			"msn.com",
+		],
 		icon: (
 			<svg
 				width="20"
@@ -56,7 +62,13 @@ const EMAIL_PROVIDERS: {
 		name: "Yahoo",
 		href: "https://mail.yahoo.com/",
 		bg: "#6001D2",
-		domains: ["yahoo.com", "yahoo.co.uk", "yahoo.ca", "yahoo.com.au", "ymail.com"],
+		domains: [
+			"yahoo.com",
+			"yahoo.co.uk",
+			"yahoo.ca",
+			"yahoo.com.au",
+			"ymail.com",
+		],
 		icon: (
 			<svg
 				width="20"

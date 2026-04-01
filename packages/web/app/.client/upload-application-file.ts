@@ -1,7 +1,4 @@
-import type {
-	ApplicationDocumentCategory,
-	ApplicationDocumentType,
-} from "api";
+import type { ApplicationDocumentCategory, ApplicationDocumentType } from "api";
 import { apiClient } from "~/lib/api";
 
 export interface UploadApplicationFileInput {

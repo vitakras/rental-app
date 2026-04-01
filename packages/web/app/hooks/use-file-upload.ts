@@ -1,7 +1,4 @@
-import type {
-	ApplicationDocumentCategory,
-	ApplicationDocumentType,
-} from "api";
+import type { ApplicationDocumentCategory, ApplicationDocumentType } from "api";
 import { useState } from "react";
 import { uploadApplicationFile } from "~/.client/upload-application-file";
 

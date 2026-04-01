@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from "hono";
-import { getSessionCookie } from "~/auth/cookies";
 import { getAuthConfig } from "~/auth/config";
+import { getSessionCookie } from "~/auth/cookies";
 import type { createAuthService } from "~/services/auth.service";
 
 type AuthService = ReturnType<typeof createAuthService>;

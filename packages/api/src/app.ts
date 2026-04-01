@@ -33,10 +33,7 @@ export function createApp({
 		})
 		.route("/auth/email", createAuthEmailRoutes(services))
 		.route("/applications", applicantRoutes)
-		.route(
-			"/landlord/applications",
-			createLandlordApplicationsRoutes(services),
-		)
+		.route("/landlord/applications", createLandlordApplicationsRoutes(services))
 		.route("/landlord", createLandlordSignupRoutes(services))
 		.route("/storage", storage)
 		.route("/storage/", storage);

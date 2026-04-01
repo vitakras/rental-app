@@ -28,7 +28,10 @@ const applicationDocumentCategories = [
 	"residence",
 	"reference",
 	"other",
-] as const satisfies [ApplicationDocumentCategory, ...ApplicationDocumentCategory[]];
+] as const satisfies [
+	ApplicationDocumentCategory,
+	...ApplicationDocumentCategory[],
+];
 
 const applicationDocumentTypes = [
 	"government_id",

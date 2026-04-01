@@ -3,13 +3,14 @@ import { createApp } from "~/app";
 const app = createApp();
 
 export default app;
+export type { AppType } from "~/app";
 export type {
 	AddIncomeSourcesData,
+	ApplicantSignupLink,
 	ApplicationDocumentCategory,
 	ApplicationDocumentType,
 	ApplicationStatus,
 	ApplicationWithDetails,
-	ApplicantSignupLink,
 	AuthUser,
 	CreateApplicationData,
 	IncomeSourceDetail,
@@ -23,4 +24,3 @@ export type {
 	UserGlobalRole,
 	VerifyEmailLoginData,
 } from "~/contracts";
-export type { AppType } from "~/app";

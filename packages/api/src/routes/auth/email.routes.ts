@@ -1,17 +1,21 @@
-import { Hono } from "hono";
 import type { Context } from "hono";
+import { Hono } from "hono";
+import { getAuthConfig } from "~/auth/config";
+import {
+	clearSessionCookie,
+	getSessionCookie,
+	setSessionCookie,
+} from "~/auth/cookies";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
-	applicantSignupSchema,
 	type ApplicantSignupData,
-	requestEmailLoginSchema,
+	applicantSignupSchema,
+	type createAuthService,
 	type RequestEmailLoginData,
+	requestEmailLoginSchema,
 	type VerifyEmailLoginData,
 	verifyEmailLoginSchema,
-	type createAuthService,
 } from "~/services/auth.service";
-import { clearSessionCookie, getSessionCookie, setSessionCookie } from "~/auth/cookies";
-import { getAuthConfig } from "~/auth/config";
 
 type AuthService = ReturnType<typeof createAuthService>;
 const authConfig = getAuthConfig();
@@ -44,65 +48,57 @@ export function createAuthEmailRoutes({
 
 			return c.json({ user: result.user }, 200);
 		})
-		.post(
-			"/signup",
-			zodJsonValidator(applicantSignupSchema),
-			async (c) => {
-				const body = c.req.valid("json") as ApplicantSignupData;
-				const result = await authService.applicantSignup(body, {
-					ipAddress: getClientIp(c),
-					userAgent: c.req.header("user-agent") ?? null,
-				});
+		.post("/signup", zodJsonValidator(applicantSignupSchema), async (c) => {
+			const body = c.req.valid("json") as ApplicantSignupData;
+			const result = await authService.applicantSignup(body, {
+				ipAddress: getClientIp(c),
+				userAgent: c.req.header("user-agent") ?? null,
+			});
 
-				if (!result.success) {
-					if ("errors" in result) {
-						return c.json(
-							{ error: "validation_failed", issues: result.errors },
-							422,
-						);
-					}
-
-					if (result.reason === "email_already_exists") {
-						return c.json({ error: result.reason }, 409);
-					}
-
-					return c.json({ error: result.reason }, 401);
-				}
-
-				setSessionCookie(c, {
-					cookieName: authConfig.cookieName,
-					sessionId: result.session.id,
-					expiresAt: result.session.expiresAt,
-				});
-
-				return c.json(
-					{
-						success: true,
-						user: result.user,
-					},
-					201,
-				);
-			},
-		)
-		.post(
-			"/request",
-			zodJsonValidator(requestEmailLoginSchema),
-			async (c) => {
-				const body = c.req.valid("json") as RequestEmailLoginData;
-				const result = await authService.requestEmailLogin(body, {
-					ipAddress: getClientIp(c),
-				});
-
-				if (!result.success) {
+			if (!result.success) {
+				if ("errors" in result) {
 					return c.json(
 						{ error: "validation_failed", issues: result.errors },
 						422,
 					);
 				}
 
-				return c.json({ success: true }, 200);
-			},
-		)
+				if (result.reason === "email_already_exists") {
+					return c.json({ error: result.reason }, 409);
+				}
+
+				return c.json({ error: result.reason }, 401);
+			}
+
+			setSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+				sessionId: result.session.id,
+				expiresAt: result.session.expiresAt,
+			});
+
+			return c.json(
+				{
+					success: true,
+					user: result.user,
+				},
+				201,
+			);
+		})
+		.post("/request", zodJsonValidator(requestEmailLoginSchema), async (c) => {
+			const body = c.req.valid("json") as RequestEmailLoginData;
+			const result = await authService.requestEmailLogin(body, {
+				ipAddress: getClientIp(c),
+			});
+
+			if (!result.success) {
+				return c.json(
+					{ error: "validation_failed", issues: result.errors },
+					422,
+				);
+			}
+
+			return c.json({ success: true }, 200);
+		})
 		.post("/signout", async (c) => {
 			const sessionId = getSessionCookie(c, {
 				cookieName: authConfig.cookieName,
@@ -115,40 +111,36 @@ export function createAuthEmailRoutes({
 
 			return c.json({ success: true }, 200);
 		})
-		.post(
-			"/verify",
-			zodJsonValidator(verifyEmailLoginSchema),
-			async (c) => {
-				const body = c.req.valid("json") as VerifyEmailLoginData;
-				const result = await authService.verifyEmailLogin(body, {
-					ipAddress: getClientIp(c),
-					userAgent: c.req.header("user-agent") ?? null,
-				});
+		.post("/verify", zodJsonValidator(verifyEmailLoginSchema), async (c) => {
+			const body = c.req.valid("json") as VerifyEmailLoginData;
+			const result = await authService.verifyEmailLogin(body, {
+				ipAddress: getClientIp(c),
+				userAgent: c.req.header("user-agent") ?? null,
+			});
 
-				if (!result.success) {
-					if ("errors" in result) {
-						return c.json(
-							{ error: "validation_failed", issues: result.errors },
-							422,
-						);
-					}
-
-					return c.json({ error: result.reason }, 401);
+			if (!result.success) {
+				if ("errors" in result) {
+					return c.json(
+						{ error: "validation_failed", issues: result.errors },
+						422,
+					);
 				}
 
-				setSessionCookie(c, {
-					cookieName: authConfig.cookieName,
-					sessionId: result.session.id,
-					expiresAt: result.session.expiresAt,
-				});
+				return c.json({ error: result.reason }, 401);
+			}
 
-				return c.json(
-					{
-						success: true,
-						user: result.user,
-					},
-					200,
-				);
-			},
-		);
+			setSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+				sessionId: result.session.id,
+				expiresAt: result.session.expiresAt,
+			});
+
+			return c.json(
+				{
+					success: true,
+					user: result.user,
+				},
+				200,
+			);
+		});
 }

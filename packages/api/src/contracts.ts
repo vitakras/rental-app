@@ -3,8 +3,8 @@ export type {
 	ApplicationDocumentType,
 	ApplicationStatus,
 	IncomeSourceType,
-	UserGlobalRole,
 	ResidentRole,
+	UserGlobalRole,
 } from "~/db/schema";
 export type {
 	AddIncomeSourcesData,

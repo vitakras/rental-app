@@ -104,7 +104,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ApplicationCard({ application }: { application: ApplicationSummary }) {
-	const isInProgress = application.status === "draft" || application.status === "pending";
+	const isInProgress =
+		application.status === "draft" || application.status === "pending";
 	const href =
 		application.status === "draft"
 			? `/a/applications/${application.id}/applicant`
@@ -217,7 +218,11 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				<div className="max-w-lg mx-auto px-5 py-4">
 					<span
 						className="text-[#C4714A] text-sm"
-						style={{ fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 300 }}
+						style={{
+							fontFamily: "'Fraunces', serif",
+							fontStyle: "italic",
+							fontWeight: 300,
+						}}
 					>
 						Find Your Home
 					</span>
