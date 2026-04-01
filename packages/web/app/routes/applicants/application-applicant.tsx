@@ -1,20 +1,65 @@
 import { useState } from "react";
-import { redirect, useSubmit } from "react-router";
+import { data, redirect, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { apiClient } from "~/lib/api";
-import type { Route } from "./+types/apply";
+import type { Route } from "./+types/application-applicant";
 
 export function meta() {
-	return [{ title: "Apply — Find Your Home" }];
+	return [{ title: "Your Info — Rental Application" }];
 }
 
-export async function clientAction({ request }: Route.ClientActionArgs) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+	const id = Number(params.id);
+	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+
+	const response = await apiClient.applications[":id"].$get({
+		param: { id: String(id) },
+	});
+
+	if (response.status === 404) throw data(null, { status: 404 });
+	if (!response.ok) throw data(null, { status: response.status });
+
+	const { application } = (await response.json()) as {
+		application: {
+			id: number;
+			desiredMoveInDate: string | null;
+			residents: Array<{
+				role: string;
+				fullName: string;
+				dateOfBirth: string;
+				email: string | null;
+				phone: string | null;
+			}>;
+		};
+	};
+
+	const primary = application.residents.find((r) => r.role === "primary");
+
+	return {
+		applicationId: id,
+		fullName: primary?.fullName ?? "",
+		dateOfBirth: primary?.dateOfBirth ?? "",
+		email: primary?.email ?? "",
+		phone: primary?.phone ?? "",
+		desiredMoveInDate: application.desiredMoveInDate ?? "",
+	};
+}
+
+export async function clientAction({
+	request,
+	params,
+}: Route.ClientActionArgs) {
+	const id = Number(params.id);
+	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+
 	const formData = await request.formData();
 	const raw = JSON.parse(formData.get("data") as string);
-	const response = await apiClient.applications.$post({
+
+	const response = await apiClient.applications[":id"].applicant.$put({
+		param: { id: String(id) },
 		json: raw,
 	});
 
@@ -22,9 +67,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 		const result = await response.json();
 		return { errors: result.issues };
 	}
+	if (!response.ok) throw data(null, { status: response.status });
 
-	const result = (await response.json()) as { applicationId: number };
-	return redirect(`/a/applications/${result.applicationId}/occupants`);
+	return redirect(`/a/applications/${id}/occupants`);
 }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
@@ -64,14 +109,16 @@ function TextInput({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-export default function Apply() {
+export default function ApplicationApplicant({
+	loaderData,
+}: Route.ComponentProps) {
 	const submit = useSubmit();
 
-	const [fullName, setFullName] = useState("");
-	const [email, setEmail] = useState("");
-	const [phone, setPhone] = useState("");
-	const [ownerDob, setOwnerDob] = useState("");
-	const [moveInDate, setMoveInDate] = useState("");
+	const [fullName, setFullName] = useState(loaderData.fullName);
+	const [email, setEmail] = useState(loaderData.email);
+	const [phone, setPhone] = useState(loaderData.phone);
+	const [ownerDob, setOwnerDob] = useState(loaderData.dateOfBirth);
+	const [moveInDate, setMoveInDate] = useState(loaderData.desiredMoveInDate);
 
 	return (
 		<div
@@ -121,7 +168,7 @@ export default function Apply() {
 			</div>
 
 			{/* ── Scrollable content ── */}
-			<div className="max-w-lg mx-auto px-5 pt-[72px] pb-36">
+			<div className="max-lg mx-auto px-5 pt-[72px] pb-36 max-w-lg">
 				{/* Heading */}
 				<div className="mt-8 mb-8">
 					<p
@@ -218,12 +265,10 @@ export default function Apply() {
 									{
 										data: JSON.stringify({
 											desiredMoveInDate: moveInDate,
-											owner: {
-												fullName,
-												dateOfBirth: ownerDob,
-												email,
-												phone,
-											},
+											fullName,
+											dateOfBirth: ownerDob,
+											email,
+											phone,
 										}),
 									},
 									{ method: "post" },

@@ -22,8 +22,9 @@ export type ResidentRole = "primary" | "co-applicant" | "dependent" | "child";
 // "employment" | "self_employment" | "other"
 export type IncomeSourceType = "employment" | "self_employment" | "other";
 
-// "pending" | "submitted" | "approved" | "rejected"
+// "draft" | "pending" | "submitted" | "approved" | "rejected"
 export type ApplicationStatus =
+	| "draft"
 	| "pending"
 	| "submitted"
 	| "approved"
@@ -90,8 +91,8 @@ export const emailLoginTokensTable = sqliteTable(
 
 export const applicationsTable = sqliteTable("applications", {
 	id: int().primaryKey({ autoIncrement: true }),
-	status: text().$type<ApplicationStatus>().notNull().default("pending"),
-	desiredMoveInDate: text().notNull(),
+	status: text().$type<ApplicationStatus>().notNull().default("draft"),
+	desiredMoveInDate: text(),
 	smokes: int({ mode: "boolean" }).notNull().default(false),
 	createdByUserId: text().references(() => usersTable.id),
 	...timestamps,

@@ -43,6 +43,14 @@ export const createApplicationSchema = z.object({
 	pets: z.array(petSchema).default([]),
 });
 
+export const upsertApplicantInfoSchema = z.object({
+	desiredMoveInDate: dateString,
+	fullName: z.string().min(1, { error: "Full name is required" }),
+	dateOfBirth: dateString,
+	email: z.email({ error: "Invalid email address" }),
+	phone: z.string().min(1, { error: "Phone number is required" }),
+});
+
 export const updateOccupantsSchema = z.object({
 	smokes: z.boolean(),
 	additionalAdults: z.array(additionalAdultSchema).default([]),
@@ -73,10 +81,14 @@ export const addIncomeSourcesSchema = z.array(
 export type UpdateOccupantsData = z.input<typeof updateOccupantsSchema>;
 export type CreateApplicationData = z.input<typeof createApplicationSchema>;
 export type AddIncomeSourcesData = z.input<typeof addIncomeSourcesSchema>;
+export type UpsertApplicantInfoData = z.input<typeof upsertApplicantInfoSchema>;
 
 // ── Repository interface ───────────────────────────────────────────────────────
 
 export type CreateApplicationPayload = z.output<typeof createApplicationSchema>;
+export type UpsertApplicantInfoPayload = z.output<
+	typeof upsertApplicantInfoSchema
+>;
 
 export type UpdateOccupantsPayload = z.output<typeof updateOccupantsSchema>;
 export type AddIncomeSourcesPayload = z.output<typeof addIncomeSourcesSchema>;
@@ -84,9 +96,9 @@ export type AddIncomeSourcesPayload = z.output<typeof addIncomeSourcesSchema>;
 export type SubmittedApplicationSummary = {
 	id: number;
 	status: string;
-	desiredMoveInDate: string;
+	desiredMoveInDate: string | null;
 	createdAt: string;
-	primaryApplicantName: string;
+	primaryApplicantName: string | null;
 };
 
 export type IncomeSourceDetail = {
@@ -130,7 +142,7 @@ export type PetDetail = {
 export type ApplicationWithDetails = {
 	id: number;
 	status: string;
-	desiredMoveInDate: string;
+	desiredMoveInDate: string | null;
 	smokes: boolean;
 	createdAt: string;
 	updatedAt: string;
@@ -141,15 +153,17 @@ export type ApplicationWithDetails = {
 export type ApplicantApplicationSummary = {
 	id: number;
 	status: string;
-	desiredMoveInDate: string;
+	desiredMoveInDate: string | null;
 	createdAt: string;
-	primaryApplicantName: string;
+	primaryApplicantName: string | null;
 };
 
 export interface ApplicationRepository {
-	create(
-		input: CreateApplicationPayload & { createdByUserId?: string },
-	): Promise<{ id: number }>;
+	create(input: { createdByUserId?: string }): Promise<{ id: number }>;
+	upsertPrimaryApplicant(
+		applicationId: number,
+		input: UpsertApplicantInfoPayload,
+	): Promise<void>;
 	findById(id: number): Promise<{ id: number; status: string } | null>;
 	submit(id: number): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
@@ -187,6 +201,11 @@ export type AddIncomeSourcesResult =
 	| { success: false; reason: "not_found" }
 	| { success: false; errors: z.ZodIssue[] };
 
+export type UpsertApplicantInfoResult =
+	| { success: true }
+	| { success: false; reason: "not_found" }
+	| { success: false; errors: z.ZodIssue[] };
+
 export type ListSubmittedApplicationsResult = {
 	success: true;
 	applications: SubmittedApplicationSummary[];
@@ -213,40 +232,55 @@ export function createApplicationService({
 	logger?: Logger;
 }) {
 	return {
-		async createApplication(
-			data: CreateApplicationData,
-			options?: { userId?: string },
-		): Promise<CreateApplicationResult> {
-			const parsed = createApplicationSchema.safeParse(data);
-
-			if (!parsed.success) {
-				logger.warn(
-					{ errors: parsed.error.issues },
-					"Application validation failed",
-				);
-				return { success: false, errors: parsed.error.issues };
-			}
-
-			const { additionalAdults, children, pets } = parsed.data;
-			logger.info(
-				{
-					desiredMoveInDate: parsed.data.desiredMoveInDate,
-					additionalAdultCount: additionalAdults.length,
-					childCount: children.length,
-					petCount: pets.length,
-				},
-				"Creating application",
-			);
+		async createApplication(options?: {
+			userId?: string;
+		}): Promise<CreateApplicationResult> {
+			logger.info("Creating draft application");
 
 			const application = await applicationRepository.create({
-				...parsed.data,
 				...(options?.userId !== undefined
 					? { createdByUserId: options.userId }
 					: {}),
 			});
 
-			logger.info({ applicationId: application.id }, "Application created");
+			logger.info(
+				{ applicationId: application.id },
+				"Draft application created",
+			);
 			return { success: true, applicationId: application.id };
+		},
+
+		async upsertApplicantInfo(
+			applicationId: number,
+			data: UpsertApplicantInfoData,
+		): Promise<UpsertApplicantInfoResult> {
+			const app = await applicationRepository.findById(applicationId);
+
+			if (!app) {
+				logger.warn(
+					{ applicationId },
+					"Cannot update applicant: application not found",
+				);
+				return { success: false, reason: "not_found" };
+			}
+
+			const parsed = upsertApplicantInfoSchema.safeParse(data);
+
+			if (!parsed.success) {
+				logger.warn(
+					{ applicationId, errors: parsed.error.issues },
+					"Applicant info validation failed",
+				);
+				return { success: false, errors: parsed.error.issues };
+			}
+
+			await applicationRepository.upsertPrimaryApplicant(
+				applicationId,
+				parsed.data,
+			);
+
+			logger.info({ applicationId }, "Applicant info updated");
+			return { success: true };
 		},
 
 		async updateOccupants(
@@ -372,7 +406,7 @@ export function createApplicationService({
 				return { success: false, reason: "not_found" };
 			}
 
-			if (app.status !== "pending") {
+			if (app.status !== "pending" && app.status !== "draft") {
 				logger.warn(
 					{ applicationId, status: app.status },
 					"Cannot submit application: not pending",

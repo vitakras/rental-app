@@ -1,13 +1,13 @@
-import { Link } from "react-router";
+import { Link, redirect, useSubmit } from "react-router";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/home";
 
 type ApplicationSummary = {
 	id: number;
 	status: string;
-	desiredMoveInDate: string;
+	desiredMoveInDate: string | null;
 	createdAt: string;
-	primaryApplicantName: string;
+	primaryApplicantName: string | null;
 };
 
 export function meta() {
@@ -25,6 +25,12 @@ export async function clientLoader() {
 	return { applications };
 }
 
+export async function clientAction() {
+	const response = await apiClient.applications.$post();
+	const result = (await response.json()) as { applicationId: number };
+	return redirect(`/a/applications/${result.applicationId}/applicant`);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string) {
@@ -40,6 +46,12 @@ const STATUS_CONFIG: Record<
 	string,
 	{ label: string; bg: string; text: string; dot: string }
 > = {
+	draft: {
+		label: "Draft",
+		bg: "#F5F0E8",
+		text: "#7A7268",
+		dot: "#7A7268",
+	},
 	pending: {
 		label: "In progress",
 		bg: "#FFF3EE",
@@ -92,11 +104,15 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ApplicationCard({ application }: { application: ApplicationSummary }) {
-	const isPending = application.status === "pending";
+	const isInProgress = application.status === "draft" || application.status === "pending";
+	const href =
+		application.status === "draft"
+			? `/a/applications/${application.id}/applicant`
+			: `/a/applications/${application.id}`;
 
 	return (
 		<Link
-			to={`/a/applications/${application.id}`}
+			to={href}
 			className="block bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] hover:shadow-[0_3px_12px_rgba(28,26,23,0.1)] transition-shadow group"
 		>
 			<div className="flex items-start justify-between gap-3 mb-3">
@@ -105,7 +121,7 @@ function ApplicationCard({ application }: { application: ApplicationSummary }) {
 						className="text-[#1C1A17] font-medium text-[15px] truncate"
 						style={{ fontFamily: "'DM Sans', sans-serif" }}
 					>
-						{application.primaryApplicantName}
+						{application.primaryApplicantName ?? "—"}
 					</p>
 					<p
 						className="text-xs text-[#7A7268] mt-0.5"
@@ -136,7 +152,9 @@ function ApplicationCard({ application }: { application: ApplicationSummary }) {
 						<rect x="1" y="2" width="11" height="10" rx="1.5" />
 						<path d="M1 5.5h11M4 1v2M9 1v2" />
 					</svg>
-					Move in {formatDate(application.desiredMoveInDate)}
+					{application.desiredMoveInDate
+						? `Move in ${formatDate(application.desiredMoveInDate)}`
+						: "Move-in date TBD"}
 				</span>
 				<span className="flex items-center gap-1.5">
 					<svg
@@ -162,7 +180,7 @@ function ApplicationCard({ application }: { application: ApplicationSummary }) {
 					className="text-xs font-medium text-[#C4714A] flex items-center gap-1 group-hover:gap-2 transition-all"
 					style={{ fontFamily: "'DM Sans', sans-serif" }}
 				>
-					{isPending ? "Continue application" : "View application"}
+					{isInProgress ? "Continue application" : "View application"}
 					<svg
 						width="13"
 						height="13"
@@ -187,6 +205,7 @@ function ApplicationCard({ application }: { application: ApplicationSummary }) {
 export default function Home({ loaderData }: Route.ComponentProps) {
 	const { applications } = loaderData;
 	const hasApplications = applications.length > 0;
+	const submit = useSubmit();
 
 	return (
 		<div
@@ -287,15 +306,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 							</p>
 						</div>
 
-						<Link to="/a/apply">
-							<button
-								type="button"
-								className="w-full h-auto min-h-14 px-5 py-3.5 bg-[#1C1A17] text-[15px] font-semibold text-white hover:bg-[#2D2B28] active:scale-[0.98] tracking-wide rounded-2xl transition-all"
-								style={{ fontFamily: "'DM Sans', sans-serif" }}
-							>
-								Begin Application
-							</button>
-						</Link>
+						<button
+							type="button"
+							className="w-full h-auto min-h-14 px-5 py-3.5 bg-[#1C1A17] text-[15px] font-semibold text-white hover:bg-[#2D2B28] active:scale-[0.98] tracking-wide rounded-2xl transition-all"
+							style={{ fontFamily: "'DM Sans', sans-serif" }}
+							onClick={() => submit({}, { method: "post" })}
+						>
+							Begin Application
+						</button>
 						<p
 							className="text-center text-xs text-[#7A7268] mt-3"
 							style={{ fontFamily: "'DM Sans', sans-serif" }}

@@ -1,6 +1,5 @@
 import {
 	index,
-	layout,
 	type RouteConfig,
 	route,
 } from "@react-router/dev/routes";
@@ -13,9 +12,9 @@ export default [
 	route("signout", "routes/auth/signout.tsx"),
 	route("a", "routes/applicants/layout.tsx", [
 		index("routes/applicants/home.tsx"),
-		route("apply", "routes/applicants/apply.tsx"),
-		route("applications/:id", "routes/applicants/application-shell.tsx", [
+route("applications/:id", "routes/applicants/application-shell.tsx", [
 			index("routes/applicants/application.tsx"),
+			route("applicant", "routes/applicants/application-applicant.tsx"),
 			route("occupants", "routes/applicants/application-occupants.tsx"),
 			route("income", "routes/applicants/application-income.tsx"),
 			route("documents", "routes/applicants/application-documents.tsx"),
