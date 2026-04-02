@@ -179,6 +179,19 @@ export type PetDetail = {
 	updatedAt: string;
 };
 
+export type ApplicationDocumentDetail = {
+	id: number;
+	applicationId: number;
+	residentId: number | null;
+	fileId: string;
+	category: string;
+	documentType: string;
+	status: string;
+	notes: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
 export type ApplicationWithDetails = {
 	id: number;
 	status: string;
@@ -189,6 +202,7 @@ export type ApplicationWithDetails = {
 	updatedAt: string;
 	residents: ResidentDetail[];
 	pets: PetDetail[];
+	documents: ApplicationDocumentDetail[];
 };
 
 export type ApplicantApplicationSummary = {

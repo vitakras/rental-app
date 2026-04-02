@@ -290,7 +290,7 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 			]);
 
 			const residentIds = residents.map((r) => r.id);
-			const [incomeSources, residences] =
+			const [incomeSources, residences, documents] =
 				residentIds.length > 0
 					? await Promise.all([
 							db
@@ -306,8 +306,19 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 										inArray(residencesTable.residentId, residentIds),
 									),
 								),
+							db
+								.select()
+								.from(applicationDocumentsTable)
+								.where(eq(applicationDocumentsTable.applicationId, id)),
 						])
-					: [[], []];
+					: [
+							[],
+							[],
+							await db
+								.select()
+								.from(applicationDocumentsTable)
+								.where(eq(applicationDocumentsTable.applicationId, id)),
+						];
 
 			const residentsWithDetails = residents.map((r) => ({
 				...r,
@@ -315,7 +326,7 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 				residences: residences.filter((residence) => residence.residentId === r.id),
 			}));
 
-			return { ...app, residents: residentsWithDetails, pets };
+			return { ...app, residents: residentsWithDetails, pets, documents };
 		},
 
 		async findAllSubmitted() {
