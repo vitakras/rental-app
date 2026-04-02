@@ -1,13 +1,9 @@
 Next Steps
-- Add ability for applicant to review the form before submiting
-- Verify file upload has been fixed
+- Make sure i can still run the app after cloudflare migration
+- Refactor file upload to use upload through my server for up to 10MB
 - Applicant can edit the form they created before they submit it
-- Simplify the login flow, to be via 6 digit totp ()
-    - Remove need for email in V1 of the product
-- add section for previoius rental history 
-  - preious landlord / number
-  - if they previously owned a place add a note
-  - previous address ether way, and length of stay, reason for leaving
+- Add ability for applicant to add additional information if requested (this would probably just be additinal files with notes)
+- Deploy a copy of the app on cloudflare
 
 Fast Follow
 - Co applicant support

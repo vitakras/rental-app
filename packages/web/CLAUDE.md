@@ -20,7 +20,7 @@ bun run typecheck
 
 ## Environment
 
-- `VITE_LOCAL_API_BASE_URL` configures the backend origin used by the web app client.
+- `VITE_API_BASE_URL` configures the backend origin used by the web app client.
 
 ## Upload Flow
 
