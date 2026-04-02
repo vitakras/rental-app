@@ -13,6 +13,7 @@ import { userRepository } from "~/repositories/user.repository";
 import { createApplicationService } from "~/services/application.service";
 import { createAuthService } from "~/services/auth.service";
 import { createFileService } from "~/services/file.service";
+import type { AppServices } from "~/runtime-services";
 import { createLocalBlobStorage } from "~/storage/local.blob.storage";
 
 export const repositories = {
@@ -32,7 +33,7 @@ const authMailer = createDevAuthMailer({
 	logger: logger.child({ service: "auth-mailer" }),
 });
 
-export const services = {
+export const services: AppServices = {
 	authService: createAuthService({
 		userRepository: repositories.userRepository,
 		emailLoginTokenRepository: repositories.emailLoginTokenRepository,

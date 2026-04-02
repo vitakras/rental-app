@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { createRequireLandlordSession } from "~/auth/landlord-session";
-import { services as defaultServices } from "~/container";
 import type { createApplicationService } from "~/services/application.service";
 import type { createAuthService } from "~/services/auth.service";
 
@@ -36,10 +35,3 @@ export function createLandlordApplicationsRoutes({
 			return c.json({ application: result.application }, 200);
 		});
 }
-
-const applications = createLandlordApplicationsRoutes({
-	authService: defaultServices.authService,
-	applicationService: defaultServices.applicationService,
-});
-
-export { applications };
