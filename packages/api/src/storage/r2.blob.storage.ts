@@ -1,0 +1,39 @@
+import { getApiBaseUrl } from "~/config";
+import type { BlobStorage } from "./blob.storage";
+
+function encodeStorageKeyForPath(key: string) {
+	return key
+		.split("/")
+		.map((segment) => encodeURIComponent(segment))
+		.join("/");
+}
+
+export function createR2BlobStorage(bucket: R2Bucket): BlobStorage {
+	return {
+		async createUploadUrl({ key }) {
+			return {
+				uploadUrl: `${getApiBaseUrl()}/storage/${encodeStorageKeyForPath(key)}`,
+			};
+		},
+
+		async createDownloadUrl(key) {
+			const object = await bucket.head(key);
+
+			if (!object) {
+				throw new Error(`Object not found for key: ${key}`);
+			}
+
+			return {
+				downloadUrl: `${getApiBaseUrl()}/storage/${encodeStorageKeyForPath(key)}`,
+			};
+		},
+
+		async objectExists(key) {
+			return (await bucket.head(key)) !== null;
+		},
+
+		async deleteObject(key) {
+			await bucket.delete(key);
+		},
+	};
+}

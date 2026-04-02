@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createApp } from "~/app";
+import { createStorageRoutes } from "~/routes/storage.routes";
 import type {
 	AddIncomeSourcesResult,
 	ApplicationWithDetails,
@@ -162,6 +163,11 @@ function makeServices() {
 					reason: "not_found",
 				}),
 			),
+			upsertApplicantInfo: mock(async () => ({ success: true as const })),
+			listApplicationsByUser: mock(async () => ({
+				success: true as const,
+				applications: [],
+			})),
 		},
 		fileService: {
 			prepareDocumentUpload: mock(
@@ -184,6 +190,13 @@ function makeServices() {
 	};
 }
 
+function createTestApp(services = makeServices()) {
+	return createApp({
+		services,
+		storageRoutes: createStorageRoutes(),
+	});
+}
+
 describe("API application flow routes", () => {
 	afterEach(async () => {
 		await fs.rm(path.join(uploadsDir, "route-tests"), {
@@ -194,7 +207,7 @@ describe("API application flow routes", () => {
 
 	it("creates an application", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications", {
 			method: "POST",
@@ -227,7 +240,7 @@ describe("API application flow routes", () => {
 
 	it("rejects applicant application routes without a session", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications", {
 			method: "POST",
@@ -252,9 +265,31 @@ describe("API application flow routes", () => {
 		).not.toHaveBeenCalled();
 	});
 
+	it("returns success for a known login email request", async () => {
+		const services = makeServices();
+		const app = createTestApp(services);
+
+		const response = await app.request("/auth/email/request", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-forwarded-for": "127.0.0.1",
+			},
+			body: JSON.stringify({ email: "alex@example.com" }),
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+		expect(services.authService.requestEmailLogin).toHaveBeenCalledWith(
+			{ email: "alex@example.com" },
+			{ ipAddress: "127.0.0.1" },
+		);
+	});
 	it("creates an applicant account and sets a session cookie", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/email/signup", {
 			method: "POST",
@@ -303,7 +338,7 @@ describe("API application flow routes", () => {
 				reason: "email_already_exists",
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/email/signup", {
 			method: "POST",
@@ -329,7 +364,7 @@ describe("API application flow routes", () => {
 				reason: "invalid_signup_token",
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/email/signup", {
 			method: "POST",
@@ -347,9 +382,91 @@ describe("API application flow routes", () => {
 		expect(response.headers.get("set-cookie")).toBeNull();
 	});
 
+	it("returns success for an unknown login email request", async () => {
+		const services = makeServices();
+		services.authService.requestEmailLogin = mock(
+			async (): Promise<RequestEmailLoginResult> => ({ success: true }),
+		);
+		const app = createTestApp(services);
+
+		const response = await app.request("/auth/email/request", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email: "missing@example.com" }),
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+	});
+
+	it("verifies a login token and sets a session cookie", async () => {
+		const services = makeServices();
+		const app = createTestApp(services);
+
+		const response = await app.request("/auth/email/verify", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-forwarded-for": "127.0.0.1",
+				"user-agent": "bun-test",
+			},
+			body: JSON.stringify({
+				email: "alex@example.com",
+				token: "plain-token",
+			}),
+		});
+
+		expect(response.status).toBe(200);
+		expect(
+			(await response.json()) as {
+				success: boolean;
+				user: { id: string; email: string; globalRole: string };
+			},
+		).toEqual({
+			success: true,
+			user: {
+				id: "user-1",
+				email: "alex@example.com",
+				globalRole: "applicant",
+			},
+		});
+		expect(services.authService.verifyEmailLogin).toHaveBeenCalledWith(
+			{ email: "alex@example.com", token: "plain-token" },
+			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
+		);
+		expect(response.headers.get("set-cookie")).toContain("session=session-1");
+	});
+
+	it("returns 401 without setting a cookie for an invalid login token", async () => {
+		const services = makeServices();
+		services.authService.verifyEmailLogin = mock(
+			async (): Promise<VerifyEmailLoginResult> => ({
+				success: false,
+				reason: "invalid_or_expired_token",
+			}),
+		);
+		const app = createTestApp(services);
+
+		const response = await app.request("/auth/email/verify", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				email: "alex@example.com",
+				token: "bad-token",
+			}),
+		});
+
+		expect(response.status).toBe(401);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "invalid_or_expired_token",
+		});
+		expect(response.headers.get("set-cookie")).toBeNull();
+	});
 	it("verifies a reusable login code and sets a session cookie", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/code/verify", {
 			method: "POST",
@@ -393,7 +510,7 @@ describe("API application flow routes", () => {
 				reason: "invalid_or_expired_code",
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/code/verify", {
 			method: "POST",
@@ -413,7 +530,7 @@ describe("API application flow routes", () => {
 
 	it("returns reusable login code status for an authenticated user", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/code", {
 			headers: {
@@ -441,7 +558,7 @@ describe("API application flow routes", () => {
 
 	it("rotates a reusable login code for an authenticated user", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/code/rotate", {
 			method: "POST",
@@ -473,7 +590,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("rejects reusable login code status requests without a session", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/auth/code");
 
@@ -481,7 +598,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("rejects reusable login code rotation without a session", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/auth/code/rotate", {
 			method: "POST",
@@ -492,7 +609,7 @@ describe("API application flow routes", () => {
 
 	it("returns the current session user when the session cookie is valid", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/auth/email/session", {
 			headers: {
@@ -518,7 +635,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("returns 401 for the current session user when the session cookie is missing", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/auth/email/session");
 
@@ -542,7 +659,7 @@ describe("API application flow routes", () => {
 				],
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications", {
 			method: "POST",
@@ -561,7 +678,7 @@ describe("API application flow routes", () => {
 
 	it("updates occupants", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/occupants", {
 			method: "PUT",
@@ -594,7 +711,7 @@ describe("API application flow routes", () => {
 
 	it("deletes a resident", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/residents/77", {
 			method: "DELETE",
@@ -630,7 +747,7 @@ describe("API application flow routes", () => {
 				application,
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12", {
 			headers: { Cookie: applicantSessionCookie },
@@ -646,7 +763,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("rejects an invalid application id for applicant reads", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/applications/not-a-number", {
 			headers: { Cookie: applicantSessionCookie },
@@ -659,7 +776,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("returns 404 for a missing applicant application", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/applications/12", {
 			headers: { Cookie: applicantSessionCookie },
@@ -672,7 +789,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("rejects an invalid application id for occupants", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 		const response = await app.request("/applications/not-a-number/occupants", {
 			method: "PUT",
 			headers: {
@@ -690,7 +807,7 @@ describe("API application flow routes", () => {
 
 	it("rejects an invalid resident id for deletes", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request(
 			"/applications/12/residents/not-a-number",
@@ -709,7 +826,7 @@ describe("API application flow routes", () => {
 
 	it("adds income sources", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const payload = [
 			{
@@ -753,7 +870,7 @@ describe("API application flow routes", () => {
 				reason: "not_found",
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/income", {
 			method: "PUT",
@@ -784,7 +901,7 @@ describe("API application flow routes", () => {
 				],
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/income", {
 			method: "PUT",
@@ -803,7 +920,7 @@ describe("API application flow routes", () => {
 
 	it("updates residence history and notes", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const payload = {
 			residents: [
@@ -846,7 +963,7 @@ describe("API application flow routes", () => {
 
 	it("submits an application", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/submit", {
 			method: "POST",
@@ -867,7 +984,7 @@ describe("API application flow routes", () => {
 				reason: "not_pending",
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/submit", {
 			method: "POST",
@@ -882,7 +999,7 @@ describe("API application flow routes", () => {
 
 	it("prepares uploads", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/upload/prepare", {
 			method: "POST",
@@ -914,7 +1031,7 @@ describe("API application flow routes", () => {
 
 	it("completes uploads", async () => {
 		const services = makeServices();
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/upload/complete", {
 			method: "POST",
@@ -953,7 +1070,7 @@ describe("API application flow routes", () => {
 				reason: "missing_object",
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/applications/12/upload/complete", {
 			method: "POST",
@@ -976,7 +1093,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("serves and stores files through the storage route", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 		const route = "/storage/route-tests/documents/test.txt";
 
 		const putResponse = await app.request(route, {
@@ -991,7 +1108,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("blocks path traversal in the storage route", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/storage/%252E%252E/forbidden.txt", {
 			method: "PUT",
@@ -1002,7 +1119,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("returns 404 for missing storage objects", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/storage/route-tests/missing.txt");
 
@@ -1048,7 +1165,7 @@ describe("API application flow routes", () => {
 				application,
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/landlord/applications/12", {
 			headers: {
@@ -1084,7 +1201,7 @@ describe("API application flow routes", () => {
 				},
 			}),
 		);
-		const app = createApp({ services });
+		const app = createTestApp(services);
 
 		const response = await app.request("/landlord/applicant-signup-url", {
 			headers: {
@@ -1104,7 +1221,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("returns 401 for landlord routes when the session cookie is missing", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/landlord/applications");
 
@@ -1115,7 +1232,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("returns 403 for landlord routes when the session belongs to a non-landlord", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/landlord/applications", {
 			headers: {
@@ -1130,7 +1247,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("sets secure default headers for API responses", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/");
 
@@ -1153,7 +1270,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("only allows credentialed CORS for the configured web origin", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const allowedResponse = await app.request("/", {
 			headers: {
@@ -1179,7 +1296,7 @@ describe("API application flow routes", () => {
 	});
 
 	it("marks auth responses as non-cacheable", async () => {
-		const app = createApp({ services: makeServices() });
+		const app = createTestApp();
 
 		const response = await app.request("/auth/email/signup", {
 			method: "POST",

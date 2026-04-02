@@ -1,4 +1,6 @@
 import { createApp } from "~/app";
+import { services } from "~/container";
+import { createStorageRoutes } from "~/routes/storage.routes";
 
 const DEFAULT_PORT = 8787;
 const DEFAULT_HOST = "127.0.0.1";
@@ -12,7 +14,7 @@ function parsePort(value: string | undefined) {
 
 const port = parsePort(process.env.PORT);
 const hostname = process.env.HOST?.trim() || DEFAULT_HOST;
-const app = createApp();
+const app = createApp({ services, storageRoutes: createStorageRoutes() });
 
 const server = Bun.serve({
 	port,

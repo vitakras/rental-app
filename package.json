@@ -13,6 +13,8 @@
 		"typecheck": "bun run --filter web typecheck",
 		"db-generate": "bun run --filter api db-generate",
 		"db-migrate": "bun run --filter api db-migrate",
+		"dev:api:bun": "bun run --filter api dev:bun",
+		"dev:api:cf": "bun run --filter api dev:cf",
 		"db-push": "bun run --filter api db-push",
 		"test": "bun run --filter api test",
 		"lint": "biome check .",
