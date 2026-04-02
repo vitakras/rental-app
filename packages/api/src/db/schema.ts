@@ -32,8 +32,6 @@ export type ApplicationStatus =
 
 export type UserGlobalRole = "landlord" | "applicant";
 
-export type EmailLoginTokenPurpose = "login";
-
 export type ApplicationAccessRole =
 	| "primary_applicant"
 	| "co_applicant"
@@ -67,25 +65,6 @@ export const sessionsTable = sqliteTable(
 	(table) => [
 		index("sessions_user_id_idx").on(table.userId),
 		index("sessions_expires_at_idx").on(table.expiresAt),
-	],
-);
-
-export const emailLoginTokensTable = sqliteTable(
-	"email_login_tokens",
-	{
-		id: text().primaryKey(),
-		email: text().notNull(),
-		tokenHash: text().notNull(),
-		purpose: text().$type<EmailLoginTokenPurpose>().notNull().default("login"),
-		expiresAt: text().notNull(),
-		consumedAt: text(),
-		createdByIp: text(),
-		...timestamps,
-	},
-	(table) => [
-		index("email_login_tokens_email_idx").on(table.email),
-		index("email_login_tokens_expires_at_idx").on(table.expiresAt),
-		uniqueIndex("email_login_tokens_token_hash_unique_idx").on(table.tokenHash),
 	],
 );
 

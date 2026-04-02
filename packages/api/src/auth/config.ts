@@ -32,10 +32,6 @@ export function getAuthConfig() {
 	const applicantSignupToken = process.env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
 
 	return {
-		loginTokenTtlSeconds: parsePositiveInt(
-			process.env.AUTH_LOGIN_TOKEN_TTL_SECONDS,
-			15 * 60,
-		),
 		loginCodeTtlSeconds: parsePositiveInt(
 			process.env.AUTH_LOGIN_CODE_TTL_SECONDS,
 			14 * 24 * 60 * 60,

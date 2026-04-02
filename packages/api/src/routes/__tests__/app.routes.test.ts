@@ -15,11 +15,9 @@ import type {
 import type {
 	ApplicantSignupLink,
 	ApplicantSignupResult,
-	GetSessionUserResult,
 	GetReusableLoginCodeStatusResult,
-	RequestEmailLoginResult,
+	GetSessionUserResult,
 	RotateReusableLoginCodeResult,
-	VerifyEmailLoginResult,
 	VerifyReusableLoginCodeResult,
 } from "~/services/auth.service";
 import type {
@@ -34,9 +32,6 @@ const applicantSessionCookie = "session=session-1";
 function makeServices() {
 	return {
 		authService: {
-			requestEmailLogin: mock(
-				async (): Promise<RequestEmailLoginResult> => ({ success: true }),
-			),
 			applicantSignup: mock(
 				async (): Promise<ApplicantSignupResult> => ({
 					success: true,
@@ -62,26 +57,6 @@ function makeServices() {
 					signupToken: "11111111-1111-4111-8111-111111111111",
 					signupUrl:
 						"http://localhost:5173/signup?token=11111111-1111-4111-8111-111111111111",
-				}),
-			),
-			verifyEmailLogin: mock(
-				async (): Promise<VerifyEmailLoginResult> => ({
-					success: true,
-					user: {
-						id: "user-1",
-						email: "alex@example.com",
-						globalRole: "applicant",
-					},
-					session: {
-						id: "session-1",
-						userId: "user-1",
-						expiresAt: "2026-04-29T00:00:00.000Z",
-						lastAccessedAt: "2026-01-01T00:00:00.000Z",
-						ipAddress: "127.0.0.1",
-						userAgent: "bun-test",
-						createdAt: "2026-01-01T00:00:00.000Z",
-						updatedAt: "2026-01-01T00:00:00.000Z",
-					},
 				}),
 			),
 			verifyReusableLoginCode: mock(
@@ -273,29 +248,6 @@ describe("API application flow routes", () => {
 		).not.toHaveBeenCalled();
 	});
 
-	it("returns success for a known login email request", async () => {
-		const services = makeServices();
-		const app = createApp({ services });
-
-		const response = await app.request("/auth/email/request", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"x-forwarded-for": "127.0.0.1",
-			},
-			body: JSON.stringify({ email: "alex@example.com" }),
-		});
-
-		expect(response.status).toBe(200);
-		expect((await response.json()) as { success: boolean }).toEqual({
-			success: true,
-		});
-		expect(services.authService.requestEmailLogin).toHaveBeenCalledWith(
-			{ email: "alex@example.com" },
-			{ ipAddress: "127.0.0.1" },
-		);
-	});
-
 	it("creates an applicant account and sets a session cookie", async () => {
 		const services = makeServices();
 		const app = createApp({ services });
@@ -317,9 +269,11 @@ describe("API application flow routes", () => {
 		expect(
 			(await response.json()) as {
 				success: boolean;
+				loginCode: string;
 				user: { id: string; email: string; globalRole: string };
 			},
 		).toEqual({
+			loginCode: "123456",
 			success: true,
 			user: {
 				id: "user-1",
@@ -385,89 +339,6 @@ describe("API application flow routes", () => {
 		expect(response.status).toBe(401);
 		expect((await response.json()) as { error: string }).toEqual({
 			error: "invalid_signup_token",
-		});
-		expect(response.headers.get("set-cookie")).toBeNull();
-	});
-
-	it("returns success for an unknown login email request", async () => {
-		const services = makeServices();
-		services.authService.requestEmailLogin = mock(
-			async (): Promise<RequestEmailLoginResult> => ({ success: true }),
-		);
-		const app = createApp({ services });
-
-		const response = await app.request("/auth/email/request", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email: "missing@example.com" }),
-		});
-
-		expect(response.status).toBe(200);
-		expect((await response.json()) as { success: boolean }).toEqual({
-			success: true,
-		});
-	});
-
-	it("verifies a login token and sets a session cookie", async () => {
-		const services = makeServices();
-		const app = createApp({ services });
-
-		const response = await app.request("/auth/email/verify", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"x-forwarded-for": "127.0.0.1",
-				"user-agent": "bun-test",
-			},
-			body: JSON.stringify({
-				email: "alex@example.com",
-				token: "plain-token",
-			}),
-		});
-
-		expect(response.status).toBe(200);
-		expect(
-			(await response.json()) as {
-				success: boolean;
-				user: { id: string; email: string; globalRole: string };
-			},
-		).toEqual({
-			success: true,
-			user: {
-				id: "user-1",
-				email: "alex@example.com",
-				globalRole: "applicant",
-			},
-		});
-		expect(services.authService.verifyEmailLogin).toHaveBeenCalledWith(
-			{ email: "alex@example.com", token: "plain-token" },
-			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
-		);
-		expect(response.headers.get("set-cookie")).toContain("session=session-1");
-	});
-
-	it("returns 401 without setting a cookie for an invalid login token", async () => {
-		const services = makeServices();
-		services.authService.verifyEmailLogin = mock(
-			async (): Promise<VerifyEmailLoginResult> => ({
-				success: false,
-				reason: "invalid_or_expired_token",
-			}),
-		);
-		const app = createApp({ services });
-
-		const response = await app.request("/auth/email/verify", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				email: "alex@example.com",
-				token: "bad-token",
-			}),
-		});
-
-		expect(response.status).toBe(401);
-		expect((await response.json()) as { error: string }).toEqual({
-			error: "invalid_or_expired_token",
 		});
 		expect(response.headers.get("set-cookie")).toBeNull();
 	});
@@ -555,13 +426,13 @@ describe("API application flow routes", () => {
 				lastUsedAt: "2026-01-02T00:00:00.000Z",
 			},
 		});
-		expect(services.authService.getReusableLoginCodeStatus).toHaveBeenCalledWith(
-			{
-				id: "user-1",
-				email: "alex@example.com",
-				globalRole: "applicant",
-			},
-		);
+		expect(
+			services.authService.getReusableLoginCodeStatus,
+		).toHaveBeenCalledWith({
+			id: "user-1",
+			email: "alex@example.com",
+			globalRole: "applicant",
+		});
 	});
 
 	it("rotates a reusable login code for an authenticated user", async () => {
@@ -1249,27 +1120,30 @@ describe("API application flow routes", () => {
 		expect(allowedResponse.headers.get("Access-Control-Allow-Origin")).toBe(
 			"http://localhost:5173",
 		);
-		expect(allowedResponse.headers.get("Access-Control-Allow-Credentials")).toBe(
-			"true",
-		);
+		expect(
+			allowedResponse.headers.get("Access-Control-Allow-Credentials"),
+		).toBe("true");
 		expect(allowedResponse.headers.get("Vary")).toContain("Origin");
-		expect(blockedResponse.headers.get("Access-Control-Allow-Origin")).toBeNull();
+		expect(
+			blockedResponse.headers.get("Access-Control-Allow-Origin"),
+		).toBeNull();
 	});
 
 	it("marks auth responses as non-cacheable", async () => {
 		const app = createApp({ services: makeServices() });
 
-		const response = await app.request("/auth/email/request", {
+		const response = await app.request("/auth/email/signup", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
 				email: "alex@example.com",
+				signupToken: "11111111-1111-4111-8111-111111111111",
 			}),
 		});
 
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(201);
 		expect(response.headers.get("Cache-Control")).toBe("no-store");
 		expect(response.headers.get("Pragma")).toBe("no-cache");
 	});
