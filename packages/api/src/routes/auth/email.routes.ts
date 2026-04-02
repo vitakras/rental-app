@@ -11,10 +11,6 @@ import {
 	type ApplicantSignupData,
 	applicantSignupSchema,
 	type createAuthService,
-	type RequestEmailLoginData,
-	requestEmailLoginSchema,
-	type VerifyEmailLoginData,
-	verifyEmailLoginSchema,
 } from "~/services/auth.service";
 
 type AuthService = ReturnType<typeof createAuthService>;
@@ -76,9 +72,12 @@ export function createAuthEmailRoutes({
 				expiresAt: result.session.expiresAt,
 			});
 
-			const codeResult = await authService.rotateReusableLoginCode(result.user, {
-				ipAddress: getClientIp(c),
-			});
+			const codeResult = await authService.rotateReusableLoginCode(
+				result.user,
+				{
+					ipAddress: getClientIp(c),
+				},
+			);
 
 			return c.json(
 				{
@@ -88,21 +87,6 @@ export function createAuthEmailRoutes({
 				},
 				201,
 			);
-		})
-		.post("/request", zodJsonValidator(requestEmailLoginSchema), async (c) => {
-			const body = c.req.valid("json") as RequestEmailLoginData;
-			const result = await authService.requestEmailLogin(body, {
-				ipAddress: getClientIp(c),
-			});
-
-			if (!result.success) {
-				return c.json(
-					{ error: "validation_failed", issues: result.errors },
-					422,
-				);
-			}
-
-			return c.json({ success: true }, 200);
 		})
 		.post("/signout", async (c) => {
 			const sessionId = getSessionCookie(c, {
@@ -115,37 +99,5 @@ export function createAuthEmailRoutes({
 			}
 
 			return c.json({ success: true }, 200);
-		})
-		.post("/verify", zodJsonValidator(verifyEmailLoginSchema), async (c) => {
-			const body = c.req.valid("json") as VerifyEmailLoginData;
-			const result = await authService.verifyEmailLogin(body, {
-				ipAddress: getClientIp(c),
-				userAgent: c.req.header("user-agent") ?? null,
-			});
-
-			if (!result.success) {
-				if ("errors" in result) {
-					return c.json(
-						{ error: "validation_failed", issues: result.errors },
-						422,
-					);
-				}
-
-				return c.json({ error: result.reason }, 401);
-			}
-
-			setSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-				sessionId: result.session.id,
-				expiresAt: result.session.expiresAt,
-			});
-
-			return c.json(
-				{
-					success: true,
-					user: result.user,
-				},
-				200,
-			);
 		});
 }

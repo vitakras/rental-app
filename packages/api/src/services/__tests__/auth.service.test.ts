@@ -1,11 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import crypto from "node:crypto";
 import type { AuthConfig } from "~/auth/config";
-import type { AuthMailer } from "~/mailers/auth.mailer";
-import type {
-	EmailLoginTokenRecord,
-	EmailLoginTokenRepository,
-} from "~/repositories/email-login-token.repository";
 import type {
 	LoginCodeRecord,
 	LoginCodeRepository,
@@ -21,7 +16,6 @@ import type {
 import { createAuthService } from "../auth.service";
 
 const authConfig: AuthConfig = {
-	loginTokenTtlSeconds: 900,
 	loginCodeTtlSeconds: 14 * 24 * 60 * 60,
 	sessionTtlSeconds: 3600,
 	cookieName: "session",
@@ -35,18 +29,6 @@ const baseUser: UserRecord = {
 	email: "alex@example.com",
 	emailVerifiedAt: null,
 	globalRole: "applicant",
-	createdAt: "2026-01-01T00:00:00.000Z",
-	updatedAt: "2026-01-01T00:00:00.000Z",
-};
-
-const baseToken: EmailLoginTokenRecord = {
-	id: "token-1",
-	email: "alex@example.com",
-	tokenHash: "hash-1",
-	purpose: "login",
-	expiresAt: "2099-01-01T00:00:00.000Z",
-	consumedAt: null,
-	createdByIp: null,
 	createdAt: "2026-01-01T00:00:00.000Z",
 	updatedAt: "2026-01-01T00:00:00.000Z",
 };
@@ -88,17 +70,6 @@ function makeUserRepository(
 	};
 }
 
-function makeTokenRepository(
-	overrides?: Partial<EmailLoginTokenRepository>,
-): EmailLoginTokenRepository {
-	return {
-		create: mock(async () => baseToken),
-		findActiveByEmailAndTokenHash: mock(async () => baseToken),
-		markConsumed: mock(async () => {}),
-		...overrides,
-	};
-}
-
 function makeSessionRepository(
 	overrides?: Partial<SessionRepository>,
 ): SessionRepository {
@@ -123,113 +94,7 @@ function makeLoginCodeRepository(
 	};
 }
 
-function makeMailer(overrides?: Partial<AuthMailer>): AuthMailer {
-	return {
-		sendLoginEmail: mock(async () => {}),
-		...overrides,
-	};
-}
-
 describe("createAuthService", () => {
-	it("creates a token and sends login email for an existing user", async () => {
-		const userRepo = makeUserRepository();
-		const tokenRepo = makeTokenRepository();
-		const loginCodeRepo = makeLoginCodeRepository();
-		const sessionRepo = makeSessionRepository();
-		const mailer = makeMailer();
-
-		const result = await createAuthService({
-			userRepository: userRepo,
-			emailLoginTokenRepository: tokenRepo,
-			loginCodeRepository: loginCodeRepo,
-			sessionRepository: sessionRepo,
-			authMailer: mailer,
-			authConfig,
-		}).requestEmailLogin(
-			{ email: " Alex@Example.com " },
-			{ ipAddress: "127.0.0.1" },
-		);
-
-		expect(result).toEqual({ success: true });
-		expect(userRepo.findByEmail).toHaveBeenCalledWith("alex@example.com");
-		expect(tokenRepo.create).toHaveBeenCalledTimes(1);
-		const tokenCreateInput = (tokenRepo.create as ReturnType<typeof mock>).mock
-			.calls[0][0];
-		expect(tokenCreateInput.email).toBe("alex@example.com");
-		expect(tokenCreateInput.createdByIp).toBe("127.0.0.1");
-		expect(typeof tokenCreateInput.tokenHash).toBe("string");
-		expect(tokenCreateInput.tokenHash).not.toBe("");
-
-		expect(mailer.sendLoginEmail).toHaveBeenCalledTimes(1);
-		const emailInput = (mailer.sendLoginEmail as ReturnType<typeof mock>).mock
-			.calls[0][0];
-		expect(emailInput.email).toBe("alex@example.com");
-		expect(emailInput.loginUrl).toContain("http://127.0.0.1:5173/login");
-		expect(emailInput.token).not.toBe(tokenCreateInput.tokenHash);
-	});
-
-	it("returns success without creating a token for an unknown email", async () => {
-		const userRepo = makeUserRepository({
-			findByEmail: mock(async () => null),
-		});
-		const tokenRepo = makeTokenRepository();
-		const loginCodeRepo = makeLoginCodeRepository();
-		const mailer = makeMailer();
-
-		const result = await createAuthService({
-			userRepository: userRepo,
-			emailLoginTokenRepository: tokenRepo,
-			loginCodeRepository: loginCodeRepo,
-			sessionRepository: makeSessionRepository(),
-			authMailer: mailer,
-			authConfig,
-		}).requestEmailLogin({ email: "missing@example.com" });
-
-		expect(result).toEqual({ success: true });
-		expect(tokenRepo.create).not.toHaveBeenCalled();
-		expect(mailer.sendLoginEmail).not.toHaveBeenCalled();
-	});
-
-	it("creates a session and consumes the token on successful verification", async () => {
-		const userRepo = makeUserRepository();
-		const tokenRepo = makeTokenRepository();
-		const loginCodeRepo = makeLoginCodeRepository();
-		const sessionRepo = makeSessionRepository();
-
-		const result = await createAuthService({
-			userRepository: userRepo,
-			emailLoginTokenRepository: tokenRepo,
-			loginCodeRepository: loginCodeRepo,
-			sessionRepository: sessionRepo,
-			authMailer: makeMailer(),
-			authConfig,
-		}).verifyEmailLogin(
-			{ email: "Alex@Example.com", token: "plain-token" },
-			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
-		);
-
-		expect(result.success).toBe(true);
-		expect(tokenRepo.findActiveByEmailAndTokenHash).toHaveBeenCalledWith(
-			"alex@example.com",
-			expect.any(String),
-			expect.any(String),
-		);
-		expect(tokenRepo.markConsumed).toHaveBeenCalledWith(
-			"token-1",
-			expect.any(String),
-		);
-		expect(userRepo.markEmailVerified).toHaveBeenCalledWith(
-			"user-1",
-			expect.any(String),
-		);
-		expect(sessionRepo.create).toHaveBeenCalledTimes(1);
-		const sessionInput = (sessionRepo.create as ReturnType<typeof mock>).mock
-			.calls[0][0];
-		expect(sessionInput.userId).toBe("user-1");
-		expect(sessionInput.ipAddress).toBe("127.0.0.1");
-		expect(sessionInput.userAgent).toBe("bun-test");
-	});
-
 	it("creates an applicant user and session on successful signup", async () => {
 		const userRepo = makeUserRepository({
 			findByEmail: mock(async () => null),
@@ -239,10 +104,8 @@ describe("createAuthService", () => {
 
 		const result = await createAuthService({
 			userRepository: userRepo,
-			emailLoginTokenRepository: makeTokenRepository(),
 			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
-			authMailer: makeMailer(),
 			authConfig,
 		}).applicantSignup(
 			{
@@ -254,7 +117,6 @@ describe("createAuthService", () => {
 
 		expect(result.success).toBe(true);
 		expect(userRepo.findByEmail).toHaveBeenCalledWith("alex@example.com");
-		expect(userRepo.create).toHaveBeenCalledTimes(1);
 		expect(userRepo.create).toHaveBeenCalledWith({
 			id: expect.any(String),
 			email: "alex@example.com",
@@ -275,14 +137,11 @@ describe("createAuthService", () => {
 			findByEmail: mock(async () => null),
 		});
 		const sessionRepo = makeSessionRepository();
-		const loginCodeRepo = makeLoginCodeRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
-			emailLoginTokenRepository: makeTokenRepository(),
-			loginCodeRepository: loginCodeRepo,
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: sessionRepo,
-			authMailer: makeMailer(),
 			authConfig,
 		}).applicantSignup({
 			email: "alex@example.com",
@@ -300,14 +159,11 @@ describe("createAuthService", () => {
 	it("rejects applicant signup when the email already exists", async () => {
 		const userRepo = makeUserRepository();
 		const sessionRepo = makeSessionRepository();
-		const loginCodeRepo = makeLoginCodeRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
-			emailLoginTokenRepository: makeTokenRepository(),
-			loginCodeRepository: loginCodeRepo,
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: sessionRepo,
-			authMailer: makeMailer(),
 			authConfig,
 		}).applicantSignup({
 			email: "alex@example.com",
@@ -322,93 +178,14 @@ describe("createAuthService", () => {
 		expect(sessionRepo.create).not.toHaveBeenCalled();
 	});
 
-	it("rejects verification when the token lookup fails", async () => {
-		const result = await createAuthService({
-			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository({
-				findActiveByEmailAndTokenHash: mock(async () => null),
-			}),
-			loginCodeRepository: makeLoginCodeRepository(),
-			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
-			authConfig,
-		}).verifyEmailLogin({ email: "alex@example.com", token: "wrong" });
-
-		expect(result).toEqual({
-			success: false,
-			reason: "invalid_or_expired_token",
-		});
-	});
-
-	it("rejects verification when the email does not match the token lookup", async () => {
-		const tokenRepo = makeTokenRepository({
-			findActiveByEmailAndTokenHash: mock(async (email) =>
-				email === "alex@example.com" ? baseToken : null,
-			),
-		});
-
-		const result = await createAuthService({
-			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: tokenRepo,
-			loginCodeRepository: makeLoginCodeRepository(),
-			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
-			authConfig,
-		}).verifyEmailLogin({ email: "other@example.com", token: "plain-token" });
-
-		expect(result).toEqual({
-			success: false,
-			reason: "invalid_or_expired_token",
-		});
-	});
-
-	it("rejects verification for an expired token", async () => {
-		const result = await createAuthService({
-			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository({
-				findActiveByEmailAndTokenHash: mock(async () => null),
-			}),
-			loginCodeRepository: makeLoginCodeRepository(),
-			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
-			authConfig,
-		}).verifyEmailLogin({ email: "alex@example.com", token: "expired-token" });
-
-		expect(result).toEqual({
-			success: false,
-			reason: "invalid_or_expired_token",
-		});
-	});
-
-	it("rejects verification for an already consumed token", async () => {
-		const result = await createAuthService({
-			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository({
-				findActiveByEmailAndTokenHash: mock(async () => null),
-			}),
-			loginCodeRepository: makeLoginCodeRepository(),
-			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
-			authConfig,
-		}).verifyEmailLogin({ email: "alex@example.com", token: "used-token" });
-
-		expect(result).toEqual({
-			success: false,
-			reason: "invalid_or_expired_token",
-		});
-	});
-
 	it("returns the user for a valid session", async () => {
 		const userRepo = makeUserRepository();
-		const loginCodeRepo = makeLoginCodeRepository();
 		const sessionRepo = makeSessionRepository();
 
 		const result = await createAuthService({
 			userRepository: userRepo,
-			emailLoginTokenRepository: makeTokenRepository(),
-			loginCodeRepository: loginCodeRepo,
+			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: sessionRepo,
-			authMailer: makeMailer(),
 			authConfig,
 		}).getSessionUser("session-1");
 
@@ -428,7 +205,6 @@ describe("createAuthService", () => {
 	it("rejects an expired session", async () => {
 		const result = await createAuthService({
 			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository(),
 			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: makeSessionRepository({
 				findById: mock(async () => ({
@@ -436,7 +212,6 @@ describe("createAuthService", () => {
 					expiresAt: "2020-01-01T00:00:00.000Z",
 				})),
 			}),
-			authMailer: makeMailer(),
 			authConfig,
 		}).getSessionUser("session-1");
 
@@ -461,10 +236,8 @@ describe("createAuthService", () => {
 
 		const result = await createAuthService({
 			userRepository: userRepo,
-			emailLoginTokenRepository: makeTokenRepository(),
 			loginCodeRepository: loginCodeRepo,
 			sessionRepository: sessionRepo,
-			authMailer: makeMailer(),
 			authConfig,
 		}).verifyReusableLoginCode(
 			{ email: "Alex@Example.com", code: "123456" },
@@ -490,10 +263,8 @@ describe("createAuthService", () => {
 
 		const result = await createAuthService({
 			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository(),
 			loginCodeRepository: loginCodeRepo,
 			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
 			authConfig,
 		}).verifyReusableLoginCode({ email: "alex@example.com", code: "123456" });
 
@@ -519,10 +290,8 @@ describe("createAuthService", () => {
 
 		const result = await createAuthService({
 			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository(),
 			loginCodeRepository: loginCodeRepo,
 			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
 			authConfig,
 		}).verifyReusableLoginCode({ email: "alex@example.com", code: "123456" });
 
@@ -543,10 +312,8 @@ describe("createAuthService", () => {
 
 		const result = await createAuthService({
 			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository(),
 			loginCodeRepository: loginCodeRepo,
 			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
 			authConfig,
 		}).rotateReusableLoginCode({
 			id: "user-1",
@@ -575,10 +342,8 @@ describe("createAuthService", () => {
 
 		const result = await createAuthService({
 			userRepository: makeUserRepository(),
-			emailLoginTokenRepository: makeTokenRepository(),
 			loginCodeRepository: loginCodeRepo,
 			sessionRepository: makeSessionRepository(),
-			authMailer: makeMailer(),
 			authConfig,
 		}).getReusableLoginCodeStatus({
 			id: "user-1",

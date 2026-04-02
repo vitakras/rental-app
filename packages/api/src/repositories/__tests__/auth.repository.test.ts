@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { eq } from "drizzle-orm";
-import {
-	emailLoginTokensTable,
-	loginCodesTable,
-	sessionsTable,
-	usersTable,
-} from "~/db/schema";
-import { emailLoginTokenRepository } from "~/repositories/email-login-token.repository";
+import { loginCodesTable, sessionsTable, usersTable } from "~/db/schema";
 import { loginCodeRepository } from "~/repositories/login-code.repository";
 import { sessionRepository } from "~/repositories/session.repository";
 import { userRepository } from "~/repositories/user.repository";
@@ -50,41 +44,6 @@ describe("auth repositories", () => {
 
 		const found = await repo.findByEmail("applicant@example.com");
 		expect(found?.id).toBe("user-2");
-	});
-
-	it("creates and consumes an email login token", async () => {
-		const repo = emailLoginTokenRepository(testDb.db);
-		const record = await repo.create({
-			id: "token-1",
-			email: "alex@example.com",
-			tokenHash: "hash-1",
-			expiresAt: "2099-01-01T00:00:00.000Z",
-			createdByIp: "127.0.0.1",
-		});
-
-		expect(record.id).toBe("token-1");
-
-		const active = await repo.findActiveByEmailAndTokenHash(
-			"alex@example.com",
-			"hash-1",
-			"2026-01-01T00:00:00.000Z",
-		);
-		expect(active?.id).toBe("token-1");
-
-		await repo.markConsumed("token-1", "2026-01-01T00:00:00.000Z");
-
-		const inactive = await repo.findActiveByEmailAndTokenHash(
-			"alex@example.com",
-			"hash-1",
-			"2026-01-01T00:00:00.000Z",
-		);
-		expect(inactive).toBeNull();
-
-		const [stored] = await testDb.db
-			.select()
-			.from(emailLoginTokensTable)
-			.where(eq(emailLoginTokensTable.id, "token-1"));
-		expect(stored?.consumedAt).toBe("2026-01-01T00:00:00.000Z");
 	});
 
 	it("creates and fetches a session", async () => {
