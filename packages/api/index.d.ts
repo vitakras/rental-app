@@ -82,6 +82,22 @@ export type AddIncomeSourcesData = Array<{
 	}>;
 }>;
 
+export type UpsertResidenceData = {
+	residents?: Array<{
+		residentId: number;
+		residences?: Array<{
+			address: string;
+			fromDate: string;
+			toDate?: string;
+			reasonForLeaving?: string;
+			isRental: boolean;
+			landlordName?: string;
+			landlordPhone?: string;
+		}>;
+	}>;
+	notes?: string;
+};
+
 export type SubmittedApplicationSummary = {
 	id: number;
 	status: string;
@@ -112,6 +128,19 @@ export type IncomeSourceDetail = {
 	updatedAt: string;
 };
 
+export type ResidenceDetail = {
+	id: number;
+	applicationId: number;
+	residentId: number;
+	address: string;
+	fromDate: string;
+	toDate: string | null;
+	reasonForLeaving: string | null;
+	isRental: boolean;
+	landlordName: string | null;
+	landlordPhone: string | null;
+};
+
 export type ResidentDetail = {
 	id: number;
 	applicationId: number;
@@ -123,6 +152,7 @@ export type ResidentDetail = {
 	createdAt: string;
 	updatedAt: string;
 	incomeSources: IncomeSourceDetail[];
+	residences: ResidenceDetail[];
 };
 
 export type PetDetail = {
@@ -139,8 +169,9 @@ export type PetDetail = {
 export type ApplicationWithDetails = {
 	id: number;
 	status: string;
-	desiredMoveInDate: string;
+	desiredMoveInDate: string | null;
 	smokes: boolean;
+	notes: string | null;
 	createdAt: string;
 	updatedAt: string;
 	residents: ResidentDetail[];

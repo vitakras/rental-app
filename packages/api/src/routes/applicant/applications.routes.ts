@@ -7,11 +7,13 @@ import { ensureValidApplicationId, parseApplicationId } from "~/routes/shared";
 import type {
 	AddIncomeSourcesData,
 	createApplicationService,
+	UpsertResidenceData,
 	UpdateOccupantsData,
 	UpsertApplicantInfoData,
 } from "~/services/application.service";
 import {
 	addIncomeSourcesSchema,
+	upsertResidenceSchema,
 	updateOccupantsSchema,
 	upsertApplicantInfoSchema,
 } from "~/services/application.service";
@@ -157,6 +159,36 @@ export function createApplicantApplicationsRoutes({
 					}
 
 					return c.json({ error: "validation_failed", issues: [] }, 422);
+				}
+
+				return c.json({ success: true }, 200);
+			},
+		)
+		.put(
+			"/:id/residence",
+			ensureValidApplicationId,
+			zodJsonValidator(upsertResidenceSchema),
+			async (c) => {
+				const id = parseApplicationId(c.req.param("id"));
+
+				if (!id) {
+					return c.json({ error: "invalid_application_id" }, 400);
+				}
+
+				const body = c.req.valid("json") as UpsertResidenceData;
+				const result = await applicationService.upsertResidence(id, body);
+
+				if (!result.success) {
+					if ("reason" in result && result.reason === "not_found") {
+						return c.json({ error: "application_not_found" }, 404);
+					}
+
+					if ("errors" in result) {
+						return c.json(
+							{ error: "validation_failed", issues: result.errors },
+							422,
+						);
+					}
 				}
 
 				return c.json({ success: true }, 200);

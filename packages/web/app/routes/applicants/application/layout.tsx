@@ -5,6 +5,7 @@ const STEPS = [
 	{ slug: "applicant", label: "Applicant" },
 	{ slug: "occupants", label: "Occupants" },
 	{ slug: "income", label: "Income" },
+	{ slug: "residence", label: "Residence" },
 	{ slug: "documents", label: "Documents" },
 ] as const;
 

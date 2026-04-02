@@ -118,6 +118,7 @@ export const applicationsTable = sqliteTable("applications", {
 	status: text().$type<ApplicationStatus>().notNull().default("draft"),
 	desiredMoveInDate: text(),
 	smokes: int({ mode: "boolean" }).notNull().default(false),
+	notes: text(),
 	createdByUserId: text().references(() => usersTable.id),
 	...timestamps,
 });
@@ -159,6 +160,24 @@ export const petsTable = sqliteTable("pets", {
 	type: text().notNull(),
 	breed: text(),
 	notes: text(),
+	...timestamps,
+});
+
+export const residencesTable = sqliteTable("residences", {
+	id: int().primaryKey({ autoIncrement: true }),
+	applicationId: int()
+		.notNull()
+		.references(() => applicationsTable.id),
+	residentId: int()
+		.notNull()
+		.references(() => residentsTable.id),
+	address: text().notNull(),
+	fromDate: text().notNull(),
+	toDate: text(),
+	reasonForLeaving: text(),
+	isRental: int({ mode: "boolean" }).notNull().default(false),
+	landlordName: text(),
+	landlordPhone: text(),
 	...timestamps,
 });
 
