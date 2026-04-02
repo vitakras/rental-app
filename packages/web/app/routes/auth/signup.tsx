@@ -1,7 +1,7 @@
+import { useState } from "react";
 import {
 	Form,
 	Link,
-	redirect,
 	useActionData,
 	useNavigation,
 } from "react-router";
@@ -56,7 +56,8 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 		return { error: "Something went wrong. Please try again." };
 	}
 
-	return redirect("/a/apply");
+	const data = await response.json();
+	return { loginCode: "loginCode" in data ? (data.loginCode as string) : null };
 }
 
 export default function Signup({ loaderData }: Route.ComponentProps) {
@@ -64,7 +65,146 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 	const actionData = useActionData<typeof clientAction>();
 	const navigation = useNavigation();
 	const submitting = navigation.state === "submitting";
-	const error = actionData?.error;
+	const error = actionData && "error" in actionData ? actionData.error : undefined;
+	const loginCode = actionData && "loginCode" in actionData ? actionData.loginCode : null;
+	const [copied, setCopied] = useState(false);
+
+	function handleCopy() {
+		if (!loginCode) return;
+		navigator.clipboard.writeText(loginCode);
+		setCopied(true);
+		setTimeout(() => setCopied(false), 2000);
+	}
+
+	if (loginCode) {
+		return (
+			<div
+				className="min-h-screen bg-[#F5F0E8]"
+				style={{ fontFamily: "'DM Sans', sans-serif" }}
+			>
+				<div className="max-w-md mx-auto px-5 pt-14 pb-16">
+					{/* Icon */}
+					<div className="w-14 h-14 bg-[#C4714A]/10 rounded-2xl flex items-center justify-center mb-8">
+						<svg
+							width="26"
+							height="26"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="#C4714A"
+							strokeWidth="1.5"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							aria-hidden="true"
+						>
+							<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+						</svg>
+					</div>
+
+					{/* Heading */}
+					<div className="mb-8">
+						<p className="text-xs text-[#C4714A] font-medium tracking-widest uppercase mb-3">
+							Applicant Portal
+						</p>
+						<h1
+							className="text-[2.8rem] leading-[1.1] text-[#1C1A17] mb-3"
+							style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
+						>
+							Your access
+							<br />
+							<em>code.</em>
+						</h1>
+						<p className="text-[#7A7268] text-sm leading-relaxed">
+							This is the code you'll use every time you sign in. You won't be
+							shown it again — write it somewhere safe.
+						</p>
+					</div>
+
+					{/* Code card */}
+					<div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(28,26,23,0.07)] mb-4">
+						<p className="text-xs font-medium text-[#7A7268] uppercase tracking-widest mb-5">
+							Your login code
+						</p>
+
+						{/* Digit display */}
+						<div className="flex justify-center gap-2 mb-6">
+							{loginCode.split("").map((digit, i) => (
+								<div
+									// biome-ignore lint/suspicious/noArrayIndexKey: fixed-length display only
+									key={i}
+									className="w-12 h-14 rounded-xl border border-[#E8E1D9] bg-[#F5F0E8] flex items-center justify-center"
+									style={{ fontFamily: "'Fraunces', serif", fontWeight: 500 }}
+								>
+									<span className="text-[1.75rem] leading-none text-[#1C1A17]">
+										{digit}
+									</span>
+								</div>
+							))}
+						</div>
+
+						{/* Copy button */}
+						<button
+							type="button"
+							onClick={handleCopy}
+							className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-[#E8E1D9] text-sm text-[#7A7268] hover:text-[#1C1A17] hover:border-[#C4B89A] transition-colors"
+						>
+							{copied ? (
+								<>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+										<polyline points="20 6 9 17 4 12" />
+									</svg>
+									<span className="text-[#C4714A] font-medium">Copied!</span>
+								</>
+							) : (
+								<>
+									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+										<rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+										<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+									</svg>
+									Copy code
+								</>
+							)}
+						</button>
+					</div>
+
+					{/* Warning card */}
+					<div className="bg-[#FDF3EC] rounded-2xl p-5 mb-6 flex gap-3">
+						<svg
+							width="18"
+							height="18"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="#C4714A"
+							strokeWidth="1.5"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							className="mt-0.5 shrink-0"
+							aria-hidden="true"
+						>
+							<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+							<line x1="12" y1="9" x2="12" y2="13" />
+							<line x1="12" y1="17" x2="12.01" y2="17" />
+						</svg>
+						<p className="text-sm text-[#7A7268] leading-relaxed">
+							<span className="font-medium text-[#1C1A17]">Write this down.</span>{" "}
+							This code is the only way to sign back into your applicant portal.
+							Store it somewhere safe like a notes app or password manager.
+						</p>
+					</div>
+
+					{/* CTA */}
+					<Link
+						to="/a"
+						className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1C1A17] px-4 py-3.5 text-sm font-medium text-white hover:bg-[#2E2B26] transition-colors"
+					>
+						I've saved my code — continue
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+							<path d="M6 12l4-4-4-4" />
+						</svg>
+					</Link>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div

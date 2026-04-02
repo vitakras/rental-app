@@ -76,10 +76,15 @@ export function createAuthEmailRoutes({
 				expiresAt: result.session.expiresAt,
 			});
 
+			const codeResult = await authService.rotateReusableLoginCode(result.user, {
+				ipAddress: getClientIp(c),
+			});
+
 			return c.json(
 				{
 					success: true,
 					user: result.user,
+					loginCode: codeResult.code,
 				},
 				201,
 			);
