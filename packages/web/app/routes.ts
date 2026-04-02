@@ -13,6 +13,7 @@ export default [
 			route("applicant", "routes/applicants/application/applicant.tsx"),
 			route("occupants", "routes/applicants/application/occupants.tsx"),
 			route("income", "routes/applicants/application/income.tsx"),
+			route("residence", "routes/applicants/application/residence.tsx"),
 			route("documents", "routes/applicants/application/documents.tsx"),
 		]),
 	]),

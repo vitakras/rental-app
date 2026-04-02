@@ -68,7 +68,7 @@ export async function clientAction({
 		throw data(null, { status: response.status });
 	}
 
-	return redirect(`/a/applications/${id}/documents`);
+	return redirect(`/a/applications/${id}/residence`);
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import type {
 	GetApplicationWithDetailsResult,
 	ListSubmittedApplicationsResult,
 	SubmitApplicationResult,
+	UpsertResidenceResult,
 	UpdateOccupantsResult,
 } from "~/services/application.service";
 import type {
@@ -139,6 +140,9 @@ function makeServices() {
 			),
 			addIncomeSources: mock(
 				async (): Promise<AddIncomeSourcesResult> => ({ success: true }),
+			),
+			upsertResidence: mock(
+				async (): Promise<UpsertResidenceResult> => ({ success: true }),
 			),
 			submitApplication: mock(
 				async (): Promise<SubmitApplicationResult> => ({
@@ -614,6 +618,7 @@ describe("API application flow routes", () => {
 			status: "pending",
 			desiredMoveInDate: "2026-06-01",
 			smokes: false,
+			notes: null,
 			createdAt: "2026-01-01 00:00:00",
 			updatedAt: "2026-01-01 00:00:00",
 			residents: [],
@@ -793,6 +798,49 @@ describe("API application flow routes", () => {
 		expect(response.status).toBe(422);
 		expect(((await response.json()) as { error: string }).error).toBe(
 			"validation_failed",
+		);
+	});
+
+	it("updates residence history and notes", async () => {
+		const services = makeServices();
+		const app = createApp({ services });
+
+		const payload = {
+			residents: [
+				{
+					residentId: 7,
+					residences: [
+						{
+							address: "123 Main St",
+							fromDate: "2024-01-01",
+							toDate: "2025-01-01",
+							reasonForLeaving: "Moving closer to work",
+							isRental: true,
+							landlordName: "Taylor Reed",
+							landlordPhone: "555-111-2222",
+						},
+					],
+				},
+			],
+			notes: "Happy to provide more context if needed.",
+		};
+
+		const response = await app.request("/applications/12/residence", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
+			body: JSON.stringify(payload),
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+		expect(services.applicationService.upsertResidence).toHaveBeenCalledWith(
+			12,
+			payload,
 		);
 	});
 
@@ -988,6 +1036,7 @@ describe("API application flow routes", () => {
 			status: "submitted",
 			desiredMoveInDate: "2026-06-01",
 			smokes: false,
+			notes: null,
 			createdAt: "2026-03-29T00:00:00.000Z",
 			updatedAt: "2026-03-29T00:00:00.000Z",
 			residents: [],

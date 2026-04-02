@@ -1,12 +1,14 @@
 import { and, desc, eq, inArray, not } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
+import type { UpsertResidencePayload } from "~/services/application.service";
 import {
 	applicationAccessTable,
 	applicationDocumentsTable,
 	applicationsTable,
 	incomeSourcesTable,
 	petsTable,
+	residencesTable,
 	residentsTable,
 } from "~/db/schema";
 
@@ -178,11 +180,58 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 			});
 		},
 
+		async upsertResidences(
+			applicationId: number,
+			input: UpsertResidencePayload,
+		) {
+			return db.transaction(async (tx) => {
+				await tx
+					.update(applicationsTable)
+					.set({ notes: input.notes ?? null })
+					.where(eq(applicationsTable.id, applicationId));
+
+				const residentIds = input.residents.map((resident) => resident.residentId);
+
+				if (residentIds.length > 0) {
+					await tx
+						.delete(residencesTable)
+						.where(
+							and(
+								eq(residencesTable.applicationId, applicationId),
+								inArray(residencesTable.residentId, residentIds),
+							),
+						);
+				}
+
+				const rows = input.residents.flatMap(({ residentId, residences }) =>
+					residences.map((residence) => ({
+						applicationId,
+						residentId,
+						address: residence.address,
+						fromDate: residence.fromDate,
+						toDate: residence.toDate ?? null,
+						reasonForLeaving: residence.reasonForLeaving ?? null,
+						isRental: residence.isRental,
+						landlordName: residence.landlordName ?? null,
+						landlordPhone: residence.landlordPhone ?? null,
+					})),
+				);
+
+				if (rows.length > 0) {
+					await tx.insert(residencesTable).values(rows);
+				}
+			});
+		},
+
 		async deleteResident(applicationId: number, residentId: number) {
 			return db.transaction(async (tx) => {
 				await tx
 					.delete(incomeSourcesTable)
 					.where(eq(incomeSourcesTable.residentId, residentId));
+
+				await tx
+					.delete(residencesTable)
+					.where(eq(residencesTable.residentId, residentId));
 
 				await tx
 					.update(applicationDocumentsTable)
@@ -241,20 +290,32 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 			]);
 
 			const residentIds = residents.map((r) => r.id);
-			const incomeSources =
+			const [incomeSources, residences] =
 				residentIds.length > 0
-					? await db
-							.select()
-							.from(incomeSourcesTable)
-							.where(inArray(incomeSourcesTable.residentId, residentIds))
-					: [];
+					? await Promise.all([
+							db
+								.select()
+								.from(incomeSourcesTable)
+								.where(inArray(incomeSourcesTable.residentId, residentIds)),
+							db
+								.select()
+								.from(residencesTable)
+								.where(
+									and(
+										eq(residencesTable.applicationId, id),
+										inArray(residencesTable.residentId, residentIds),
+									),
+								),
+						])
+					: [[], []];
 
-			const residentsWithIncome = residents.map((r) => ({
+			const residentsWithDetails = residents.map((r) => ({
 				...r,
 				incomeSources: incomeSources.filter((is) => is.residentId === r.id),
+				residences: residences.filter((residence) => residence.residentId === r.id),
 			}));
 
-			return { ...app, residents: residentsWithIncome, pets };
+			return { ...app, residents: residentsWithDetails, pets };
 		},
 
 		async findAllSubmitted() {

@@ -25,7 +25,8 @@ export function meta({ data }: Route.MetaArgs) {
 	];
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null): string {
+	if (!dateStr) return "—";
 	const normalized = dateStr.length > 10 ? dateStr.replace(" ", "T") : dateStr;
 	return new Intl.DateTimeFormat("en-US", {
 		month: "short",

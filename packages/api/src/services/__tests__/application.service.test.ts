@@ -25,6 +25,7 @@ function makeRepo(
 		findById: mock(async () => ({ id: 1, status: "pending" })),
 		submit: mock(async () => ({ id: 1 })),
 		updateOccupants: mock(async () => {}),
+		upsertResidences: mock(async () => {}),
 		deleteResident: mock(async () => {}),
 		findAllSubmitted: mock(async () => []),
 		findByIdWithDetails: mock(async () => null),
@@ -536,5 +537,79 @@ describe("addIncomeSources", () => {
 		}).addIncomeSources(999, baseIncome);
 
 		expect(result).toEqual({ success: false, reason: "not_found" });
+	});
+});
+
+describe("upsertResidence", () => {
+	const baseResidence = {
+		residents: [
+			{
+				residentId: 2,
+				residences: [
+					{
+						address: "123 Main St",
+						fromDate: "2024-01-01",
+						toDate: "2025-01-01",
+						reasonForLeaving: "Closer to work",
+						isRental: true,
+						landlordName: "Jordan Smith",
+						landlordPhone: "555-123-4567",
+					},
+				],
+			},
+		],
+		notes: "Optional application note",
+	};
+
+	it("persists residence details for an existing application", async () => {
+		const repo = makeRepo();
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertResidence(1, baseResidence);
+
+		expect(result).toEqual({ success: true });
+		expect(repo.findById).toHaveBeenCalledWith(1);
+		expect(repo.upsertResidences).toHaveBeenCalledWith(1, baseResidence);
+	});
+
+	it("returns validation errors for malformed residence payloads", async () => {
+		const repo = makeRepo();
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertResidence(1, {
+			residents: [
+				{
+					residentId: 2,
+					residences: [
+						{
+							address: "",
+							fromDate: "01-01-2024",
+							isRental: true,
+						},
+					],
+				},
+			],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success && "errors" in result) {
+			expect(result.errors.length).toBeGreaterThan(0);
+		}
+		expect(repo.upsertResidences).not.toHaveBeenCalled();
+	});
+
+	it("returns not_found when the application does not exist", async () => {
+		const repo = makeRepo({
+			findById: mock(async () => null),
+		});
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertResidence(999, baseResidence);
+
+		expect(result).toEqual({ success: false, reason: "not_found" });
+		expect(repo.upsertResidences).not.toHaveBeenCalled();
 	});
 });

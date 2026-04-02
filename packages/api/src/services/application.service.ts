@@ -73,6 +73,16 @@ const incomeSourceSchema = z.object({
 	notes: z.string().optional(),
 });
 
+const residenceEntrySchema = z.object({
+	address: z.string().min(1),
+	fromDate: dateString,
+	toDate: dateString.optional(),
+	reasonForLeaving: z.string().optional(),
+	isRental: z.boolean(),
+	landlordName: z.string().optional(),
+	landlordPhone: z.string().optional(),
+});
+
 export const addIncomeSourcesSchema = z.array(
 	z.object({
 		residentId: z.int().positive(),
@@ -80,9 +90,22 @@ export const addIncomeSourcesSchema = z.array(
 	}),
 );
 
+export const upsertResidenceSchema = z.object({
+	residents: z
+		.array(
+			z.object({
+				residentId: z.int().positive(),
+				residences: z.array(residenceEntrySchema).default([]),
+			}),
+		)
+		.default([]),
+	notes: z.string().optional(),
+});
+
 export type UpdateOccupantsData = z.input<typeof updateOccupantsSchema>;
 export type CreateApplicationData = z.input<typeof createApplicationSchema>;
 export type AddIncomeSourcesData = z.input<typeof addIncomeSourcesSchema>;
+export type UpsertResidenceData = z.input<typeof upsertResidenceSchema>;
 export type UpsertApplicantInfoData = z.input<typeof upsertApplicantInfoSchema>;
 
 // ── Repository interface ───────────────────────────────────────────────────────
@@ -94,6 +117,7 @@ export type UpsertApplicantInfoPayload = z.output<
 
 export type UpdateOccupantsPayload = z.output<typeof updateOccupantsSchema>;
 export type AddIncomeSourcesPayload = z.output<typeof addIncomeSourcesSchema>;
+export type UpsertResidencePayload = z.output<typeof upsertResidenceSchema>;
 
 export type SubmittedApplicationSummary = {
 	id: number;
@@ -117,6 +141,19 @@ export type IncomeSourceDetail = {
 	updatedAt: string;
 };
 
+export type ResidenceDetail = {
+	id: number;
+	applicationId: number;
+	residentId: number;
+	address: string;
+	fromDate: string;
+	toDate: string | null;
+	reasonForLeaving: string | null;
+	isRental: boolean;
+	landlordName: string | null;
+	landlordPhone: string | null;
+};
+
 export type ResidentDetail = {
 	id: number;
 	applicationId: number;
@@ -128,6 +165,7 @@ export type ResidentDetail = {
 	createdAt: string;
 	updatedAt: string;
 	incomeSources: IncomeSourceDetail[];
+	residences: ResidenceDetail[];
 };
 
 export type PetDetail = {
@@ -146,6 +184,7 @@ export type ApplicationWithDetails = {
 	status: string;
 	desiredMoveInDate: string | null;
 	smokes: boolean;
+	notes: string | null;
 	createdAt: string;
 	updatedAt: string;
 	residents: ResidentDetail[];
@@ -169,6 +208,10 @@ export interface ApplicationRepository {
 	findById(id: number): Promise<{ id: number; status: string } | null>;
 	submit(id: number): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
+	upsertResidences(
+		applicationId: number,
+		input: UpsertResidencePayload,
+	): Promise<void>;
 	deleteResident(applicationId: number, residentId: number): Promise<void>;
 	findAllSubmitted(): Promise<SubmittedApplicationSummary[]>;
 	findByIdWithDetails(id: number): Promise<ApplicationWithDetails | null>;
@@ -205,6 +248,11 @@ export type AddIncomeSourcesResult =
 	| { success: false; errors: z.ZodIssue[] };
 
 export type UpsertApplicantInfoResult =
+	| { success: true }
+	| { success: false; reason: "not_found" }
+	| { success: false; errors: z.ZodIssue[] };
+
+export type UpsertResidenceResult =
 	| { success: true }
 	| { success: false; reason: "not_found" }
 	| { success: false; errors: z.ZodIssue[] };
@@ -375,6 +423,35 @@ export function createApplicationService({
 			await incomeSourceRepository.createMany(allSources);
 
 			logger.info({ applicationId }, "Income sources added");
+			return { success: true };
+		},
+
+		async upsertResidence(
+			applicationId: number,
+			input: UpsertResidenceData,
+		): Promise<UpsertResidenceResult> {
+			const parsed = upsertResidenceSchema.safeParse(input);
+
+			if (!parsed.success) {
+				logger.warn(
+					{ applicationId, errors: parsed.error.issues },
+					"Residence validation failed",
+				);
+				return { success: false, errors: parsed.error.issues };
+			}
+
+			const existing = await applicationRepository.findById(applicationId);
+
+			if (!existing) {
+				logger.warn(
+					{ applicationId },
+					"Cannot update residence: application not found",
+				);
+				return { success: false, reason: "not_found" };
+			}
+
+			await applicationRepository.upsertResidences(applicationId, parsed.data);
+			logger.info({ applicationId }, "Residence details updated");
 			return { success: true };
 		},
 

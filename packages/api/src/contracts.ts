@@ -13,8 +13,10 @@ export type {
 	CreateApplicationData,
 	IncomeSourceDetail,
 	PetDetail,
+	ResidenceDetail,
 	ResidentDetail,
 	SubmittedApplicationSummary,
+	UpsertResidenceData,
 	UpdateOccupantsData,
 } from "~/services/application.service";
 export type {
