@@ -7,6 +7,7 @@ export type {
 	UserGlobalRole,
 } from "~/db/schema";
 export type {
+	ApplicationDocumentDetail,
 	AddIncomeSourcesData,
 	ApplicantApplicationSummary,
 	ApplicationWithDetails,

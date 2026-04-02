@@ -6,6 +6,7 @@ export default app;
 export type { AppType } from "~/app";
 export type {
 	AddIncomeSourcesData,
+	ApplicationDocumentDetail,
 	ApplicantSignupLink,
 	ApplicationDocumentCategory,
 	ApplicationDocumentType,

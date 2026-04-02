@@ -7,6 +7,7 @@ const STEPS = [
 	{ slug: "income", label: "Income" },
 	{ slug: "residence", label: "Residence" },
 	{ slug: "documents", label: "Documents" },
+	{ slug: "", label: "Review" },
 ] as const;
 
 // ── Check icon ────────────────────────────────────────────────────────────────
@@ -120,8 +121,9 @@ export default function ApplicationShell() {
 	const location = useLocation();
 	const navigate = useNavigate();
 
-	const currentIndex = STEPS.findIndex((s) =>
-		location.pathname.endsWith(`/${s.slug}`),
+	const basePath = `/a/applications/${id}`;
+	const currentIndex = STEPS.findIndex((step) =>
+		step.slug ? location.pathname.endsWith(`/${step.slug}`) : location.pathname === basePath,
 	);
 
 	return (
@@ -155,7 +157,9 @@ export default function ApplicationShell() {
 					</div>
 					<StepNavigator
 						currentIndex={currentIndex}
-						onNavigate={(slug) => navigate(`/a/applications/${id}/${slug}`)}
+						onNavigate={(slug) =>
+							navigate(slug ? `${basePath}/${slug}` : basePath)
+						}
 					/>
 				</div>
 			</div>
