@@ -1,14 +1,59 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import {
+	Form,
+	Link,
+	redirect,
+	useActionData,
+	useLoaderData,
+	useNavigation,
+} from "react-router";
 import { Button } from "~/components/ui/button";
 import {
 	InputOTP,
 	InputOTPGroup,
 	InputOTPSlot,
 } from "~/components/ui/input-otp";
+import { apiClient } from "~/lib/api";
+import type { Route } from "./+types/otp";
 
 export function meta() {
 	return [{ title: "Enter access code — Rental Portal" }];
+}
+
+export async function clientLoader() {
+	const email = sessionStorage.getItem("otp_email");
+	const role = sessionStorage.getItem("otp_role") ?? "applicant";
+	if (!email) throw redirect("/");
+	return { email, role };
+}
+
+export async function clientAction({ request }: Route.ClientActionArgs) {
+	const formData = await request.formData();
+	const email = formData.get("email") as string;
+	const code = formData.get("code") as string;
+	const role = formData.get("role") as string;
+
+	const response = await apiClient.auth.code.verify.$post({
+		json: { email, code },
+	});
+
+	if (response.status === 422) {
+		const result = await response.json();
+		const message =
+			"issues" in result
+				? (result.issues[0]?.message ?? "Invalid code")
+				: "Invalid code";
+		return { error: message };
+	}
+
+	if (!response.ok) {
+		return { error: "Invalid or expired code. Please try again." };
+	}
+
+	sessionStorage.removeItem("otp_email");
+	sessionStorage.removeItem("otp_role");
+
+	return redirect(role === "landlord" ? "/l/applications" : "/a");
 }
 
 function BackArrow() {
@@ -30,6 +75,11 @@ function BackArrow() {
 }
 
 export default function OtpVerify() {
+	const { email, role } = useLoaderData<typeof clientLoader>();
+	const actionData = useActionData<typeof clientAction>();
+	const navigation = useNavigation();
+	const submitting = navigation.state === "submitting";
+
 	const [value, setValue] = useState("");
 	const [showForgotInfo, setShowForgotInfo] = useState(false);
 
@@ -73,7 +123,7 @@ export default function OtpVerify() {
 				{/* Heading */}
 				<div className="mb-10">
 					<p className="text-xs text-[#C4714A] font-medium tracking-widest uppercase mb-3">
-						Applicant Portal
+						{role === "landlord" ? "Landlord" : "Applicant"} Portal
 					</p>
 					<h1
 						className="text-[2.8rem] leading-[1.1] text-[#1C1A17] mb-3"
@@ -84,39 +134,56 @@ export default function OtpVerify() {
 						<em>access code.</em>
 					</h1>
 					<p className="text-[#7A7268] text-sm leading-relaxed">
-						Enter the 6-digit code provided by the property you're applying to.
+						Signing in as <span className="text-[#1C1A17] font-medium">{email}</span>
 					</p>
 				</div>
 
-				{/* OTP Card */}
-				<div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(28,26,23,0.07)] mb-4">
-					<p className="text-xs font-medium text-[#7A7268] uppercase tracking-widest mb-5">
-						Access Code
-					</p>
+				{/* Form */}
+				<Form method="post">
+					<input type="hidden" name="email" value={email} />
+					<input type="hidden" name="role" value={role} />
+					<input type="hidden" name="code" value={value} />
 
-					<div className="flex justify-center">
-						<InputOTP
-							maxLength={6}
-							value={value}
-							onChange={setValue}
-							autoFocus
-						>
-							<InputOTPGroup>
-								{[0, 1, 2, 3, 4, 5].map((i) => (
-									<InputOTPSlot
-										key={i}
-										index={i}
-										className="size-12 text-base font-medium text-[#1C1A17] border-[#E8E1D9] first:rounded-l-xl last:rounded-r-xl data-[active=true]:border-[#C4714A] data-[active=true]:ring-[#C4714A]/20"
-									/>
-								))}
-							</InputOTPGroup>
-						</InputOTP>
+					{/* OTP Card */}
+					<div className="bg-white rounded-2xl p-6 shadow-[0_1px_4px_rgba(28,26,23,0.07)] mb-4">
+						<p className="text-xs font-medium text-[#7A7268] uppercase tracking-widest mb-5">
+							Access Code
+						</p>
+
+						<div className="flex justify-center">
+							<InputOTP
+								maxLength={6}
+								value={value}
+								onChange={setValue}
+								autoFocus
+							>
+								<InputOTPGroup>
+									{[0, 1, 2, 3, 4, 5].map((i) => (
+										<InputOTPSlot
+											key={i}
+											index={i}
+											className="size-12 text-base font-medium text-[#1C1A17] border-[#E8E1D9] first:rounded-l-xl last:rounded-r-xl data-[active=true]:border-[#C4714A] data-[active=true]:ring-[#C4714A]/20"
+										/>
+									))}
+								</InputOTPGroup>
+							</InputOTP>
+						</div>
+
+						{actionData?.error && (
+							<p className="text-sm text-red-600 mt-4 text-center">
+								{actionData.error}
+							</p>
+						)}
 					</div>
-				</div>
 
-				<Button variant="continue" disabled={!isComplete}>
-					Continue
-				</Button>
+					<Button
+						variant="continue"
+						type="submit"
+						disabled={!isComplete || submitting}
+					>
+						{submitting ? "Verifying…" : "Continue"}
+					</Button>
+				</Form>
 
 				{/* Forgot code */}
 				<div className="mt-8">

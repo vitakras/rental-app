@@ -1,15 +1,7 @@
-import {
-	Form,
-	Link,
-	redirect,
-	useActionData,
-	useNavigation,
-	useSearchParams,
-} from "react-router";
+import { Form, Link, redirect, useLoaderData } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/login";
 
 export function meta() {
@@ -26,38 +18,14 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 	const formData = await request.formData();
 	const email = formData.get("email") as string;
 	const role = formData.get("role") as string;
-
-	const response = await apiClient.auth.email.request.$post({
-		json: { email },
-	});
-
-	if (response.status === 422) {
-		const result = await response.json();
-		const message =
-			"issues" in result
-				? (result.issues[0]?.message ?? "Invalid email address")
-				: "Invalid email address";
-		return { error: message };
-	}
-
-	if (!response.ok) {
-		return { error: "Something went wrong. Please try again." };
-	}
-
-	return redirect(
-		`/login/check-email?email=${encodeURIComponent(email)}&role=${encodeURIComponent(role)}`,
-	);
+	sessionStorage.setItem("otp_email", email);
+	sessionStorage.setItem("otp_role", role);
+	return redirect("/otp");
 }
 
 export default function Login() {
-	const [searchParams] = useSearchParams();
-	const role = searchParams.get("role") ?? "applicant";
+	const { role } = useLoaderData<typeof clientLoader>();
 	const isLandlord = role === "landlord";
-
-	const actionData = useActionData<typeof clientAction>();
-	const navigation = useNavigation();
-	const submitting = navigation.state === "submitting";
-	const error = actionData?.error;
 
 	return (
 		<div
@@ -102,15 +70,13 @@ export default function Login() {
 						<em>your account.</em>
 					</h1>
 					<p className="text-[#7A7268] text-sm leading-relaxed">
-						Enter your email and we'll send you a secure link to sign in — no
-						password needed.
+						Enter your email to sign in with your 6-digit access code.
 					</p>
 				</div>
 
 				{/* Form */}
 				<Form method="post">
 					<input type="hidden" name="role" value={role} />
-
 					<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] mb-4">
 						<Label htmlFor="email" className="mb-1.5 block">
 							Email address
@@ -122,23 +88,13 @@ export default function Login() {
 							placeholder="you@example.com"
 							required
 							autoFocus
-							aria-describedby={error ? "email-error" : undefined}
 						/>
-						{error && (
-							<p id="email-error" className="text-sm text-red-600 mt-2">
-								{error}
-							</p>
-						)}
 					</div>
 
-					<Button variant="continue" type="submit" disabled={submitting}>
-						{submitting ? "Sending…" : "Send sign-in link"}
+					<Button variant="continue" type="submit">
+						Continue
 					</Button>
 				</Form>
-
-				<p className="text-center text-xs text-[#7A7268] mt-4 leading-relaxed">
-					We'll only send a link if an account exists for that email.
-				</p>
 			</div>
 		</div>
 	);
