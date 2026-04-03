@@ -184,7 +184,9 @@ export function applicationRepository(db: DbInstance) {
 				.set({ notes: input.notes ?? null })
 				.where(eq(applicationsTable.id, applicationId));
 
-			const residentIds = input.residents.map((resident) => resident.residentId);
+			const residentIds = input.residents.map(
+				(resident) => resident.residentId,
+			);
 
 			if (residentIds.length > 0) {
 				await db

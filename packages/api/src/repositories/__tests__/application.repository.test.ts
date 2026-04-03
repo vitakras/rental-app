@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	applicationsTable,
 	petsTable,
@@ -342,9 +342,9 @@ describe("applicationRepository.updateOccupants", () => {
 			.where(eq(petsTable.applicationId, created.id));
 
 		expect(residents).toHaveLength(2);
-		expect(residents.filter((resident) => resident.role === "primary")).toHaveLength(
-			1,
-		);
+		expect(
+			residents.filter((resident) => resident.role === "primary"),
+		).toHaveLength(1);
 		expect(
 			residents.filter((resident) => resident.role === "co-applicant"),
 		).toHaveLength(1);

@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { incomeSourcesTable, residentsTable } from "~/db/schema";
 import { applicationRepository } from "../application.repository";
 import { incomeSourceRepository } from "../income-source.repository";
@@ -163,7 +163,8 @@ describe("incomeSourceRepository.findByResidentId", () => {
 	});
 
 	it("only returns sources for the requested resident", async () => {
-		const { residentId: residentId1 } = await createApplicationWithPrimaryResident();
+		const { residentId: residentId1 } =
+			await createApplicationWithPrimaryResident();
 		const secondApp = await appRepo.create({});
 		await appRepo.upsertPrimaryApplicant(secondApp.id, {
 			...primaryApplicantInput,

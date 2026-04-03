@@ -1,6 +1,6 @@
 import { getAuthConfig } from "~/auth/config";
-import { createDb } from "~/db";
 import logger from "~/cf-logger";
+import { createDb } from "~/db";
 import { applicationRepository } from "~/repositories/application.repository";
 import { applicationDocumentRepository } from "~/repositories/application-document.repository";
 import { fileRepository } from "~/repositories/file.repository";

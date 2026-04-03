@@ -28,10 +28,13 @@ type MigrationJournal = {
 	}>;
 };
 
-const journalModule = import.meta.glob("../../db/migrations/meta/_journal.json", {
-	eager: true,
-	import: "default",
-}) as Record<string, MigrationJournal>;
+const journalModule = import.meta.glob(
+	"../../db/migrations/meta/_journal.json",
+	{
+		eager: true,
+		import: "default",
+	},
+) as Record<string, MigrationJournal>;
 
 const sqlModules = import.meta.glob("../../db/migrations/*.sql", {
 	eager: true,

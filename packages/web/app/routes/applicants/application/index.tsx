@@ -1,5 +1,5 @@
 import type { ApplicationWithDetails } from "api";
-import { data, Form, Link, useNavigation } from "react-router";
+import { data, Form, Link, redirect, useNavigation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/index";
@@ -42,7 +42,7 @@ export async function clientAction({ params }: Route.ClientActionArgs) {
 		throw data(null, { status: response.status });
 	}
 
-	return null;
+	return redirect("/a");
 }
 
 export function meta() {
@@ -142,6 +142,8 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 	const { applicationId, application } = loaderData;
 	const navigation = useNavigation();
 	const submitting = navigation.state === "submitting";
+	const isSubmittable =
+		application.status === "draft" || application.status === "pending";
 	const primary = application.residents.find(
 		(resident) => resident.role === "primary",
 	);
@@ -514,7 +516,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 			<div className="fixed bottom-0 left-0 right-0 pointer-events-none z-20">
 				<div className="bg-gradient-to-t from-[#F5F0E8] via-[#F5F0E8]/95 to-transparent pt-8 pb-10 px-5 pointer-events-auto">
 					<div className="max-w-lg mx-auto">
-						{application.status === "pending" ? (
+						{isSubmittable ? (
 							<Form method="post">
 								<Button variant="continue" type="submit" disabled={submitting}>
 									{submitting ? "Submitting..." : "Submit application"}
@@ -528,7 +530,9 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 							</div>
 						)}
 						<p className="text-center text-xs text-[#7A7268] mt-3">
-							You can still return to any section above before submitting.
+							{isSubmittable
+								? "You can still return to any section above before submitting."
+								: "This application is no longer editable from the applicant portal."}
 						</p>
 					</div>
 				</div>
