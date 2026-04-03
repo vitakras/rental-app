@@ -54,7 +54,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 		additionalAdults,
 		children,
 		pets,
-		hasPets: pets.length > 0 ? true : null,
 	};
 }
 
@@ -130,7 +129,6 @@ const PET_TYPES = [
 	"Bird",
 	"Reptile",
 	"Fish",
-	"Small animal",
 	"Other",
 ];
 
@@ -361,7 +359,6 @@ export default function ApplicationOccupants({
 	const [childList, setChildList] = useState<Child[]>(loaderData.children);
 
 	// Lifestyle
-	const [hasPets, setHasPets] = useState<boolean | null>(loaderData.hasPets);
 	const [pets, setPets] = useState<Pet[]>(loaderData.pets);
 	const [smokes, setSmokes] = useState<boolean | null>(loaderData.smokes);
 	const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
@@ -421,8 +418,16 @@ export default function ApplicationOccupants({
 		);
 	}
 
-	function addPet() {
-		setPets((prev) => [...prev, emptyPet()]);
+	function handlePetsChange(newCount: number) {
+		const current = pets.length;
+		if (newCount > current) {
+			setPets((prev) => [
+				...prev,
+				...Array.from({ length: newCount - current }, () => emptyPet()),
+			]);
+		} else {
+			setPets((prev) => prev.slice(0, newCount));
+		}
 	}
 
 	function updatePet<K extends keyof Pet>(id: string, field: K, value: Pet[K]) {
@@ -433,7 +438,6 @@ export default function ApplicationOccupants({
 
 	function removePet(id: string) {
 		setPets((prev) => prev.filter((p) => p.id !== id));
-		if (pets.length === 1) setHasPets(null);
 	}
 
 	function removeAdult(adult: AdditionalAdult) {
@@ -762,23 +766,8 @@ export default function ApplicationOccupants({
 				<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
 					<SectionLabel>Lifestyle</SectionLabel>
 
-					{/* Pets */}
-					<div className="mb-6">
-						<div className="flex items-center justify-between mb-3">
-							<div>
-								<p className="text-sm font-medium text-[#1C1A17]">Pets</p>
-								<p className="text-xs text-[#7A7268] mt-0.5">
-									Any furry, feathered, or scaly friends?
-								</p>
-							</div>
-						</div>
-						<YesNoToggle value={hasPets} onChange={setHasPets} />
-					</div>
-
-					<div className="border-t border-[#F0EBE3] mb-6" />
-
 					{/* Smoking */}
-					<div>
+					<div className="mb-6">
 						<div className="flex items-center justify-between mb-3">
 							<div>
 								<p className="text-sm font-medium text-[#1C1A17]">Smoking</p>
@@ -789,10 +778,25 @@ export default function ApplicationOccupants({
 						</div>
 						<YesNoToggle value={smokes} onChange={setSmokes} />
 					</div>
+
+					<div className="border-t border-[#F0EBE3] mb-6" />
+
+					{/* Pets */}
+					<div>
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm font-medium text-[#1C1A17]">Pets</p>
+								<p className="text-xs text-[#7A7268] mt-0.5">
+									Any furry, feathered, or scaly friends?
+								</p>
+							</div>
+							<Stepper value={pets.length} onChange={handlePetsChange} />
+						</div>
+					</div>
 				</div>
 
 				{/* ── Pet cards (inline, outside lifestyle card) ── */}
-				{hasPets === true && (
+				{pets.length > 0 && (
 					<div className="mt-4 space-y-3">
 						{pets.map((pet, i) => (
 							<div
@@ -883,27 +887,6 @@ export default function ApplicationOccupants({
 							</div>
 						))}
 
-						{/* Add pet button */}
-						<button
-							type="button"
-							onClick={addPet}
-							className="w-full py-3.5 rounded-2xl border-2 border-dashed border-[#C4714A] text-[#C4714A] text-sm font-medium flex items-center justify-center gap-2 transition-all active:bg-[#FDF0E9] bg-white/50"
-							style={{ fontFamily: "'DM Sans', sans-serif" }}
-						>
-							<svg
-								aria-hidden="true"
-								width="14"
-								height="14"
-								viewBox="0 0 14 14"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeLinecap="round"
-							>
-								<path d="M7 1v12M1 7h12" />
-							</svg>
-							{pets.length === 0 ? "Add a pet" : "Add another pet"}
-						</button>
 					</div>
 				)}
 			</div>
@@ -932,14 +915,12 @@ export default function ApplicationOccupants({
 												fullName: c.name,
 												dateOfBirth: c.dob,
 											})),
-											pets: hasPets
-												? pets.map((p) => ({
-														type: p.type,
-														name: p.name || undefined,
-														breed: p.breed || undefined,
-														notes: p.notes || undefined,
-													}))
-												: [],
+											pets: pets.map((p) => ({
+												type: p.type,
+												name: p.name || undefined,
+												breed: p.breed || undefined,
+												notes: p.notes || undefined,
+											})),
 										}),
 									},
 									{ method: "post" },
