@@ -1,30 +1,20 @@
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { authConfig } from "./config";
+import type { SessionRecord } from "~/repositories/session.repository";
 
 export function getSessionCookie(c: Context) {
 	return getCookie(c, authConfig.cookieName) ?? null;
 }
 
-export function setSessionCookie(
-	c: Context,
-	{
-		cookieName,
-		sessionId,
-		expiresAt,
-	}: {
-		cookieName: string;
-		sessionId: string;
-		expiresAt: string;
-	},
-) {
-	const expiresAtDate = new Date(expiresAt);
+export function setSessionCookie(c: Context, session: SessionRecord) {
+	const expiresAtDate = new Date(session.expiresAt);
 	const maxAge = Math.max(
 		0,
 		Math.floor((expiresAtDate.getTime() - Date.now()) / 1000),
 	);
 
-	setCookie(c, cookieName, sessionId, {
+	setCookie(c, authConfig.cookieName, session.id, {
 		httpOnly: true,
 		path: "/",
 		sameSite: "Lax",

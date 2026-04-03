@@ -63,12 +63,8 @@ export function createAuthEmailRoutes({
 				return c.json({ error: result.reason }, 401);
 			}
 
-			setSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-				sessionId: result.session.id,
-				expiresAt: result.session.expiresAt,
-			});
-
+			setSessionCookie(c, result.session);
+			
 			const codeResult = await authService.rotateReusableLoginCode(
 				result.user,
 				{
@@ -86,9 +82,7 @@ export function createAuthEmailRoutes({
 			);
 		})
 		.post("/signout", async (c) => {
-			const sessionId = getSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-			});
+			const sessionId = getSessionCookie(c);
 
 			if (sessionId) {
 				await authService.signout(sessionId);

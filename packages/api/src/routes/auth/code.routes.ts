@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
-import { authConfig } from "~/auth/config";
 import { setSessionCookie } from "~/auth/cookies";
 import { createRequireSession } from "~/auth/require-session";
 import { type AuthContextEnv, getAuthContext } from "~/auth/session-context";
@@ -63,11 +62,7 @@ export function createAuthCodeRoutes({
 					return c.json({ error: result.reason }, 401);
 				}
 
-				setSessionCookie(c, {
-					cookieName: authConfig.cookieName,
-					sessionId: result.session.id,
-					expiresAt: result.session.expiresAt,
-				});
+				setSessionCookie(c, result.session);
 
 				return c.json(
 					{
