@@ -1,9 +1,9 @@
 export interface BlobStorage {
-	createUploadUrl(input: {
+	putObject(input: {
 		key: string;
 		contentType: string;
-		sizeBytes: number;
-	}): Promise<{ uploadUrl: string }>;
+		body: ArrayBuffer;
+	}): Promise<void>;
 
 	createDownloadUrl(key: string): Promise<{ downloadUrl: string }>;
 

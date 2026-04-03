@@ -13,14 +13,19 @@ import type {
 	FileRepository,
 } from "../repositories/file.repository";
 
-// ── Zod schemas ───────────────────────────────────────────────────────────────
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const ALLOWED_UPLOAD_MIME_TYPES = [
+	"application/pdf",
+	"image/jpeg",
+	"image/png",
+] as const;
+type AllowedUploadMimeType = (typeof ALLOWED_UPLOAD_MIME_TYPES)[number];
 
-const prepareDocumentUploadSchema = z.object({
-	originalFilename: z.string().min(1),
-	contentType: z.string().min(1),
-	sizeBytes: z.number().int().positive(),
-	uploadedByUserId: z.string().min(1),
-});
+const uploadMimeTypeToExtension: Record<AllowedUploadMimeType, string> = {
+	"application/pdf": "pdf",
+	"image/jpeg": "jpg",
+	"image/png": "png",
+};
 
 const applicationDocumentCategories = [
 	"identity",
@@ -42,50 +47,32 @@ const applicationDocumentTypes = [
 	"other",
 ] as const satisfies [ApplicationDocumentType, ...ApplicationDocumentType[]];
 
-export const prepareDocumentUploadRequestSchema = z.object({
-	filename: z.string().min(1),
-	contentType: z.string().min(1).optional(),
-	sizeBytes: z.number().int().positive(),
-});
-
-export const attachDocumentToApplicationSchema = z.object({
-	fileId: z.string().min(1),
+export const uploadDocumentRequestSchema = z.object({
 	residentId: z.number().int().positive(),
 	category: z.enum(applicationDocumentCategories),
 	documentType: z.enum(applicationDocumentTypes),
 });
 
-export type PrepareDocumentUploadData = z.input<
-	typeof prepareDocumentUploadSchema
->;
+const uploadDocumentSchema = uploadDocumentRequestSchema.extend({
+	applicationId: z.number().int().positive(),
+	originalFilename: z.string().min(1),
+	contentType: z.enum(ALLOWED_UPLOAD_MIME_TYPES),
+	sizeBytes: z.number().int().positive().max(MAX_FILE_SIZE_BYTES),
+	uploadedByUserId: z.string().min(1),
+	fileData: z.instanceof(ArrayBuffer),
+});
+
+export type UploadDocumentData = z.input<typeof uploadDocumentSchema>;
 
 // ── Result types ──────────────────────────────────────────────────────────────
 
-export type PrepareDocumentUploadResult =
-	| { success: true; fileId: string; uploadUrl: string }
+export type UploadDocumentResult =
+	| { success: true; fileId: string; file: FileRecord }
 	| { success: false; errors: z.ZodIssue[] };
 
-export type CompleteUploadResult =
-	| { success: true; file: FileRecord }
-	| {
-			success: false;
-			reason: "not_found" | "invalid_status" | "missing_object";
-	  };
-
-export interface AttachDocumentInput {
-	fileId: string;
-	applicationId: number;
-	residentId: number;
-	category: ApplicationDocumentCategory;
-	documentType: ApplicationDocumentType;
-}
-
-export type AttachDocumentResult =
-	| { success: true }
-	| {
-			success: false;
-			reason: "not_found" | "invalid_status" | "missing_object";
-	  };
+export type UploadDocumentFailureResult =
+	| { success: false; errors: z.ZodIssue[] }
+	| { success: false; reason: "storage_write_failed" };
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -103,101 +90,82 @@ export function createFileService({
 	logger?: Logger;
 }) {
 	return {
-		async prepareDocumentUpload(
-			data: PrepareDocumentUploadData,
-		): Promise<PrepareDocumentUploadResult> {
-			const parsed = prepareDocumentUploadSchema.safeParse(data);
+		async uploadDocument(
+			data: UploadDocumentData,
+		): Promise<UploadDocumentResult | UploadDocumentFailureResult> {
+			const parsed = uploadDocumentSchema.safeParse(data);
 
 			if (!parsed.success) {
 				return { success: false, errors: parsed.error.issues };
 			}
 
-			const { originalFilename, contentType, sizeBytes, uploadedByUserId } =
-				parsed.data;
-
-			const fileId = crypto.randomUUID();
-			const storageKey = `documents/${uploadedByUserId}/${fileId}/${originalFilename}`;
-
-			const { uploadUrl } = await blobStorage.createUploadUrl({
-				key: storageKey,
-				contentType,
-				sizeBytes,
-			});
-
-			await fileRepository.createPendingUpload({
-				id: fileId,
-				storageKey,
+			const {
+				applicationId,
+				residentId,
+				category,
+				documentType,
 				originalFilename,
 				contentType,
 				sizeBytes,
 				uploadedByUserId,
-			});
+				fileData,
+			} = parsed.data;
 
-			logger.info({ fileId, uploadedByUserId }, "Prepared document upload");
-			return { success: true, fileId, uploadUrl };
-		},
+			const fileId = crypto.randomUUID();
+			const fileExtension = uploadMimeTypeToExtension[contentType];
+			const storageKey = `applications/${applicationId}/${residentId}/${fileId}.${fileExtension}`;
+			const uploadedAt = new Date().toISOString();
 
-		async completeUpload(fileId: string): Promise<CompleteUploadResult> {
-			const file = await fileRepository.findById(fileId);
-
-			if (!file) {
-				logger.warn({ fileId }, "Cannot complete upload: file not found");
-				return { success: false, reason: "not_found" };
-			}
-
-			if (file.status !== "pending_upload") {
-				logger.warn(
-					{ fileId, status: file.status },
-					"Cannot complete upload: invalid status",
+			try {
+				await blobStorage.putObject({
+					key: storageKey,
+					contentType,
+					body: fileData,
+				});
+			} catch (error) {
+				logger.error(
+					{ err: error, applicationId, residentId, fileId, storageKey },
+					"Failed to store uploaded document",
 				);
-				return { success: false, reason: "invalid_status" };
+				return { success: false, reason: "storage_write_failed" };
 			}
 
-			const objectExists = await blobStorage.objectExists(file.storageKey);
-			if (!objectExists) {
-				logger.warn(
-					{ fileId, storageKey: file.storageKey },
-					"Cannot complete upload: object missing",
+			let fileCreated = false;
+
+			try {
+				const file = await fileRepository.create({
+					id: fileId,
+					storageKey,
+					originalFilename,
+					contentType,
+					sizeBytes,
+					status: "attached",
+					uploadedByUserId,
+					uploadedAt,
+				});
+				fileCreated = true;
+
+				await applicationDocumentRepository.create({
+					applicationId,
+					residentId,
+					fileId,
+					category,
+					documentType,
+				});
+
+				logger.info({ fileId, applicationId, residentId }, "Document uploaded");
+				return { success: true, fileId, file };
+			} catch (error) {
+				logger.error(
+					{ err: error, applicationId, residentId, fileId, storageKey },
+					"Failed to persist uploaded document metadata",
 				);
-				return { success: false, reason: "missing_object" };
+				if (fileCreated) {
+					await fileRepository.deleteById(fileId);
+				}
+				await blobStorage.deleteObject(storageKey);
+				throw error;
 			}
-
-			await fileRepository.markUploaded(fileId);
-
-			logger.info({ fileId }, "Upload completed");
-			return {
-				success: true,
-				file: {
-					...file,
-					status: "uploaded",
-					uploadedAt: new Date().toISOString(),
-				},
-			};
-		},
-
-		async attachDocumentToApplication(
-			input: AttachDocumentInput,
-		): Promise<AttachDocumentResult> {
-			const { fileId, applicationId, residentId, category, documentType } =
-				input;
-
-			const completeResult = await this.completeUpload(fileId);
-			if (!completeResult.success) return completeResult;
-
-			await applicationDocumentRepository.create({
-				applicationId,
-				residentId,
-				fileId,
-				category,
-				documentType,
-			});
-			await fileRepository.markAttached(fileId);
-
-			logger.info(
-				{ fileId, applicationId },
-				"Document attached to application",
-			);
-			return { success: true };
 		},
 	};
 }

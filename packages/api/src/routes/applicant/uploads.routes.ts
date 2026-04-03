@@ -1,87 +1,129 @@
 import { Hono } from "hono";
+import type { ZodIssue } from "zod";
 import { createRequireApplicantSession } from "~/auth/applicant-session";
-import { zodJsonValidator } from "~/lib/zod-validator";
+import { getAuthConfig } from "~/auth/config";
+import { getSessionCookie } from "~/auth/cookies";
 import { ensureValidApplicationId, parseApplicationId } from "~/routes/shared";
+import type { createApplicationService } from "~/services/application.service";
 import type { createAuthService } from "~/services/auth.service";
 import {
-	attachDocumentToApplicationSchema,
+	ALLOWED_UPLOAD_MIME_TYPES,
 	type createFileService,
-	prepareDocumentUploadRequestSchema,
+	MAX_FILE_SIZE_BYTES,
+	uploadDocumentRequestSchema,
 } from "~/services/file.service";
+
+const authConfig = getAuthConfig();
 
 type FileService = ReturnType<typeof createFileService>;
 type AuthService = ReturnType<typeof createAuthService>;
+type ApplicationService = ReturnType<typeof createApplicationService>;
+
+function isAllowedUploadMimeType(
+	contentType: string,
+): contentType is (typeof ALLOWED_UPLOAD_MIME_TYPES)[number] {
+	return ALLOWED_UPLOAD_MIME_TYPES.includes(
+		contentType as (typeof ALLOWED_UPLOAD_MIME_TYPES)[number],
+	);
+}
 
 export function createApplicantUploadsRoutes({
 	authService,
+	applicationService,
 	fileService,
 }: {
 	authService: AuthService;
+	applicationService: ApplicationService;
 	fileService: FileService;
 }) {
 	return new Hono()
 		.use("*", createRequireApplicantSession({ authService }))
-		.post(
-			"/:id/upload/prepare",
-			ensureValidApplicationId,
-			zodJsonValidator(prepareDocumentUploadRequestSchema),
-			async (c) => {
-				const id = parseApplicationId(c.req.param("id"));
+		.post("/:id/documents", ensureValidApplicationId, async (c) => {
+			const applicationId = parseApplicationId(c.req.param("id"));
 
-				if (!id) {
-					return c.json({ error: "invalid_application_id" }, 400);
-				}
+			if (!applicationId) {
+				return c.json({ error: "invalid_application_id" }, 400);
+			}
 
-				const body = c.req.valid("json");
+			const sessionId = getSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+			});
+			const sessionResult = await authService.getSessionUser(sessionId ?? "");
+			if (!sessionResult.success) {
+				return c.json({ error: "unauthorized" }, 401);
+			}
 
-				const result = await fileService.prepareDocumentUpload({
-					originalFilename: body.filename,
-					contentType: body.contentType ?? "application/octet-stream",
-					sizeBytes: body.sizeBytes,
-					uploadedByUserId: `app-${id}`,
-				});
+			const formData = await c.req.formData();
+			const file = formData.get("file");
 
-				if (!result.success) {
+			const parsedPayload = uploadDocumentRequestSchema.safeParse({
+				residentId: Number(formData.get("residentId")),
+				category: formData.get("category"),
+				documentType: formData.get("documentType"),
+			});
+
+			if (!(file instanceof File) || !parsedPayload.success) {
+				return c.json(
+					{
+						error: "invalid_upload_payload",
+						issues: parsedPayload.success ? [] : parsedPayload.error.issues,
+					},
+					422,
+				);
+			}
+
+			if (file.size > MAX_FILE_SIZE_BYTES) {
+				return c.json({ error: "file_too_large" }, 422);
+			}
+
+			if (!isAllowedUploadMimeType(file.type)) {
+				return c.json({ error: "unsupported_file_type" }, 422);
+			}
+
+			const applicationResult =
+				await applicationService.getApplicationWithDetails(applicationId);
+			if (!applicationResult.success) {
+				return c.json({ error: "application_not_found" }, 404);
+			}
+
+			const residentExists = applicationResult.application.residents.some(
+				(resident) => resident.id === parsedPayload.data.residentId,
+			);
+			if (!residentExists) {
+				return c.json({ error: "invalid_upload_payload" }, 422);
+			}
+
+			const result = await fileService.uploadDocument({
+				applicationId,
+				residentId: parsedPayload.data.residentId,
+				category: parsedPayload.data.category,
+				documentType: parsedPayload.data.documentType,
+				originalFilename: file.name,
+				contentType: file.type,
+				sizeBytes: file.size,
+				uploadedByUserId: sessionResult.user.id,
+				fileData: await file.arrayBuffer(),
+			});
+
+			if (!result.success) {
+				if ("errors" in result) {
+					const issues = result.errors satisfies ZodIssue[];
+					const unsupportedType = issues.some(
+						(issue: ZodIssue) => issue.path[0] === "contentType",
+					);
+					if (unsupportedType) {
+						return c.json({ error: "unsupported_file_type" }, 422);
+					}
+
 					return c.json(
-						{ error: "validation_failed", issues: result.errors },
+						{ error: "invalid_upload_payload", issues },
 						422,
 					);
 				}
 
-				return c.json(
-					{ fileId: result.fileId, uploadUrl: result.uploadUrl },
-					200,
-				);
-			},
-		)
-		.post(
-			"/:id/upload/complete",
-			ensureValidApplicationId,
-			zodJsonValidator(attachDocumentToApplicationSchema),
-			async (c) => {
-				const id = parseApplicationId(c.req.param("id"));
+				return c.json({ error: "storage_write_failed" }, 422);
+			}
 
-				if (!id) {
-					return c.json({ error: "invalid_application_id" }, 400);
-				}
-
-				const body = c.req.valid("json") as Parameters<
-					FileService["attachDocumentToApplication"]
-				>[0];
-
-				const result = await fileService.attachDocumentToApplication({
-					fileId: body.fileId,
-					applicationId: id,
-					residentId: body.residentId,
-					category: body.category,
-					documentType: body.documentType,
-				});
-
-				if (!result.success) {
-					return c.json({ error: "attach_failed", reason: result.reason }, 422);
-				}
-
-				return c.json({ success: true }, 200);
-			},
-		);
+			return c.json({ fileId: result.fileId }, 200);
+		});
 }

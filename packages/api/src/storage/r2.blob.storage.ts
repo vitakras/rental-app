@@ -10,10 +10,10 @@ function encodeStorageKeyForPath(key: string) {
 
 export function createR2BlobStorage(bucket: R2Bucket): BlobStorage {
 	return {
-		async createUploadUrl({ key }) {
-			return {
-				uploadUrl: `${getApiBaseUrl()}/storage/${encodeStorageKeyForPath(key)}`,
-			};
+		async putObject({ key, contentType, body }) {
+			await bucket.put(key, body, {
+				httpMetadata: { contentType },
+			});
 		},
 
 		async createDownloadUrl(key) {

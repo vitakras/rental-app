@@ -17,29 +17,32 @@ export interface FileRecord {
 	uploadedAt: string | null;
 }
 
-export interface CreatePendingUploadInput {
+export interface CreateFileInput {
 	id: string;
 	storageKey: string;
 	originalFilename: string;
 	contentType: string;
 	sizeBytes: number;
+	status: FileStatus;
 	uploadedByUserId: string;
+	uploadedAt?: string;
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
 
 export interface FileRepository {
-	createPendingUpload(input: CreatePendingUploadInput): Promise<FileRecord>;
+	create(input: CreateFileInput): Promise<FileRecord>;
 	markUploaded(fileId: string): Promise<void>;
 	markAttached(fileId: string): Promise<void>;
 	findById(fileId: string): Promise<FileRecord | null>;
+	deleteById(fileId: string): Promise<void>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 export function fileRepository(db: DbInstance): FileRepository {
 	return {
-		async createPendingUpload(input) {
+		async create(input) {
 			const [file] = await db
 				.insert(filesTable)
 				.values({
@@ -48,8 +51,9 @@ export function fileRepository(db: DbInstance): FileRepository {
 					originalFilename: input.originalFilename,
 					contentType: input.contentType,
 					sizeBytes: input.sizeBytes,
-					status: "pending_upload",
+					status: input.status,
 					uploadedByUserId: input.uploadedByUserId,
+					uploadedAt: input.uploadedAt ?? null,
 				})
 				.returning();
 
@@ -77,6 +81,10 @@ export function fileRepository(db: DbInstance): FileRepository {
 				.where(eq(filesTable.id, fileId));
 
 			return file ?? null;
+		},
+
+		async deleteById(fileId) {
+			await db.delete(filesTable).where(eq(filesTable.id, fileId));
 		},
 	};
 }

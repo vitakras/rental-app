@@ -210,7 +210,7 @@ function SlotCard({
 								style={{ fontFamily: "'DM Sans', sans-serif" }}
 							>
 								{file.status === "error"
-									? `${file.filename} — upload failed`
+									? `${file.filename} — ${file.errorMessage ?? "upload failed"}`
 									: file.filename}
 							</span>
 						</li>
@@ -222,6 +222,7 @@ function SlotCard({
 				<input
 					type="file"
 					multiple
+					accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
 					className="sr-only"
 					onChange={(e) => {
 						if (e.target.files?.length) uploadFiles(e.target.files);

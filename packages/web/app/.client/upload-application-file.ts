@@ -1,5 +1,19 @@
 import type { ApplicationDocumentCategory, ApplicationDocumentType } from "api";
-import { apiClient } from "~/lib/api";
+import { BASE_API_URL } from "~/config/env";
+
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_UPLOAD_TYPES = new Set([
+	"application/pdf",
+	"image/jpeg",
+	"image/png",
+]);
+
+export class UploadValidationError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "UploadValidationError";
+	}
+}
 
 export interface UploadApplicationFileInput {
 	applicationId: number;
@@ -9,48 +23,14 @@ export interface UploadApplicationFileInput {
 	documentType: ApplicationDocumentType;
 }
 
-async function createUploadIntent(
-	applicationId: number,
-	file: File,
-): Promise<{ fileId: string; uploadUrl: string }> {
-	const res = await apiClient.applications[":id"].upload.prepare.$post({
-		param: { id: String(applicationId) },
-		json: {
-			filename: file.name,
-			contentType: file.type || "application/octet-stream",
-			sizeBytes: file.size,
-		},
-	});
-	if (!res.ok) throw new Error("Failed to prepare upload");
-	return res.json();
-}
+function validateFile(file: File) {
+	if (file.size > MAX_FILE_SIZE_BYTES) {
+		throw new UploadValidationError("File must be 10 MB or smaller.");
+	}
 
-async function uploadBytes(uploadUrl: string, file: File): Promise<void> {
-	const res = await fetch(uploadUrl, {
-		method: "PUT",
-		body: file,
-		headers: { "Content-Type": file.type || "application/octet-stream" },
-	});
-	if (!res.ok) throw new Error("Failed to upload file");
-}
-
-async function completeUpload(
-	applicationId: number,
-	fileId: string,
-	residentId: number,
-	category: ApplicationDocumentCategory,
-	documentType: ApplicationDocumentType,
-): Promise<void> {
-	const res = await apiClient.applications[":id"].upload.complete.$post({
-		param: { id: String(applicationId) },
-		json: {
-			fileId,
-			residentId,
-			category,
-			documentType,
-		},
-	});
-	if (!res.ok) throw new Error("Failed to complete upload");
+	if (!ALLOWED_UPLOAD_TYPES.has(file.type)) {
+		throw new UploadValidationError("Only PDF, PNG, and JPG files are allowed.");
+	}
 }
 
 export async function uploadApplicationFile({
@@ -60,14 +40,37 @@ export async function uploadApplicationFile({
 	category,
 	documentType,
 }: UploadApplicationFileInput): Promise<{ fileId: string }> {
-	const { fileId, uploadUrl } = await createUploadIntent(applicationId, file);
-	await uploadBytes(uploadUrl, file);
-	await completeUpload(
-		applicationId,
-		fileId,
-		residentId,
-		category,
-		documentType,
-	);
+	validateFile(file);
+
+	const formData = new FormData();
+	formData.set("file", file);
+	formData.set("residentId", String(residentId));
+	formData.set("category", category);
+	formData.set("documentType", documentType);
+
+	const res = await fetch(`${BASE_API_URL}/applications/${applicationId}/documents`, {
+		method: "POST",
+		body: formData,
+		credentials: "include",
+	});
+	if (!res.ok) {
+		const payload = (await res.json().catch(() => null)) as
+			| { error?: string }
+			| null;
+
+		if (payload?.error === "file_too_large") {
+			throw new UploadValidationError("File must be 10 MB or smaller.");
+		}
+
+		if (payload?.error === "unsupported_file_type") {
+			throw new UploadValidationError(
+				"Only PDF, PNG, and JPG files are allowed.",
+			);
+		}
+
+		throw new Error("Failed to upload file");
+	}
+
+	const { fileId } = (await res.json()) as { fileId: string };
 	return { fileId };
 }

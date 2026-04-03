@@ -21,11 +21,7 @@ import type {
 	RotateReusableLoginCodeResult,
 	VerifyReusableLoginCodeResult,
 } from "~/services/auth.service";
-import type {
-	AttachDocumentResult,
-	CompleteUploadResult,
-	PrepareDocumentUploadResult,
-} from "~/services/file.service";
+import type { UploadDocumentResult } from "~/services/file.service";
 
 const applicantSessionCookie = "session=session-1";
 
@@ -168,22 +164,21 @@ function makeServices() {
 			})),
 		},
 		fileService: {
-			prepareDocumentUpload: vi.fn(
-				async (): Promise<PrepareDocumentUploadResult> => ({
+			uploadDocument: vi.fn(async (): Promise<UploadDocumentResult> => ({
 					success: true,
 					fileId: "file-1",
-					uploadUrl: "/storage/documents/app-12/file.pdf",
-				}),
-			),
-			completeUpload: vi.fn(
-				async (): Promise<CompleteUploadResult> => ({
-					success: false,
-					reason: "not_found",
-				}),
-			),
-			attachDocumentToApplication: vi.fn(
-				async (): Promise<AttachDocumentResult> => ({ success: true }),
-			),
+					file: {
+						id: "file-1",
+						storageKey: "applications/12/8/file-1.pdf",
+						originalFilename: "lease.pdf",
+						contentType: "application/pdf",
+						sizeBytes: 123,
+						status: "attached",
+						uploadedByUserId: "user-1",
+						createdAt: "2026-01-01T00:00:00.000Z",
+						uploadedAt: "2026-01-01T00:00:00.000Z",
+					},
+				})),
 		},
 	};
 }
@@ -1020,99 +1015,187 @@ describe("API application flow routes", () => {
 		});
 	});
 
-	it("prepares uploads", async () => {
+	it("uploads documents in one request", async () => {
 		const services = makeServices();
+		services.applicationService.getApplicationWithDetails = vi.fn(
+			async (): Promise<GetApplicationWithDetailsResult> => ({
+				success: true,
+				application: {
+					id: 12,
+					status: "pending",
+					smokes: false,
+					desiredMoveInDate: "2026-06-01",
+					createdAt: "2026-01-01T00:00:00.000Z",
+					updatedAt: "2026-01-01T00:00:00.000Z",
+					residents: [
+						{
+							id: 8,
+							applicationId: 12,
+							role: "primary",
+							fullName: "Alex Johnson",
+							dateOfBirth: "1990-05-15",
+							email: "alex@example.com",
+							phone: "555-000-0001",
+							createdAt: "2026-01-01T00:00:00.000Z",
+							updatedAt: "2026-01-01T00:00:00.000Z",
+							incomeSources: [],
+							pets: [],
+							residences: [],
+						},
+					],
+					documents: [],
+				} as ApplicationWithDetails,
+			}),
+		);
 		const app = createTestApp(services);
+		const formData = new FormData();
+		formData.set(
+			"file",
+			new File(["pdf bytes"], "lease.pdf", { type: "application/pdf" }),
+		);
+		formData.set("residentId", "8");
+		formData.set("category", "income");
+		formData.set("documentType", "paystub");
 
-		const response = await app.request("/applications/12/upload/prepare", {
+		const response = await app.request("/applications/12/documents", {
 			method: "POST",
 			headers: {
-				"Content-Type": "application/json",
 				Cookie: applicantSessionCookie,
 			},
-			body: JSON.stringify({
-				filename: "lease.pdf",
-				contentType: "application/pdf",
-				sizeBytes: 123,
-			}),
+			body: formData,
 		});
 
 		expect(response.status).toBe(200);
-		expect(
-			(await response.json()) as { fileId: string; uploadUrl: string },
-		).toEqual({
+		expect((await response.json()) as { fileId: string }).toEqual({
 			fileId: "file-1",
-			uploadUrl: "/storage/documents/app-12/file.pdf",
 		});
-		expect(services.fileService.prepareDocumentUpload).toHaveBeenCalledWith({
-			originalFilename: "lease.pdf",
-			contentType: "application/pdf",
-			sizeBytes: 123,
-			uploadedByUserId: "app-12",
-		});
-	});
-
-	it("completes uploads", async () => {
-		const services = makeServices();
-		const app = createTestApp(services);
-
-		const response = await app.request("/applications/12/upload/complete", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Cookie: applicantSessionCookie,
-			},
-			body: JSON.stringify({
-				fileId: "file-1",
-				residentId: 8,
-				category: "income",
-				documentType: "paystub",
-			}),
-		});
-
-		expect(response.status).toBe(200);
-		expect((await response.json()) as { success: boolean }).toEqual({
-			success: true,
-		});
-		expect(
-			services.fileService.attachDocumentToApplication,
-		).toHaveBeenCalledWith({
-			fileId: "file-1",
+		expect(services.fileService.uploadDocument).toHaveBeenCalledWith({
 			applicationId: 12,
 			residentId: 8,
 			category: "income",
 			documentType: "paystub",
+			originalFilename: "lease.pdf",
+			contentType: "application/pdf",
+			sizeBytes: 9,
+			uploadedByUserId: "user-1",
+			fileData: expect.any(ArrayBuffer),
 		});
 	});
 
-	it("returns 422 when completing an upload fails", async () => {
+	it("returns 422 for oversized uploads", async () => {
 		const services = makeServices();
-		services.fileService.attachDocumentToApplication = vi.fn(
-			async (): Promise<AttachDocumentResult> => ({
-				success: false,
-				reason: "missing_object",
+		services.applicationService.getApplicationWithDetails = vi.fn(
+			async (): Promise<GetApplicationWithDetailsResult> => ({
+				success: true,
+				application: {
+					id: 12,
+					status: "pending",
+					smokes: false,
+					desiredMoveInDate: "2026-06-01",
+					createdAt: "2026-01-01T00:00:00.000Z",
+					updatedAt: "2026-01-01T00:00:00.000Z",
+					residents: [
+						{
+							id: 8,
+							applicationId: 12,
+							role: "primary",
+							fullName: "Alex Johnson",
+							dateOfBirth: "1990-05-15",
+							email: "alex@example.com",
+							phone: "555-000-0001",
+							createdAt: "2026-01-01T00:00:00.000Z",
+							updatedAt: "2026-01-01T00:00:00.000Z",
+							incomeSources: [],
+							pets: [],
+							residences: [],
+						},
+					],
+					documents: [],
+				} as ApplicationWithDetails,
 			}),
 		);
 		const app = createTestApp(services);
+		const formData = new FormData();
+		formData.set(
+			"file",
+			new File([new Uint8Array(10 * 1024 * 1024 + 1)], "too-large.pdf", {
+				type: "application/pdf",
+			}),
+		);
+		formData.set("residentId", "8");
+		formData.set("category", "income");
+		formData.set("documentType", "paystub");
 
-		const response = await app.request("/applications/12/upload/complete", {
+		const response = await app.request("/applications/12/documents", {
 			method: "POST",
 			headers: {
-				"Content-Type": "application/json",
 				Cookie: applicantSessionCookie,
 			},
-			body: JSON.stringify({
-				fileId: "file-1",
-				residentId: 8,
-				category: "income",
-				documentType: "paystub",
-			}),
+			body: formData,
 		});
 
 		expect(response.status).toBe(422);
-		expect(((await response.json()) as { error: string }).error).toBe(
-			"attach_failed",
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "file_too_large",
+		});
+		expect(services.fileService.uploadDocument).not.toHaveBeenCalled();
+	});
+
+	it("returns 422 when the file type is unsupported", async () => {
+		const services = makeServices();
+		services.applicationService.getApplicationWithDetails = vi.fn(
+			async (): Promise<GetApplicationWithDetailsResult> => ({
+				success: true,
+				application: {
+					id: 12,
+					status: "pending",
+					smokes: false,
+					desiredMoveInDate: "2026-06-01",
+					createdAt: "2026-01-01T00:00:00.000Z",
+					updatedAt: "2026-01-01T00:00:00.000Z",
+					residents: [
+						{
+							id: 8,
+							applicationId: 12,
+							role: "primary",
+							fullName: "Alex Johnson",
+							dateOfBirth: "1990-05-15",
+							email: "alex@example.com",
+							phone: "555-000-0001",
+							createdAt: "2026-01-01T00:00:00.000Z",
+							updatedAt: "2026-01-01T00:00:00.000Z",
+							incomeSources: [],
+							pets: [],
+							residences: [],
+						},
+					],
+					documents: [],
+				} as ApplicationWithDetails,
+			}),
 		);
+		const app = createTestApp(services);
+		const formData = new FormData();
+		formData.set(
+			"file",
+			new File(["nope"], "notes.txt", { type: "text/plain" }),
+		);
+		formData.set("residentId", "8");
+		formData.set("category", "income");
+		formData.set("documentType", "paystub");
+
+		const response = await app.request("/applications/12/documents", {
+			method: "POST",
+			headers: {
+				Cookie: applicantSessionCookie,
+			},
+			body: formData,
+		});
+
+		expect(response.status).toBe(422);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "unsupported_file_type",
+		});
+		expect(services.fileService.uploadDocument).not.toHaveBeenCalled();
 	});
 
 	it("serves and stores files through the storage route", async () => {

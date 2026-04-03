@@ -1,11 +1,15 @@
 import type { ApplicationDocumentCategory, ApplicationDocumentType } from "api";
 import { useState } from "react";
-import { uploadApplicationFile } from "~/.client/upload-application-file";
+import {
+	uploadApplicationFile,
+	UploadValidationError,
+} from "~/.client/upload-application-file";
 
 export interface UploadedFile {
 	clientId: string;
 	filename: string;
 	status: "uploading" | "done" | "error";
+	errorMessage?: string;
 	fileId?: string;
 }
 
@@ -41,10 +45,17 @@ export function useFileUpload(applicationId: number, slot: SlotInfo) {
 						),
 					);
 				})
-				.catch(() => {
+				.catch((error: unknown) => {
+					const errorMessage =
+						error instanceof UploadValidationError
+							? error.message
+							: "Upload failed. Please try again.";
+
 					setUploadedFiles((prev) =>
 						prev.map((f) =>
-							f.clientId === clientId ? { ...f, status: "error" } : f,
+							f.clientId === clientId
+								? { ...f, status: "error", errorMessage }
+								: f,
 						),
 					);
 				});

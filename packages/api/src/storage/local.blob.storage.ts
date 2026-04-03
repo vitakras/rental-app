@@ -18,13 +18,10 @@ function encodeStorageKeyForPath(key: string) {
 
 export function createLocalBlobStorage(): BlobStorage {
 	return {
-		async createUploadUrl({ key }) {
-			await fs.mkdir(path.join(UPLOADS_DIR, path.dirname(key)), {
-				recursive: true,
-			});
-			return {
-				uploadUrl: `${getApiBaseUrl()}/storage/${encodeStorageKeyForPath(key)}`,
-			};
+		async putObject({ key, body }) {
+			const filePath = path.join(UPLOADS_DIR, key);
+			await fs.mkdir(path.dirname(filePath), { recursive: true });
+			await fs.writeFile(filePath, Buffer.from(body));
 		},
 
 		async createDownloadUrl(key) {
