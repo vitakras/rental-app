@@ -1,5 +1,5 @@
 import { createApp } from "~/app";
-import { createCfServices } from "~/cf-container";
+import { createCfServices } from "~/container";
 import type { CloudflareBindings } from "~/worker-env";
 
 export default {
