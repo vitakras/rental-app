@@ -244,6 +244,7 @@ export interface IncomeSourceRepository {
 			} & AddIncomeSourcesPayload[number]["incomeSources"][number]
 		>,
 	): Promise<void>;
+	deleteByResidentIds(residentIds: number[]): Promise<void>;
 }
 
 // ── Service ────────────────────────────────────────────────────────────────────
@@ -493,6 +494,9 @@ export function createApplicationService({
 			if (!incomeSourceRepository) {
 				throw new Error("incomeSourceRepository is required");
 			}
+
+			const residentIds = parsed.data.map((r) => r.residentId);
+			await incomeSourceRepository.deleteByResidentIds(residentIds);
 
 			const allSources = parsed.data.flatMap(({ residentId, incomeSources }) =>
 				incomeSources.map((source) => ({ residentId, ...source })),

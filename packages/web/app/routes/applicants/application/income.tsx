@@ -13,12 +13,68 @@ export function meta() {
 	return [{ title: "Income — Rental Application" }];
 }
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type IncomeType = "employment" | "self_employment" | "other" | "";
+
+interface IncomeSourceEntry {
+	id: string;
+	type: IncomeType;
+	employerOrSourceName: string;
+	titleOrOccupation: string;
+	monthlyAmount: string;
+	startDate: string;
+	endDate: string;
+	notes: string;
+}
+
+const INCOME_TYPE_OPTIONS: { value: IncomeType; label: string }[] = [
+	{ value: "employment", label: "Employment" },
+	{ value: "self_employment", label: "Self-employed" },
+	{ value: "other", label: "Other" },
+];
+
+function emptyIncomeSource(): IncomeSourceEntry {
+	return {
+		id: Math.random().toString(36).slice(2),
+		type: "",
+		employerOrSourceName: "",
+		titleOrOccupation: "",
+		monthlyAmount: "",
+		startDate: "",
+		endDate: "",
+		notes: "",
+	};
+}
+
+function incomeSourceLabels(type: IncomeType) {
+	if (type === "employment")
+		return { employer: "Employer name", title: "Job title" };
+	if (type === "self_employment")
+		return { employer: "Business name", title: "Occupation" };
+	return { employer: "Source name", title: "Description" };
+}
+
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	const id = parseApplicationParam(params.id);
 	const application = await loadEditableApplication(id);
 
-	// Only adult residents have income (not children)
-	const residents = application.residents.filter((r) => r.role !== "child");
+	const residents = application.residents
+		.filter((r) => r.role !== "child")
+		.map((r) => ({
+			id: r.id,
+			fullName: r.fullName,
+			sources: r.incomeSources.map((s) => ({
+				id: Math.random().toString(36).slice(2),
+				type: s.type as IncomeType,
+				employerOrSourceName: s.employerOrSourceName,
+				titleOrOccupation: s.titleOrOccupation ?? "",
+				monthlyAmount: String(s.monthlyAmountCents / 100),
+				startDate: s.startDate,
+				endDate: s.endDate ?? "",
+				notes: s.notes ?? "",
+			})),
+		}));
 
 	return { applicationId: id, residents };
 }
@@ -62,48 +118,6 @@ export async function clientAction({
 	}
 
 	return redirect(`/a/applications/${id}/residence`);
-}
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type IncomeType = "employment" | "self_employment" | "other" | "";
-
-interface IncomeSourceEntry {
-	id: string;
-	type: IncomeType;
-	employerOrSourceName: string;
-	titleOrOccupation: string;
-	monthlyAmount: string;
-	startDate: string;
-	endDate: string;
-	notes: string;
-}
-
-const INCOME_TYPE_OPTIONS: { value: IncomeType; label: string }[] = [
-	{ value: "employment", label: "Employment" },
-	{ value: "self_employment", label: "Self-employed" },
-	{ value: "other", label: "Other" },
-];
-
-function emptyIncomeSource(): IncomeSourceEntry {
-	return {
-		id: Math.random().toString(36).slice(2),
-		type: "",
-		employerOrSourceName: "",
-		titleOrOccupation: "",
-		monthlyAmount: "",
-		startDate: "",
-		endDate: "",
-		notes: "",
-	};
-}
-
-function incomeSourceLabels(type: IncomeType) {
-	if (type === "employment")
-		return { employer: "Employer name", title: "Job title" };
-	if (type === "self_employment")
-		return { employer: "Business name", title: "Occupation" };
-	return { employer: "Source name", title: "Description" };
 }
 
 // ── Shared primitives ─────────────────────────────────────────────────────────
@@ -344,7 +358,7 @@ export default function ApplicationIncome() {
 		residents.map((r) => ({
 			residentId: r.id,
 			fullName: r.fullName,
-			sources: [],
+			sources: r.sources,
 		})),
 	);
 

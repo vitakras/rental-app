@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { DbInstance } from "~/db";
 import type { IncomeSourceType } from "~/db/schema";
 import { incomeSourcesTable } from "~/db/schema";
@@ -34,6 +34,13 @@ export function incomeSourceRepository(db: DbInstance) {
 					notes: input.notes ?? null,
 				})),
 			);
+		},
+
+		async deleteByResidentIds(residentIds: number[]): Promise<void> {
+			if (residentIds.length === 0) return;
+			await db
+				.delete(incomeSourcesTable)
+				.where(inArray(incomeSourcesTable.residentId, residentIds));
 		},
 
 		async findByResidentId(residentId: number) {

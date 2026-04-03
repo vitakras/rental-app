@@ -44,6 +44,7 @@ function makeIncomeSourceRepo(
 ): IncomeSourceRepository {
 	return {
 		createMany: vi.fn(async () => {}),
+		deleteByResidentIds: vi.fn(async () => {}),
 		...overrides,
 	};
 }
