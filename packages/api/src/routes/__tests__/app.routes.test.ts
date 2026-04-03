@@ -1,7 +1,5 @@
-import { env } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "~/app";
-import { createR2StorageRoutes } from "~/routes/r2-storage.routes";
 import type {
 	AddIncomeSourcesResult,
 	ApplicationWithDetails,
@@ -186,10 +184,7 @@ function makeServices() {
 }
 
 function createTestApp(services = makeServices()) {
-	return createApp({
-		services,
-		storageRoutes: createR2StorageRoutes(env.STORAGE),
-	});
+	return createApp({ services });
 }
 
 describe("API application flow routes", () => {
@@ -1239,44 +1234,6 @@ describe("API application flow routes", () => {
 			error: "unsupported_file_type",
 		});
 		expect(services.fileService.uploadDocument).not.toHaveBeenCalled();
-	});
-
-	it("serves and stores files through the storage route", async () => {
-		const app = createTestApp();
-		const route = "/storage/route-tests/documents/test.txt";
-
-		const putResponse = await app.request(route, {
-			method: "PUT",
-			body: "hello world",
-		});
-		expect(putResponse.status).toBe(200);
-
-		const getResponse = await app.request(route);
-		expect(getResponse.status).toBe(200);
-		expect(await getResponse.text()).toBe("hello world");
-	});
-
-	it("treats encoded traversal-like strings as opaque storage keys", async () => {
-		const app = createTestApp();
-		const route = "/storage/%252E%252E/forbidden.txt";
-
-		const putResponse = await app.request(route, {
-			method: "PUT",
-			body: "nope",
-		});
-		expect(putResponse.status).toBe(200);
-
-		const getResponse = await app.request(route);
-		expect(getResponse.status).toBe(200);
-		expect(await getResponse.text()).toBe("nope");
-	});
-
-	it("returns 404 for missing storage objects", async () => {
-		const app = createTestApp();
-
-		const response = await app.request("/storage/route-tests/missing.txt");
-
-		expect(response.status).toBe(404);
 	});
 
 	it("keeps landlord application reads working", async () => {

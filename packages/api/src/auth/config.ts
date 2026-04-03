@@ -51,8 +51,7 @@ function createDevelopmentAuthConfig(): AuthConfig {
 		),
 		cookieName: process.env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
 		webBaseUrl: getWebBaseUrl(),
-		applicantSignupToken:
-			applicantSignupToken || LOCAL_APPLICANT_SIGNUP_TOKEN,
+		applicantSignupToken: applicantSignupToken || LOCAL_APPLICANT_SIGNUP_TOKEN,
 		loginCodePepper:
 			process.env.AUTH_LOGIN_CODE_PEPPER?.trim() || LOCAL_LOGIN_CODE_PEPPER,
 	};

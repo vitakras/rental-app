@@ -29,7 +29,9 @@ function validateFile(file: File) {
 	}
 
 	if (!ALLOWED_UPLOAD_TYPES.has(file.type)) {
-		throw new UploadValidationError("Only PDF, PNG, and JPG files are allowed.");
+		throw new UploadValidationError(
+			"Only PDF, PNG, and JPG files are allowed.",
+		);
 	}
 }
 
@@ -48,15 +50,18 @@ export async function uploadApplicationFile({
 	formData.set("category", category);
 	formData.set("documentType", documentType);
 
-	const res = await fetch(`${BASE_API_URL}/applications/${applicationId}/documents`, {
-		method: "POST",
-		body: formData,
-		credentials: "include",
-	});
+	const res = await fetch(
+		`${BASE_API_URL}/applications/${applicationId}/documents`,
+		{
+			method: "POST",
+			body: formData,
+			credentials: "include",
+		},
+	);
 	if (!res.ok) {
-		const payload = (await res.json().catch(() => null)) as
-			| { error?: string }
-			| null;
+		const payload = (await res.json().catch(() => null)) as {
+			error?: string;
+		} | null;
 
 		if (payload?.error === "file_too_large") {
 			throw new UploadValidationError("File must be 10 MB or smaller.");

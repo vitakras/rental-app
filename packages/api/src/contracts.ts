@@ -24,6 +24,4 @@ export type {
 	ApplicantSignupData,
 	ApplicantSignupLink,
 	AuthUser,
-	RequestEmailLoginData,
-	VerifyEmailLoginData,
 } from "~/services/auth.service";

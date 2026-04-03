@@ -6,11 +6,8 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { apiClient } from "~/lib/api";
-import {
-	loadEditableApplication,
-	parseApplicationParam,
-} from "./form-route";
 import type { Route } from "./+types/occupants";
+import { loadEditableApplication, parseApplicationParam } from "./form-route";
 
 export function meta() {
 	return [{ title: "Occupants — Rental Application" }];

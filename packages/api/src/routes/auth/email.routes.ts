@@ -64,7 +64,7 @@ export function createAuthEmailRoutes({
 			}
 
 			setSessionCookie(c, result.session);
-			
+
 			const codeResult = await authService.rotateReusableLoginCode(
 				result.user,
 				{

@@ -219,9 +219,11 @@ export interface ApplicationRepository {
 		applicationId: number,
 		input: UpsertApplicantInfoPayload,
 	): Promise<void>;
-	findById(
-		id: number,
-	): Promise<{ id: number; status: string; createdByUserId: string | null } | null>;
+	findById(id: number): Promise<{
+		id: number;
+		status: string;
+		createdByUserId: string | null;
+	} | null>;
 	submit(id: number): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
 	upsertResidences(

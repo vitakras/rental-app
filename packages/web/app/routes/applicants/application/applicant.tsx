@@ -5,11 +5,8 @@ import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { apiClient } from "~/lib/api";
-import {
-	loadEditableApplication,
-	parseApplicationParam,
-} from "./form-route";
 import type { Route } from "./+types/applicant";
+import { loadEditableApplication, parseApplicationParam } from "./form-route";
 
 export function meta() {
 	return [{ title: "Your Info — Rental Application" }];

@@ -12,7 +12,6 @@ export type {
 	IncomeSourceDetail,
 	IncomeSourceType,
 	PetDetail,
-	RequestEmailLoginData,
 	ResidenceDetail,
 	ResidentDetail,
 	ResidentRole,
@@ -20,5 +19,4 @@ export type {
 	UpdateOccupantsData,
 	UpsertResidenceData,
 	UserGlobalRole,
-	VerifyEmailLoginData,
 } from "~/contracts";

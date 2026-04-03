@@ -8,11 +8,9 @@ import { createAuthCodeRoutes } from "~/routes/auth/code.routes";
 import { createAuthEmailRoutes } from "~/routes/auth/email.routes";
 import { createLandlordApplicationsRoutes } from "~/routes/landlord/applications.routes";
 import { createLandlordSignupRoutes } from "~/routes/landlord/signup.routes";
-import type { AppServices } from "~/runtime-services";
+import type { AppServices } from "./container";
 
-const allowedCorsOrigins = new Set([
-	new URL(authConfig.webBaseUrl).origin,
-]);
+const allowedCorsOrigins = new Set([new URL(authConfig.webBaseUrl).origin]);
 
 function resolveCorsOrigin(origin: string) {
 	return allowedCorsOrigins.has(origin) ? origin : null;

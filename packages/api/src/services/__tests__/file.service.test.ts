@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ApplicationDocumentRepository } from "~/repositories/application-document.repository";
 import type { FileRepository } from "~/repositories/file.repository";
 import type { BlobStorage } from "~/storage/blob.storage";
-import {
-	createFileService,
-	MAX_FILE_SIZE_BYTES,
-} from "../file.service";
+import { createFileService, MAX_FILE_SIZE_BYTES } from "../file.service";
 
 function makeFileRepository(
 	overrides?: Partial<FileRepository>,
@@ -57,7 +54,9 @@ function makeApplicationDocumentRepository(
 function makeBlobStorage(overrides?: Partial<BlobStorage>): BlobStorage {
 	return {
 		putObject: vi.fn(async () => {}),
-		createDownloadUrl: vi.fn(async () => ({ downloadUrl: "/storage/file.pdf" })),
+		createDownloadUrl: vi.fn(async () => ({
+			downloadUrl: "/storage/file.pdf",
+		})),
 		objectExists: vi.fn(async () => true),
 		deleteObject: vi.fn(async () => {}),
 		...overrides,
@@ -163,9 +162,9 @@ describe("createFileService.uploadDocument", () => {
 
 		expect(result.success).toBe(false);
 		if (!result.success && "errors" in result) {
-			expect(result.errors.some((issue) => issue.path[0] === "contentType")).toBe(
-				true,
-			);
+			expect(
+				result.errors.some((issue) => issue.path[0] === "contentType"),
+			).toBe(true);
 		}
 		expect(blobStorage.putObject).not.toHaveBeenCalled();
 		expect(fileRepository.create).not.toHaveBeenCalled();

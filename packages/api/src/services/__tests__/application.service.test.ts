@@ -23,9 +23,11 @@ function makeRepo(
 	return {
 		create: vi.fn(async () => ({ id: 1 })),
 		upsertPrimaryApplicant: vi.fn(async () => {}),
-		findById: vi.fn(
-			async () => ({ id: 1, status: "pending", createdByUserId: "user-1" }),
-		),
+		findById: vi.fn(async () => ({
+			id: 1,
+			status: "pending",
+			createdByUserId: "user-1",
+		})),
 		submit: vi.fn(async () => ({ id: 1 })),
 		updateOccupants: vi.fn(async () => {}),
 		upsertResidences: vi.fn(async () => {}),
@@ -181,9 +183,11 @@ describe("upsertApplicantInfo", () => {
 
 	it("returns not_editable when the application has already been submitted", async () => {
 		const repo = makeRepo({
-			findById: vi.fn(
-				async () => ({ id: 1, status: "submitted", createdByUserId: "user-1" }),
-			),
+			findById: vi.fn(async () => ({
+				id: 1,
+				status: "submitted",
+				createdByUserId: "user-1",
+			})),
 		});
 
 		const result = await createApplicationService({
@@ -196,9 +200,11 @@ describe("upsertApplicantInfo", () => {
 
 	it("returns not_found when the application belongs to another user", async () => {
 		const repo = makeRepo({
-			findById: vi.fn(
-				async () => ({ id: 1, status: "pending", createdByUserId: "user-2" }),
-			),
+			findById: vi.fn(async () => ({
+				id: 1,
+				status: "pending",
+				createdByUserId: "user-2",
+			})),
 		});
 
 		const result = await createApplicationService({
@@ -242,9 +248,11 @@ describe("submitApplication", () => {
 
 	it("returns not_pending when the application is not in pending state", async () => {
 		const repo = makeRepo({
-			findById: vi.fn(
-				async () => ({ id: 1, status: "submitted", createdByUserId: "user-1" }),
-			),
+			findById: vi.fn(async () => ({
+				id: 1,
+				status: "submitted",
+				createdByUserId: "user-1",
+			})),
 		});
 		const result = await createApplicationService({
 			applicationRepository: repo,
@@ -259,9 +267,11 @@ describe("submitApplication", () => {
 
 	it("returns not_found when submitting another user's application", async () => {
 		const repo = makeRepo({
-			findById: vi.fn(
-				async () => ({ id: 1, status: "pending", createdByUserId: "user-2" }),
-			),
+			findById: vi.fn(async () => ({
+				id: 1,
+				status: "pending",
+				createdByUserId: "user-2",
+			})),
 		});
 		const result = await createApplicationService({
 			applicationRepository: repo,
@@ -289,9 +299,11 @@ describe("submitApplication", () => {
 describe("getApplicationWithDetails", () => {
 	it("returns not_found when the application belongs to another user", async () => {
 		const repo = makeRepo({
-			findById: vi.fn(
-				async () => ({ id: 12, status: "pending", createdByUserId: "user-2" }),
-			),
+			findById: vi.fn(async () => ({
+				id: 12,
+				status: "pending",
+				createdByUserId: "user-2",
+			})),
 		});
 
 		const result = await createApplicationService({
@@ -403,12 +415,14 @@ describe("updateOccupants", () => {
 		).rejects.toThrow("DB error");
 	});
 
-		it("returns not_editable when the application has already been submitted", async () => {
-			const repo = makeRepo({
-				findById: vi.fn(
-					async () => ({ id: 1, status: "submitted", createdByUserId: "user-1" }),
-				),
-			});
+	it("returns not_editable when the application has already been submitted", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => ({
+				id: 1,
+				status: "submitted",
+				createdByUserId: "user-1",
+			})),
+		});
 
 		const result = await createApplicationService({
 			applicationRepository: repo,
@@ -430,16 +444,14 @@ describe("deleteResident", () => {
 		expect(repo.deleteResident).toHaveBeenCalledWith(12, 44);
 	});
 
-		it("returns not_editable when the application has already been submitted", async () => {
-			const repo = makeRepo({
-				findById: vi.fn(
-					async () => ({
-						id: 12,
-						status: "submitted",
-						createdByUserId: "user-1",
-					}),
-				),
-			});
+	it("returns not_editable when the application has already been submitted", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => ({
+				id: 12,
+				status: "submitted",
+				createdByUserId: "user-1",
+			})),
+		});
 
 		const result = await createApplicationService({
 			applicationRepository: repo,
@@ -553,19 +565,17 @@ describe("addIncomeSources", () => {
 		expect(result).toEqual({ success: false, reason: "not_found" });
 	});
 
-		it("returns not_editable when the application has already been submitted", async () => {
-			const result = await createApplicationService({
-				applicationRepository: makeRepo({
-					findById: vi.fn(
-						async () => ({
-							id: 1,
-							status: "submitted",
-							createdByUserId: "user-1",
-						}),
-					),
-				}),
-				incomeSourceRepository: makeIncomeSourceRepo(),
-			}).addIncomeSources(1, baseIncome);
+	it("returns not_editable when the application has already been submitted", async () => {
+		const result = await createApplicationService({
+			applicationRepository: makeRepo({
+				findById: vi.fn(async () => ({
+					id: 1,
+					status: "submitted",
+					createdByUserId: "user-1",
+				})),
+			}),
+			incomeSourceRepository: makeIncomeSourceRepo(),
+		}).addIncomeSources(1, baseIncome);
 
 		expect(result).toEqual({ success: false, reason: "not_editable" });
 	});
@@ -644,12 +654,14 @@ describe("upsertResidence", () => {
 		expect(repo.upsertResidences).not.toHaveBeenCalled();
 	});
 
-		it("returns not_editable when the application has already been submitted", async () => {
-			const repo = makeRepo({
-				findById: vi.fn(
-					async () => ({ id: 1, status: "submitted", createdByUserId: "user-1" }),
-				),
-			});
+	it("returns not_editable when the application has already been submitted", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => ({
+				id: 1,
+				status: "submitted",
+				createdByUserId: "user-1",
+			})),
+		});
 
 		const result = await createApplicationService({
 			applicationRepository: repo,

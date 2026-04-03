@@ -12,9 +12,8 @@ function encodeStorageKeyForPath(key: string) {
 		.join("/");
 }
 
-// Routes that must exist to serve local uploads:
-//   PUT  /storage/*  — reads raw body, writes to data/uploads/<key>
-//   GET  /storage/*  — reads data/uploads/<key>, streams it back
+// Route that must exist to serve local uploads:
+//   GET /storage/* — reads data/uploads/<key>, streams it back
 
 export function createLocalBlobStorage(): BlobStorage {
 	return {

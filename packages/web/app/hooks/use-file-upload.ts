@@ -1,8 +1,8 @@
 import type { ApplicationDocumentCategory, ApplicationDocumentType } from "api";
 import { useState } from "react";
 import {
-	uploadApplicationFile,
 	UploadValidationError,
+	uploadApplicationFile,
 } from "~/.client/upload-application-file";
 
 export interface UploadedFile {

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { authConfig } from "./config";
 import type { SessionRecord } from "~/repositories/session.repository";
+import { authConfig } from "./config";
 
 export function getSessionCookie(c: Context) {
 	return getCookie(c, authConfig.cookieName) ?? null;
