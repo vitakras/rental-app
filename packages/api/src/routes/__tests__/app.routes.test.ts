@@ -164,7 +164,8 @@ function makeServices() {
 			})),
 		},
 		fileService: {
-			uploadDocument: vi.fn(async (): Promise<UploadDocumentResult> => ({
+			uploadDocument: vi.fn(
+				async (): Promise<UploadDocumentResult> => ({
 					success: true,
 					fileId: "file-1",
 					file: {
@@ -178,7 +179,8 @@ function makeServices() {
 						createdAt: "2026-01-01T00:00:00.000Z",
 						uploadedAt: "2026-01-01T00:00:00.000Z",
 					},
-				})),
+				}),
+			),
 		},
 	};
 }
@@ -225,6 +227,7 @@ describe("API application flow routes", () => {
 		expect(services.applicationService.createApplication).toHaveBeenCalledWith({
 			userId: "user-1",
 		});
+		expect(services.authService.getSessionUser).toHaveBeenCalledTimes(1);
 	});
 
 	it("rejects applicant application routes without a session", async () => {
@@ -374,6 +377,7 @@ describe("API application flow routes", () => {
 		expect(services.authService.getSessionUser).toHaveBeenCalledWith(
 			"session-1",
 		);
+		expect(services.authService.getSessionUser).toHaveBeenCalledTimes(1);
 	});
 
 	it("returns 401 for the current session user when the session cookie is missing", async () => {
@@ -385,6 +389,29 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { error: string }).toEqual({
 			error: "unauthorized",
 		});
+	});
+
+	it("returns the invalid session reason for the current session user when the session is expired", async () => {
+		const services = makeServices();
+		services.authService.getSessionUser = vi.fn(
+			async (): Promise<GetSessionUserResult> => ({
+				success: false,
+				reason: "invalid_or_expired_session",
+			}),
+		);
+		const app = createTestApp(services);
+
+		const response = await app.request("/auth/email/session", {
+			headers: {
+				Cookie: applicantSessionCookie,
+			},
+		});
+
+		expect(response.status).toBe(401);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "invalid_or_expired_session",
+		});
+		expect(services.authService.getSessionUser).toHaveBeenCalledTimes(1);
 	});
 
 	it("signs out an authenticated user and clears the session cookie", async () => {
@@ -511,6 +538,7 @@ describe("API application flow routes", () => {
 			email: "alex@example.com",
 			globalRole: "applicant",
 		});
+		expect(services.authService.getSessionUser).toHaveBeenCalledTimes(1);
 	});
 
 	it("rotates a reusable login code for an authenticated user", async () => {
@@ -544,6 +572,7 @@ describe("API application flow routes", () => {
 			},
 			{ ipAddress: "127.0.0.1" },
 		);
+		expect(services.authService.getSessionUser).toHaveBeenCalledTimes(1);
 	});
 
 	it("rejects reusable login code status requests without a session", async () => {

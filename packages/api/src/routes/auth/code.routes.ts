@@ -1,7 +1,9 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { getAuthConfig } from "~/auth/config";
-import { getSessionCookie, setSessionCookie } from "~/auth/cookies";
+import { setSessionCookie } from "~/auth/cookies";
+import { createRequireSession } from "~/auth/require-session";
+import { type AuthContextEnv, getAuthContext } from "~/auth/session-context";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
 	type createAuthService,
@@ -22,47 +24,23 @@ export function createAuthCodeRoutes({
 }: {
 	authService: AuthService;
 }) {
-	return new Hono()
+	const app = new Hono<AuthContextEnv>();
+
+	app.use("/", createRequireSession({ authService }));
+	app.use("/rotate", createRequireSession({ authService }));
+
+	return app
 		.get("/", async (c) => {
-			const sessionId = getSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-			});
-
-			if (!sessionId) {
-				return c.json({ error: "unauthorized" }, 401);
-			}
-
-			const sessionResult = await authService.getSessionUser(sessionId);
-
-			if (!sessionResult.success) {
-				return c.json({ error: "unauthorized" }, 401);
-			}
-
-			const result = await authService.getReusableLoginCodeStatus(
-				sessionResult.user,
-			);
+			const auth = getAuthContext(c);
+			const result = await authService.getReusableLoginCodeStatus(auth.user);
 
 			return c.json({ status: result.status }, 200);
 		})
 		.post("/rotate", async (c) => {
-			const sessionId = getSessionCookie(c, {
-				cookieName: authConfig.cookieName,
+			const auth = getAuthContext(c);
+			const result = await authService.rotateReusableLoginCode(auth.user, {
+				ipAddress: getClientIp(c),
 			});
-
-			if (!sessionId) {
-				return c.json({ error: "unauthorized" }, 401);
-			}
-
-			const sessionResult = await authService.getSessionUser(sessionId);
-
-			if (!sessionResult.success) {
-				return c.json({ error: "unauthorized" }, 401);
-			}
-
-			const result = await authService.rotateReusableLoginCode(
-				sessionResult.user,
-				{ ipAddress: getClientIp(c) },
-			);
 
 			return c.json(result, 200);
 		})

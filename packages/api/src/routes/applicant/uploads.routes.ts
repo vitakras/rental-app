@@ -1,8 +1,7 @@
 import { Hono } from "hono";
 import type { ZodIssue } from "zod";
 import { createRequireApplicantSession } from "~/auth/applicant-session";
-import { getAuthConfig } from "~/auth/config";
-import { getSessionCookie } from "~/auth/cookies";
+import { type AuthContextEnv, getAuthContext } from "~/auth/session-context";
 import { ensureValidApplicationId, parseApplicationId } from "~/routes/shared";
 import type { createApplicationService } from "~/services/application.service";
 import type { createAuthService } from "~/services/auth.service";
@@ -12,8 +11,6 @@ import {
 	MAX_FILE_SIZE_BYTES,
 	uploadDocumentRequestSchema,
 } from "~/services/file.service";
-
-const authConfig = getAuthConfig();
 
 type FileService = ReturnType<typeof createFileService>;
 type AuthService = ReturnType<typeof createAuthService>;
@@ -36,7 +33,7 @@ export function createApplicantUploadsRoutes({
 	applicationService: ApplicationService;
 	fileService: FileService;
 }) {
-	return new Hono()
+	return new Hono<AuthContextEnv>()
 		.use("*", createRequireApplicantSession({ authService }))
 		.post("/:id/documents", ensureValidApplicationId, async (c) => {
 			const applicationId = parseApplicationId(c.req.param("id"));
@@ -45,13 +42,7 @@ export function createApplicantUploadsRoutes({
 				return c.json({ error: "invalid_application_id" }, 400);
 			}
 
-			const sessionId = getSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-			});
-			const sessionResult = await authService.getSessionUser(sessionId ?? "");
-			if (!sessionResult.success) {
-				return c.json({ error: "unauthorized" }, 401);
-			}
+			const auth = getAuthContext(c);
 
 			const formData = await c.req.formData();
 			const file = formData.get("file");
@@ -83,7 +74,7 @@ export function createApplicantUploadsRoutes({
 			const applicationResult =
 				await applicationService.getApplicationWithDetails(
 					applicationId,
-					sessionResult.user.id,
+					auth.user.id,
 				);
 			if (!applicationResult.success) {
 				return c.json({ error: "application_not_found" }, 404);
@@ -104,7 +95,7 @@ export function createApplicantUploadsRoutes({
 				originalFilename: file.name,
 				contentType: file.type,
 				sizeBytes: file.size,
-				uploadedByUserId: sessionResult.user.id,
+				uploadedByUserId: auth.user.id,
 				fileData: await file.arrayBuffer(),
 			});
 
@@ -118,10 +109,7 @@ export function createApplicantUploadsRoutes({
 						return c.json({ error: "unsupported_file_type" }, 422);
 					}
 
-					return c.json(
-						{ error: "invalid_upload_payload", issues },
-						422,
-					);
+					return c.json({ error: "invalid_upload_payload", issues }, 422);
 				}
 
 				return c.json({ error: "storage_write_failed" }, 422);

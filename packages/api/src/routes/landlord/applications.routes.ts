@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { createRequireLandlordSession } from "~/auth/landlord-session";
+import type { AuthContextEnv } from "~/auth/session-context";
 import type { createApplicationService } from "~/services/application.service";
 import type { createAuthService } from "~/services/auth.service";
 
@@ -13,7 +14,7 @@ export function createLandlordApplicationsRoutes({
 	authService: AuthService;
 	applicationService: ApplicationService;
 }) {
-	return new Hono()
+	return new Hono<AuthContextEnv>()
 		.use("*", createRequireLandlordSession({ authService }))
 		.get("/", async (c) => {
 			const result = await applicationService.listSubmittedApplications();

@@ -6,6 +6,8 @@ import {
 	getSessionCookie,
 	setSessionCookie,
 } from "~/auth/cookies";
+import { createRequireSession } from "~/auth/require-session";
+import { type AuthContextEnv, getAuthContext } from "~/auth/session-context";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
 	type ApplicantSignupData,
@@ -26,23 +28,20 @@ export function createAuthEmailRoutes({
 }: {
 	authService: AuthService;
 }) {
-	return new Hono()
+	const app = new Hono<AuthContextEnv>();
+
+	app.use(
+		"/session",
+		createRequireSession({
+			authService,
+			invalidSessionError: "invalid_or_expired_session",
+		}),
+	);
+
+	return app
 		.get("/session", async (c) => {
-			const sessionId = getSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-			});
-
-			if (!sessionId) {
-				return c.json({ error: "unauthorized" }, 401);
-			}
-
-			const result = await authService.getSessionUser(sessionId);
-
-			if (!result.success) {
-				return c.json({ error: result.reason }, 401);
-			}
-
-			return c.json({ user: result.user }, 200);
+			const auth = getAuthContext(c);
+			return c.json({ user: auth.user }, 200);
 		})
 		.post("/signup", zodJsonValidator(applicantSignupSchema), async (c) => {
 			const body = c.req.valid("json") as ApplicantSignupData;

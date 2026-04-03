@@ -1,7 +1,6 @@
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import { createRequireApplicantSession } from "~/auth/applicant-session";
-import { getAuthConfig } from "~/auth/config";
-import { getSessionCookie } from "~/auth/cookies";
+import { type AuthContextEnv, getAuthContext } from "~/auth/session-context";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import { ensureValidApplicationId, parseApplicationId } from "~/routes/shared";
 import type {
@@ -19,25 +18,8 @@ import {
 } from "~/services/application.service";
 import type { createAuthService } from "~/services/auth.service";
 
-const authConfig = getAuthConfig();
-
 type ApplicationService = ReturnType<typeof createApplicationService>;
 type AuthService = ReturnType<typeof createAuthService>;
-
-async function getAuthenticatedApplicantUserId(c: Context, authService: AuthService) {
-	const sessionId = getSessionCookie(c, {
-		cookieName: authConfig.cookieName,
-	});
-	const sessionResult = await authService.getSessionUser(sessionId ?? "");
-	if (!sessionResult.success) {
-		return {
-			success: false as const,
-			response: c.json({ error: "unauthorized" }, 401),
-		};
-	}
-
-	return { success: true as const, userId: sessionResult.user.id };
-}
 
 export function createApplicantApplicationsRoutes({
 	authService,
@@ -46,26 +28,20 @@ export function createApplicantApplicationsRoutes({
 	authService: AuthService;
 	applicationService: ApplicationService;
 }) {
-	return new Hono()
+	return new Hono<AuthContextEnv>()
 		.use("*", createRequireApplicantSession({ authService }))
 		.get("/", async (c) => {
-			const authResult = await getAuthenticatedApplicantUserId(c, authService);
-			if (!authResult.success) {
-				return authResult.response;
-			}
+			const auth = getAuthContext(c);
 			const result = await applicationService.listApplicationsByUser(
-				authResult.userId,
+				auth.user.id,
 			);
 			return c.json({ applications: result.applications }, 200);
 		})
 		.post("/", async (c) => {
-			const authResult = await getAuthenticatedApplicantUserId(c, authService);
-			if (!authResult.success) {
-				return authResult.response;
-			}
+			const auth = getAuthContext(c);
 
 			const result = await applicationService.createApplication({
-				userId: authResult.userId,
+				userId: auth.user.id,
 			});
 			if (!result.success) {
 				return c.json(
@@ -83,14 +59,11 @@ export function createApplicantApplicationsRoutes({
 				return c.json({ error: "invalid_application_id" }, 400);
 			}
 
-			const authResult = await getAuthenticatedApplicantUserId(c, authService);
-			if (!authResult.success) {
-				return authResult.response;
-			}
+			const auth = getAuthContext(c);
 
 			const result = await applicationService.getApplicationWithDetails(
 				id,
-				authResult.userId,
+				auth.user.id,
 			);
 
 			if (!result.success) {
@@ -111,15 +84,12 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as UpsertApplicantInfoData;
-				const authResult = await getAuthenticatedApplicantUserId(c, authService);
-				if (!authResult.success) {
-					return authResult.response;
-				}
+				const auth = getAuthContext(c);
 
 				const result = await applicationService.upsertApplicantInfo(
 					id,
 					body,
-					authResult.userId,
+					auth.user.id,
 				);
 
 				if (!result.success) {
@@ -154,15 +124,12 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as UpdateOccupantsData;
-				const authResult = await getAuthenticatedApplicantUserId(c, authService);
-				if (!authResult.success) {
-					return authResult.response;
-				}
+				const auth = getAuthContext(c);
 
 				const result = await applicationService.updateOccupants(
 					id,
 					body,
-					authResult.userId,
+					auth.user.id,
 				);
 
 				if (!result.success) {
@@ -197,15 +164,12 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as AddIncomeSourcesData;
-				const authResult = await getAuthenticatedApplicantUserId(c, authService);
-				if (!authResult.success) {
-					return authResult.response;
-				}
+				const auth = getAuthContext(c);
 
 				const result = await applicationService.addIncomeSources(
 					id,
 					body,
-					authResult.userId,
+					auth.user.id,
 				);
 
 				if (!result.success) {
@@ -242,15 +206,12 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as UpsertResidenceData;
-				const authResult = await getAuthenticatedApplicantUserId(c, authService);
-				if (!authResult.success) {
-					return authResult.response;
-				}
+				const auth = getAuthContext(c);
 
 				const result = await applicationService.upsertResidence(
 					id,
 					body,
-					authResult.userId,
+					auth.user.id,
 				);
 
 				if (!result.success) {
@@ -284,15 +245,12 @@ export function createApplicantApplicationsRoutes({
 					return c.json({ error: "invalid_id" }, 400);
 				}
 
-				const authResult = await getAuthenticatedApplicantUserId(c, authService);
-				if (!authResult.success) {
-					return authResult.response;
-				}
+				const auth = getAuthContext(c);
 
 				const result = await applicationService.deleteResident(
 					id,
 					residentId,
-					authResult.userId,
+					auth.user.id,
 				);
 
 				if (!result.success) {
@@ -313,14 +271,11 @@ export function createApplicantApplicationsRoutes({
 				return c.json({ error: "invalid_application_id" }, 400);
 			}
 
-			const authResult = await getAuthenticatedApplicantUserId(c, authService);
-			if (!authResult.success) {
-				return authResult.response;
-			}
+			const auth = getAuthContext(c);
 
 			const result = await applicationService.submitApplication(
 				id,
-				authResult.userId,
+				auth.user.id,
 			);
 
 			if (!result.success) {

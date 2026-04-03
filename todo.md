@@ -2,6 +2,7 @@
 
 
 Next Steps
+- Make sure routes are secure and user cannot access other peoples routes
 - Make sure i can still run the app after cloudflare migration
 - Refactor file upload to use upload through my server for up to 10MB
 - Applicant can edit the form they created before they submit it
