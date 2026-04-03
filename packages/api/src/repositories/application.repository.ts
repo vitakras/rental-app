@@ -1,7 +1,6 @@
 import { and, desc, eq, inArray, not } from "drizzle-orm";
 import { db as defaultDb } from "~/db";
 import type { ResidentRole } from "~/db/schema";
-import type { UpsertResidencePayload } from "~/services/application.service";
 import {
 	applicationAccessTable,
 	applicationDocumentsTable,
@@ -11,6 +10,7 @@ import {
 	residencesTable,
 	residentsTable,
 } from "~/db/schema";
+import type { UpsertResidencePayload } from "~/services/application.service";
 
 type DbInstance = typeof defaultDb;
 
@@ -190,7 +190,9 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 					.set({ notes: input.notes ?? null })
 					.where(eq(applicationsTable.id, applicationId));
 
-				const residentIds = input.residents.map((resident) => resident.residentId);
+				const residentIds = input.residents.map(
+					(resident) => resident.residentId,
+				);
 
 				if (residentIds.length > 0) {
 					await tx
@@ -323,7 +325,9 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 			const residentsWithDetails = residents.map((r) => ({
 				...r,
 				incomeSources: incomeSources.filter((is) => is.residentId === r.id),
-				residences: residences.filter((residence) => residence.residentId === r.id),
+				residences: residences.filter(
+					(residence) => residence.residentId === r.id,
+				),
 			}));
 
 			return { ...app, residents: residentsWithDetails, pets, documents };

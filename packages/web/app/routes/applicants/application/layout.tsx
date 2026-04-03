@@ -1,4 +1,10 @@
-import { Link, Outlet, useLocation, useNavigate, useParams } from "react-router";
+import {
+	Link,
+	Outlet,
+	useLocation,
+	useNavigate,
+	useParams,
+} from "react-router";
 import { cn } from "~/lib/utils";
 
 const STEPS = [
@@ -55,7 +61,11 @@ function StepNavigator({
 				const isLast = i === STEPS.length - 1;
 
 				return (
-					<div key={step.slug} className="flex items-start flex-1" role="listitem">
+					<div
+						key={step.slug}
+						className="flex items-start flex-1"
+						role="listitem"
+					>
 						<div className="flex flex-col items-center flex-shrink-0">
 							<button
 								type="button"
@@ -123,7 +133,9 @@ export default function ApplicationShell() {
 
 	const basePath = `/a/applications/${id}`;
 	const currentIndex = STEPS.findIndex((step) =>
-		step.slug ? location.pathname.endsWith(`/${step.slug}`) : location.pathname === basePath,
+		step.slug
+			? location.pathname.endsWith(`/${step.slug}`)
+			: location.pathname === basePath,
 	);
 
 	return (

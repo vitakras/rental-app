@@ -4,8 +4,8 @@ import { getAuthConfig } from "~/auth/config";
 import { getSessionCookie, setSessionCookie } from "~/auth/cookies";
 import { zodJsonValidator } from "~/lib/zod-validator";
 import {
-	type VerifyReusableLoginCodeData,
 	type createAuthService,
+	type VerifyReusableLoginCodeData,
 	verifyReusableLoginCodeSchema,
 } from "~/services/auth.service";
 
@@ -66,36 +66,40 @@ export function createAuthCodeRoutes({
 
 			return c.json(result, 200);
 		})
-		.post("/verify", zodJsonValidator(verifyReusableLoginCodeSchema), async (c) => {
-			const body = c.req.valid("json") as VerifyReusableLoginCodeData;
-			const result = await authService.verifyReusableLoginCode(body, {
-				ipAddress: getClientIp(c),
-				userAgent: c.req.header("user-agent") ?? null,
-			});
+		.post(
+			"/verify",
+			zodJsonValidator(verifyReusableLoginCodeSchema),
+			async (c) => {
+				const body = c.req.valid("json") as VerifyReusableLoginCodeData;
+				const result = await authService.verifyReusableLoginCode(body, {
+					ipAddress: getClientIp(c),
+					userAgent: c.req.header("user-agent") ?? null,
+				});
 
-			if (!result.success) {
-				if ("errors" in result) {
-					return c.json(
-						{ error: "validation_failed", issues: result.errors },
-						422,
-					);
+				if (!result.success) {
+					if ("errors" in result) {
+						return c.json(
+							{ error: "validation_failed", issues: result.errors },
+							422,
+						);
+					}
+
+					return c.json({ error: result.reason }, 401);
 				}
 
-				return c.json({ error: result.reason }, 401);
-			}
+				setSessionCookie(c, {
+					cookieName: authConfig.cookieName,
+					sessionId: result.session.id,
+					expiresAt: result.session.expiresAt,
+				});
 
-			setSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-				sessionId: result.session.id,
-				expiresAt: result.session.expiresAt,
-			});
-
-			return c.json(
-				{
-					success: true,
-					user: result.user,
-				},
-				200,
-			);
-		});
+				return c.json(
+					{
+						success: true,
+						user: result.user,
+					},
+					200,
+				);
+			},
+		);
 }

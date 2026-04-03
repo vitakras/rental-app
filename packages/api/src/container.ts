@@ -8,10 +8,10 @@ import { incomeSourceRepository } from "~/repositories/income-source.repository"
 import { loginCodeRepository } from "~/repositories/login-code.repository";
 import { sessionRepository } from "~/repositories/session.repository";
 import { userRepository } from "~/repositories/user.repository";
+import type { AppServices } from "~/runtime-services";
 import { createApplicationService } from "~/services/application.service";
 import { createAuthService } from "~/services/auth.service";
 import { createFileService } from "~/services/file.service";
-import type { AppServices } from "~/runtime-services";
 import { createLocalBlobStorage } from "~/storage/local.blob.storage";
 
 export const repositories = {

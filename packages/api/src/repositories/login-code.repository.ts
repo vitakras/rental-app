@@ -28,8 +28,14 @@ export interface CreateLoginCodeInput {
 
 export interface LoginCodeRepository {
 	create(input: CreateLoginCodeInput): Promise<LoginCodeRecord>;
-	findActiveByUserId(userId: string, now: string): Promise<LoginCodeRecord | null>;
-	invalidateActiveByUserId(userId: string, invalidatedAt: string): Promise<void>;
+	findActiveByUserId(
+		userId: string,
+		now: string,
+	): Promise<LoginCodeRecord | null>;
+	invalidateActiveByUserId(
+		userId: string,
+		invalidatedAt: string,
+	): Promise<void>;
 	recordSuccessfulUse(id: string, usedAt: string): Promise<void>;
 	recordFailedAttempt(
 		id: string,
@@ -102,7 +108,12 @@ export function loginCodeRepository(
 				.where(eq(loginCodesTable.id, id));
 		},
 
-		async recordFailedAttempt(id, failedAttempts, updatedAt, invalidatedAt = null) {
+		async recordFailedAttempt(
+			id,
+			failedAttempts,
+			updatedAt,
+			invalidatedAt = null,
+		) {
 			await db
 				.update(loginCodesTable)
 				.set({

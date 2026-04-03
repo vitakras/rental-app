@@ -11,8 +11,8 @@ import type {
 	GetApplicationWithDetailsResult,
 	ListSubmittedApplicationsResult,
 	SubmitApplicationResult,
-	UpsertResidenceResult,
 	UpdateOccupantsResult,
+	UpsertResidenceResult,
 } from "~/services/application.service";
 import type {
 	ApplicantSignupLink,

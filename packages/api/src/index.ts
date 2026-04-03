@@ -8,9 +8,9 @@ export default app;
 export type { AppType } from "~/app";
 export type {
 	AddIncomeSourcesData,
-	ApplicationDocumentDetail,
 	ApplicantSignupLink,
 	ApplicationDocumentCategory,
+	ApplicationDocumentDetail,
 	ApplicationDocumentType,
 	ApplicationStatus,
 	ApplicationWithDetails,
@@ -19,13 +19,13 @@ export type {
 	IncomeSourceDetail,
 	IncomeSourceType,
 	PetDetail,
-	ResidenceDetail,
 	RequestEmailLoginData,
+	ResidenceDetail,
 	ResidentDetail,
 	ResidentRole,
 	SubmittedApplicationSummary,
-	UpsertResidenceData,
 	UpdateOccupantsData,
+	UpsertResidenceData,
 	UserGlobalRole,
 	VerifyEmailLoginData,
 } from "~/contracts";

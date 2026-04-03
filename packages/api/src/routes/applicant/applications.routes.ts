@@ -7,15 +7,15 @@ import { ensureValidApplicationId, parseApplicationId } from "~/routes/shared";
 import type {
 	AddIncomeSourcesData,
 	createApplicationService,
-	UpsertResidenceData,
 	UpdateOccupantsData,
 	UpsertApplicantInfoData,
+	UpsertResidenceData,
 } from "~/services/application.service";
 import {
 	addIncomeSourcesSchema,
-	upsertResidenceSchema,
 	updateOccupantsSchema,
 	upsertApplicantInfoSchema,
+	upsertResidenceSchema,
 } from "~/services/application.service";
 import type { createAuthService } from "~/services/auth.service";
 

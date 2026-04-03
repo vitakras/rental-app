@@ -1,10 +1,8 @@
 import { drizzle } from "drizzle-orm/d1";
 import { getAuthConfig } from "~/auth/config";
 import logger from "~/cf-logger";
-import { createDevAuthMailer } from "~/mailers/dev-auth.mailer";
-import { applicationDocumentRepository } from "~/repositories/application-document.repository";
 import { applicationRepository } from "~/repositories/application.repository";
-import { emailLoginTokenRepository } from "~/repositories/email-login-token.repository";
+import { applicationDocumentRepository } from "~/repositories/application-document.repository";
 import { fileRepository } from "~/repositories/file.repository";
 import { incomeSourceRepository } from "~/repositories/income-source.repository";
 import { loginCodeRepository } from "~/repositories/login-code.repository";
@@ -24,7 +22,6 @@ export function createCfServices(env: CloudflareBindings): AppServices {
 
 	const repositories = {
 		userRepository: userRepository(db),
-		emailLoginTokenRepository: emailLoginTokenRepository(db),
 		loginCodeRepository: loginCodeRepository(db),
 		sessionRepository: sessionRepository(db),
 		applicationRepository: applicationRepository(db),
@@ -35,17 +32,12 @@ export function createCfServices(env: CloudflareBindings): AppServices {
 
 	const blobStorage = createR2BlobStorage(env.STORAGE);
 	const authConfig = getAuthConfig();
-	const authMailer = createDevAuthMailer({
-		logger: logger.child({ service: "auth-mailer" }),
-	});
 
 	return {
 		authService: createAuthService({
 			userRepository: repositories.userRepository,
-			emailLoginTokenRepository: repositories.emailLoginTokenRepository,
 			loginCodeRepository: repositories.loginCodeRepository,
 			sessionRepository: repositories.sessionRepository,
-			authMailer,
 			authConfig,
 			logger: logger.child({ service: "auth" }),
 		}),
@@ -55,8 +47,7 @@ export function createCfServices(env: CloudflareBindings): AppServices {
 		}),
 		fileService: createFileService({
 			fileRepository: repositories.fileRepository,
-			applicationDocumentRepository:
-				repositories.applicationDocumentRepository,
+			applicationDocumentRepository: repositories.applicationDocumentRepository,
 			blobStorage,
 			logger: logger.child({ service: "file" }),
 		}),

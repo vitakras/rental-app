@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-	Form,
-	Link,
-	useActionData,
-	useNavigation,
-} from "react-router";
+import { Form, Link, useActionData, useNavigation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -65,8 +60,10 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 	const actionData = useActionData<typeof clientAction>();
 	const navigation = useNavigation();
 	const submitting = navigation.state === "submitting";
-	const error = actionData && "error" in actionData ? actionData.error : undefined;
-	const loginCode = actionData && "loginCode" in actionData ? actionData.loginCode : null;
+	const error =
+		actionData && "error" in actionData ? actionData.error : undefined;
+	const loginCode =
+		actionData && "loginCode" in actionData ? actionData.loginCode : null;
 	const [copied, setCopied] = useState(false);
 
 	function handleCopy() {
@@ -149,14 +146,34 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 						>
 							{copied ? (
 								<>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C4714A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+									<svg
+										width="15"
+										height="15"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="#C4714A"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										aria-hidden="true"
+									>
 										<polyline points="20 6 9 17 4 12" />
 									</svg>
 									<span className="text-[#C4714A] font-medium">Copied!</span>
 								</>
 							) : (
 								<>
-									<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+									<svg
+										width="15"
+										height="15"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="1.5"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										aria-hidden="true"
+									>
 										<rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
 										<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
 									</svg>
@@ -185,7 +202,9 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 							<line x1="12" y1="17" x2="12.01" y2="17" />
 						</svg>
 						<p className="text-sm text-[#7A7268] leading-relaxed">
-							<span className="font-medium text-[#1C1A17]">Write this down.</span>{" "}
+							<span className="font-medium text-[#1C1A17]">
+								Write this down.
+							</span>{" "}
 							This code is the only way to sign back into your applicant portal.
 							Store it somewhere safe like a notes app or password manager.
 						</p>
@@ -197,7 +216,17 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 						className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1C1A17] px-4 py-3.5 text-sm font-medium text-white hover:bg-[#2E2B26] transition-colors"
 					>
 						I've saved my code — continue
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="1.5"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							aria-hidden="true"
+						>
 							<path d="M6 12l4-4-4-4" />
 						</svg>
 					</Link>
@@ -330,8 +359,8 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 							</h2>
 							<p className="text-sm text-[#7A7268] leading-relaxed">
 								To create an account, you'll need a signup link from the
-								property or company you're applying with. Check your email for an
-								invitation, or reach out to them directly to request one.
+								property or company you're applying with. Check your email for
+								an invitation, or reach out to them directly to request one.
 							</p>
 
 							<div className="mt-5 pt-5 border-t border-[#F0EBE3]">

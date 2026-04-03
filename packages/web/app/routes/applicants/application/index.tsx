@@ -102,7 +102,9 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
 				{label}
 			</p>
-			<p className="text-sm text-[#1C1A17]">{value && value.trim() ? value : "Not provided"}</p>
+			<p className="text-sm text-[#1C1A17]">
+				{value && value.trim() ? value : "Not provided"}
+			</p>
 		</div>
 	);
 }
@@ -140,7 +142,9 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 	const { applicationId, application } = loaderData;
 	const navigation = useNavigation();
 	const submitting = navigation.state === "submitting";
-	const primary = application.residents.find((resident) => resident.role === "primary");
+	const primary = application.residents.find(
+		(resident) => resident.role === "primary",
+	);
 	const otherResidents = application.residents.filter(
 		(resident) => resident.role !== "primary",
 	);
@@ -150,14 +154,21 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 	const warnings: string[] = [];
 
 	if (!primary?.fullName) warnings.push("Primary applicant name is missing.");
-	if (!primary?.dateOfBirth) warnings.push("Primary applicant date of birth is missing.");
-	if (!primary?.phone) warnings.push("Primary applicant phone number is missing.");
-	if (!application.desiredMoveInDate) warnings.push("Preferred move-in date is missing.");
+	if (!primary?.dateOfBirth)
+		warnings.push("Primary applicant date of birth is missing.");
+	if (!primary?.phone)
+		warnings.push("Primary applicant phone number is missing.");
+	if (!application.desiredMoveInDate)
+		warnings.push("Preferred move-in date is missing.");
 	if (adultResidents.some((resident) => resident.incomeSources.length === 0)) {
-		warnings.push("One or more adult applicants do not have income details yet.");
+		warnings.push(
+			"One or more adult applicants do not have income details yet.",
+		);
 	}
 	if (adultResidents.some((resident) => resident.residences.length === 0)) {
-		warnings.push("One or more adult applicants do not have residence history yet.");
+		warnings.push(
+			"One or more adult applicants do not have residence history yet.",
+		);
 	}
 	if (application.documents.length === 0) {
 		warnings.push("No supporting documents have been uploaded yet.");
@@ -232,7 +243,10 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 								label="Move-in date"
 								value={formatDate(application.desiredMoveInDate)}
 							/>
-							<Field label="Smoking" value={application.smokes ? "Yes" : "No"} />
+							<Field
+								label="Smoking"
+								value={application.smokes ? "Yes" : "No"}
+							/>
 							<Field label="Notes" value={application.notes} />
 						</div>
 					</ReviewSection>
@@ -252,7 +266,9 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 								<Field label="Phone" value={primary.phone} />
 							</div>
 						) : (
-							<p className="text-sm text-[#7A7268]">Primary applicant details have not been added yet.</p>
+							<p className="text-sm text-[#7A7268]">
+								Primary applicant details have not been added yet.
+							</p>
 						)}
 					</ReviewSection>
 
@@ -284,7 +300,9 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 								))}
 							</div>
 						) : (
-							<p className="text-sm text-[#7A7268]">No additional occupants were added.</p>
+							<p className="text-sm text-[#7A7268]">
+								No additional occupants were added.
+							</p>
 						)}
 					</ReviewSection>
 
@@ -294,7 +312,10 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					>
 						<div className="space-y-4">
 							{adultResidents.map((resident) => (
-								<div key={resident.id} className="border border-[#F0EBE3] rounded-xl p-4">
+								<div
+									key={resident.id}
+									className="border border-[#F0EBE3] rounded-xl p-4"
+								>
 									<p className="text-sm font-medium text-[#1C1A17] mb-3">
 										{resident.fullName}
 									</p>
@@ -304,7 +325,9 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 												<div key={source.id} className="grid grid-cols-2 gap-4">
 													<Field
 														label="Type"
-														value={INCOME_TYPE_LABELS[source.type] ?? source.type}
+														value={
+															INCOME_TYPE_LABELS[source.type] ?? source.type
+														}
 													/>
 													<Field
 														label="Monthly amount"
@@ -337,14 +360,20 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					>
 						<div className="space-y-4">
 							{adultResidents.map((resident) => (
-								<div key={resident.id} className="border border-[#F0EBE3] rounded-xl p-4">
+								<div
+									key={resident.id}
+									className="border border-[#F0EBE3] rounded-xl p-4"
+								>
 									<p className="text-sm font-medium text-[#1C1A17] mb-3">
 										{resident.fullName}
 									</p>
 									{resident.residences.length > 0 ? (
 										<div className="space-y-3">
 											{resident.residences.map((residence) => (
-												<div key={residence.id} className="grid grid-cols-2 gap-4">
+												<div
+													key={residence.id}
+													className="grid grid-cols-2 gap-4"
+												>
 													<div className="col-span-2">
 														<Field label="Address" value={residence.address} />
 													</div>
@@ -400,7 +429,10 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						{application.pets.length > 0 ? (
 							<div className="space-y-4">
 								{application.pets.map((pet) => (
-									<div key={pet.id} className="border border-[#F0EBE3] rounded-xl p-4">
+									<div
+										key={pet.id}
+										className="border border-[#F0EBE3] rounded-xl p-4"
+									>
 										<div className="grid grid-cols-2 gap-4">
 											<Field label="Type" value={pet.type} />
 											<Field label="Name" value={pet.name} />

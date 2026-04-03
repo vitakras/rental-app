@@ -199,7 +199,9 @@ function ResidentResidenceSection({
 							type="text"
 							placeholder="123 Main St, City, State ZIP"
 							value={residence.address}
-							onChange={(e) => onUpdate(residence.id, "address", e.target.value)}
+							onChange={(e) =>
+								onUpdate(residence.id, "address", e.target.value)
+							}
 						/>
 					</div>
 
@@ -218,7 +220,9 @@ function ResidentResidenceSection({
 					</div>
 
 					<div className="mb-4">
-						<Label className="mb-1.5 block">Reason for leaving (optional)</Label>
+						<Label className="mb-1.5 block">
+							Reason for leaving (optional)
+						</Label>
 						<Textarea
 							rows={2}
 							placeholder="Share any context you'd like"
@@ -239,7 +243,9 @@ function ResidentResidenceSection({
 								<button
 									key={option.label}
 									type="button"
-									onClick={() => onUpdate(residence.id, "isRental", option.value)}
+									onClick={() =>
+										onUpdate(residence.id, "isRental", option.value)
+									}
 									className={`px-3.5 py-2 rounded-xl border-2 text-sm transition-all ${
 										residence.isRental === option.value
 											? "border-[#C4714A] bg-[#FDF0E9] text-[#C4714A] font-medium"
@@ -303,28 +309,31 @@ function ResidentResidenceSection({
 }
 
 export default function ApplicationResidence() {
-	const { applicationId, residents, notes: initialNotes } =
-		useLoaderData<typeof clientLoader>();
+	const {
+		applicationId,
+		residents,
+		notes: initialNotes,
+	} = useLoaderData<typeof clientLoader>();
 	const submit = useSubmit();
 
 	const [residentResidences, setResidentResidences] = useState<
 		{ residentId: number; fullName: string; residences: ResidenceEntry[] }[]
 	>(() =>
-			residents.map((resident) => ({
-				residentId: resident.id,
-				fullName: resident.fullName,
-				residences: resident.residences.map((residence) => ({
-					id: Math.random().toString(36).slice(2),
-					address: residence.address,
-					fromDate: residence.fromDate,
-					toDate: residence.toDate ?? "",
-					reasonForLeaving: residence.reasonForLeaving ?? "",
-					isRental: residence.isRental,
-					landlordName: residence.landlordName ?? "",
-					landlordPhone: residence.landlordPhone ?? "",
-				})),
+		residents.map((resident) => ({
+			residentId: resident.id,
+			fullName: resident.fullName,
+			residences: resident.residences.map((residence) => ({
+				id: Math.random().toString(36).slice(2),
+				address: residence.address,
+				fromDate: residence.fromDate,
+				toDate: residence.toDate ?? "",
+				reasonForLeaving: residence.reasonForLeaving ?? "",
+				isRental: residence.isRental,
+				landlordName: residence.landlordName ?? "",
+				landlordPhone: residence.landlordPhone ?? "",
 			})),
-		);
+		})),
+	);
 	const [notes, setNotes] = useState(initialNotes);
 
 	function addResidence(residentIndex: number) {
@@ -377,7 +386,9 @@ export default function ApplicationResidence() {
 				index === residentIndex
 					? {
 							...resident,
-							residences: resident.residences.filter((entry) => entry.id !== id),
+							residences: resident.residences.filter(
+								(entry) => entry.id !== id,
+							),
 						}
 					: resident,
 			),

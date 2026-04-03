@@ -7,9 +7,9 @@ export type {
 	UserGlobalRole,
 } from "~/db/schema";
 export type {
-	ApplicationDocumentDetail,
 	AddIncomeSourcesData,
 	ApplicantApplicationSummary,
+	ApplicationDocumentDetail,
 	ApplicationWithDetails,
 	CreateApplicationData,
 	IncomeSourceDetail,
@@ -17,8 +17,8 @@ export type {
 	ResidenceDetail,
 	ResidentDetail,
 	SubmittedApplicationSummary,
-	UpsertResidenceData,
 	UpdateOccupantsData,
+	UpsertResidenceData,
 } from "~/services/application.service";
 export type {
 	ApplicantSignupData,

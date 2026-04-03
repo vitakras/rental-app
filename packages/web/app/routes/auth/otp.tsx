@@ -134,7 +134,8 @@ export default function OtpVerify() {
 						<em>access code.</em>
 					</h1>
 					<p className="text-[#7A7268] text-sm leading-relaxed">
-						Signing in as <span className="text-[#1C1A17] font-medium">{email}</span>
+						Signing in as{" "}
+						<span className="text-[#1C1A17] font-medium">{email}</span>
 					</p>
 				</div>
 
