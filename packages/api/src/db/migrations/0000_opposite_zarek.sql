@@ -36,27 +36,13 @@ CREATE TABLE `applications` (
 	`status` text DEFAULT 'draft' NOT NULL,
 	`desired_move_in_date` text,
 	`smokes` integer DEFAULT false NOT NULL,
+	`notes` text,
 	`created_by_user_id` text,
 	`created_at` text DEFAULT (current_timestamp) NOT NULL,
 	`updated_at` text DEFAULT (current_timestamp) NOT NULL,
 	FOREIGN KEY (`created_by_user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE TABLE `email_login_tokens` (
-	`id` text PRIMARY KEY NOT NULL,
-	`email` text NOT NULL,
-	`token_hash` text NOT NULL,
-	`purpose` text DEFAULT 'login' NOT NULL,
-	`expires_at` text NOT NULL,
-	`consumed_at` text,
-	`created_by_ip` text,
-	`created_at` text DEFAULT (current_timestamp) NOT NULL,
-	`updated_at` text DEFAULT (current_timestamp) NOT NULL
-);
---> statement-breakpoint
-CREATE INDEX `email_login_tokens_email_idx` ON `email_login_tokens` (`email`);--> statement-breakpoint
-CREATE INDEX `email_login_tokens_expires_at_idx` ON `email_login_tokens` (`expires_at`);--> statement-breakpoint
-CREATE UNIQUE INDEX `email_login_tokens_token_hash_unique_idx` ON `email_login_tokens` (`token_hash`);--> statement-breakpoint
 CREATE TABLE `files` (
 	`id` text PRIMARY KEY NOT NULL,
 	`storage_key` text NOT NULL,
@@ -114,6 +100,23 @@ CREATE TABLE `pets` (
 	`created_at` text DEFAULT (current_timestamp) NOT NULL,
 	`updated_at` text DEFAULT (current_timestamp) NOT NULL,
 	FOREIGN KEY (`application_id`) REFERENCES `applications`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `residences` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`application_id` integer NOT NULL,
+	`resident_id` integer NOT NULL,
+	`address` text NOT NULL,
+	`from_date` text NOT NULL,
+	`to_date` text,
+	`reason_for_leaving` text,
+	`is_rental` integer DEFAULT false NOT NULL,
+	`landlord_name` text,
+	`landlord_phone` text,
+	`created_at` text DEFAULT (current_timestamp) NOT NULL,
+	`updated_at` text DEFAULT (current_timestamp) NOT NULL,
+	FOREIGN KEY (`application_id`) REFERENCES `applications`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`resident_id`) REFERENCES `residents`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `residents` (

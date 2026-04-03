@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
-import { db as defaultDb } from "~/db";
+import type { DbInstance } from "~/db";
 import type { IncomeSourceType } from "~/db/schema";
 import { incomeSourcesTable } from "~/db/schema";
-
-type DbInstance = typeof defaultDb;
 
 // ── Input types ───────────────────────────────────────────────────────────────
 
@@ -20,7 +18,7 @@ export interface CreateIncomeSourceInput {
 
 // ── Factory ───────────────────────────────────────────────────────────────────
 
-export function incomeSourceRepository(db: DbInstance = defaultDb) {
+export function incomeSourceRepository(db: DbInstance) {
 	return {
 		async createMany(inputs: CreateIncomeSourceInput[]): Promise<void> {
 			if (inputs.length === 0) return;

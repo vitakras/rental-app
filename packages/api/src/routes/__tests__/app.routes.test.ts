@@ -1,8 +1,7 @@
-import { afterEach, describe, expect, it, mock } from "bun:test";
-import fs from "node:fs/promises";
-import path from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { env } from "cloudflare:test";
 import { createApp } from "~/app";
-import { createStorageRoutes } from "~/routes/storage.routes";
+import { createR2StorageRoutes } from "~/routes/r2-storage.routes";
 import type {
 	AddIncomeSourcesResult,
 	ApplicationWithDetails,
@@ -28,13 +27,12 @@ import type {
 	PrepareDocumentUploadResult,
 } from "~/services/file.service";
 
-const uploadsDir = path.resolve("data/uploads");
 const applicantSessionCookie = "session=session-1";
 
 function makeServices() {
 	return {
 		authService: {
-			applicantSignup: mock(
+			applicantSignup: vi.fn(
 				async (): Promise<ApplicantSignupResult> => ({
 					success: true,
 					user: {
@@ -54,14 +52,14 @@ function makeServices() {
 					},
 				}),
 			),
-			getApplicantSignupLink: mock(
+			getApplicantSignupLink: vi.fn(
 				(): ApplicantSignupLink => ({
 					signupToken: "11111111-1111-4111-8111-111111111111",
 					signupUrl:
 						"http://localhost:5173/signup?token=11111111-1111-4111-8111-111111111111",
 				}),
 			),
-			verifyReusableLoginCode: mock(
+			verifyReusableLoginCode: vi.fn(
 				async (): Promise<VerifyReusableLoginCodeResult> => ({
 					success: true,
 					user: {
@@ -81,7 +79,7 @@ function makeServices() {
 					},
 				}),
 			),
-			rotateReusableLoginCode: mock(
+			rotateReusableLoginCode: vi.fn(
 				async (): Promise<RotateReusableLoginCodeResult> => ({
 					success: true,
 					code: "123456",
@@ -93,7 +91,7 @@ function makeServices() {
 					},
 				}),
 			),
-			getReusableLoginCodeStatus: mock(
+			getReusableLoginCodeStatus: vi.fn(
 				async (): Promise<GetReusableLoginCodeStatusResult> => ({
 					success: true,
 					status: {
@@ -104,8 +102,8 @@ function makeServices() {
 					},
 				}),
 			),
-			signout: mock(async (): Promise<void> => {}),
-			getSessionUser: mock(
+			signout: vi.fn(async (): Promise<void> => {}),
+			getSessionUser: vi.fn(
 				async (): Promise<GetSessionUserResult> => ({
 					success: true,
 					user: {
@@ -127,63 +125,63 @@ function makeServices() {
 			),
 		},
 		applicationService: {
-			createApplication: mock(
+			createApplication: vi.fn(
 				async (): Promise<CreateApplicationResult> => ({
 					success: true,
 					applicationId: 12,
 				}),
 			),
-			updateOccupants: mock(
+			updateOccupants: vi.fn(
 				async (): Promise<UpdateOccupantsResult> => ({ success: true }),
 			),
-			deleteResident: mock(
+			deleteResident: vi.fn(
 				async (): Promise<DeleteResidentResult> => ({ success: true }),
 			),
-			addIncomeSources: mock(
+			addIncomeSources: vi.fn(
 				async (): Promise<AddIncomeSourcesResult> => ({ success: true }),
 			),
-			upsertResidence: mock(
+			upsertResidence: vi.fn(
 				async (): Promise<UpsertResidenceResult> => ({ success: true }),
 			),
-			submitApplication: mock(
+			submitApplication: vi.fn(
 				async (): Promise<SubmitApplicationResult> => ({
 					success: true,
 					applicationId: 12,
 				}),
 			),
-			listSubmittedApplications: mock(
+			listSubmittedApplications: vi.fn(
 				async (): Promise<ListSubmittedApplicationsResult> => ({
 					success: true,
 					applications: [],
 				}),
 			),
-			getApplicationWithDetails: mock(
+			getApplicationWithDetails: vi.fn(
 				async (): Promise<GetApplicationWithDetailsResult> => ({
 					success: false,
 					reason: "not_found",
 				}),
 			),
-			upsertApplicantInfo: mock(async () => ({ success: true as const })),
-			listApplicationsByUser: mock(async () => ({
+			upsertApplicantInfo: vi.fn(async () => ({ success: true as const })),
+			listApplicationsByUser: vi.fn(async () => ({
 				success: true as const,
 				applications: [],
 			})),
 		},
 		fileService: {
-			prepareDocumentUpload: mock(
+			prepareDocumentUpload: vi.fn(
 				async (): Promise<PrepareDocumentUploadResult> => ({
 					success: true,
 					fileId: "file-1",
 					uploadUrl: "/storage/documents/app-12/file.pdf",
 				}),
 			),
-			completeUpload: mock(
+			completeUpload: vi.fn(
 				async (): Promise<CompleteUploadResult> => ({
 					success: false,
 					reason: "not_found",
 				}),
 			),
-			attachDocumentToApplication: mock(
+			attachDocumentToApplication: vi.fn(
 				async (): Promise<AttachDocumentResult> => ({ success: true }),
 			),
 		},
@@ -193,18 +191,11 @@ function makeServices() {
 function createTestApp(services = makeServices()) {
 	return createApp({
 		services,
-		storageRoutes: createStorageRoutes(),
+		storageRoutes: createR2StorageRoutes(env.STORAGE),
 	});
 }
 
 describe("API application flow routes", () => {
-	afterEach(async () => {
-		await fs.rm(path.join(uploadsDir, "route-tests"), {
-			force: true,
-			recursive: true,
-		});
-	});
-
 	it("creates an application", async () => {
 		const services = makeServices();
 		const app = createTestApp(services);
@@ -265,28 +256,6 @@ describe("API application flow routes", () => {
 		).not.toHaveBeenCalled();
 	});
 
-	it("returns success for a known login email request", async () => {
-		const services = makeServices();
-		const app = createTestApp(services);
-
-		const response = await app.request("/auth/email/request", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				"x-forwarded-for": "127.0.0.1",
-			},
-			body: JSON.stringify({ email: "alex@example.com" }),
-		});
-
-		expect(response.status).toBe(200);
-		expect((await response.json()) as { success: boolean }).toEqual({
-			success: true,
-		});
-		expect(services.authService.requestEmailLogin).toHaveBeenCalledWith(
-			{ email: "alex@example.com" },
-			{ ipAddress: "127.0.0.1" },
-		);
-	});
 	it("creates an applicant account and sets a session cookie", async () => {
 		const services = makeServices();
 		const app = createTestApp(services);
@@ -332,7 +301,7 @@ describe("API application flow routes", () => {
 
 	it("returns 409 when applicant signup email already exists", async () => {
 		const services = makeServices();
-		services.authService.applicantSignup = mock(
+		services.authService.applicantSignup = vi.fn(
 			async (): Promise<ApplicantSignupResult> => ({
 				success: false,
 				reason: "email_already_exists",
@@ -358,7 +327,7 @@ describe("API application flow routes", () => {
 
 	it("returns 401 for an invalid applicant signup token", async () => {
 		const services = makeServices();
-		services.authService.applicantSignup = mock(
+		services.authService.applicantSignup = vi.fn(
 			async (): Promise<ApplicantSignupResult> => ({
 				success: false,
 				reason: "invalid_signup_token",
@@ -382,88 +351,78 @@ describe("API application flow routes", () => {
 		expect(response.headers.get("set-cookie")).toBeNull();
 	});
 
-	it("returns success for an unknown login email request", async () => {
-		const services = makeServices();
-		services.authService.requestEmailLogin = mock(
-			async (): Promise<RequestEmailLoginResult> => ({ success: true }),
-		);
-		const app = createTestApp(services);
-
-		const response = await app.request("/auth/email/request", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email: "missing@example.com" }),
-		});
-
-		expect(response.status).toBe(200);
-		expect((await response.json()) as { success: boolean }).toEqual({
-			success: true,
-		});
-	});
-
-	it("verifies a login token and sets a session cookie", async () => {
+	it("returns the current session user when the session cookie is valid", async () => {
 		const services = makeServices();
 		const app = createTestApp(services);
 
-		const response = await app.request("/auth/email/verify", {
-			method: "POST",
+		const response = await app.request("/auth/email/session", {
 			headers: {
-				"Content-Type": "application/json",
-				"x-forwarded-for": "127.0.0.1",
-				"user-agent": "bun-test",
+				Cookie: "session=session-1",
 			},
-			body: JSON.stringify({
-				email: "alex@example.com",
-				token: "plain-token",
-			}),
 		});
 
 		expect(response.status).toBe(200);
 		expect(
 			(await response.json()) as {
-				success: boolean;
 				user: { id: string; email: string; globalRole: string };
 			},
 		).toEqual({
-			success: true,
 			user: {
 				id: "user-1",
 				email: "alex@example.com",
 				globalRole: "applicant",
 			},
 		});
-		expect(services.authService.verifyEmailLogin).toHaveBeenCalledWith(
-			{ email: "alex@example.com", token: "plain-token" },
-			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
+		expect(services.authService.getSessionUser).toHaveBeenCalledWith(
+			"session-1",
 		);
-		expect(response.headers.get("set-cookie")).toContain("session=session-1");
 	});
 
-	it("returns 401 without setting a cookie for an invalid login token", async () => {
-		const services = makeServices();
-		services.authService.verifyEmailLogin = mock(
-			async (): Promise<VerifyEmailLoginResult> => ({
-				success: false,
-				reason: "invalid_or_expired_token",
-			}),
-		);
-		const app = createTestApp(services);
+	it("returns 401 for the current session user when the session cookie is missing", async () => {
+		const app = createTestApp();
 
-		const response = await app.request("/auth/email/verify", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				email: "alex@example.com",
-				token: "bad-token",
-			}),
-		});
+		const response = await app.request("/auth/email/session");
 
 		expect(response.status).toBe(401);
 		expect((await response.json()) as { error: string }).toEqual({
-			error: "invalid_or_expired_token",
+			error: "unauthorized",
 		});
-		expect(response.headers.get("set-cookie")).toBeNull();
 	});
+
+	it("signs out an authenticated user and clears the session cookie", async () => {
+		const services = makeServices();
+		const app = createTestApp(services);
+
+		const response = await app.request("/auth/email/signout", {
+			method: "POST",
+			headers: {
+				Cookie: "session=session-1",
+			},
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+		expect(services.authService.signout).toHaveBeenCalledWith("session-1");
+		expect(response.headers.get("set-cookie")).toContain("session=");
+	});
+
+	it("returns success when signing out without a session", async () => {
+		const services = makeServices();
+		const app = createTestApp(services);
+
+		const response = await app.request("/auth/email/signout", {
+			method: "POST",
+		});
+
+		expect(response.status).toBe(200);
+		expect((await response.json()) as { success: boolean }).toEqual({
+			success: true,
+		});
+		expect(services.authService.signout).not.toHaveBeenCalled();
+	});
+
 	it("verifies a reusable login code and sets a session cookie", async () => {
 		const services = makeServices();
 		const app = createTestApp(services);
@@ -504,7 +463,7 @@ describe("API application flow routes", () => {
 
 	it("returns 401 for an invalid reusable login code", async () => {
 		const services = makeServices();
-		services.authService.verifyReusableLoginCode = mock(
+		services.authService.verifyReusableLoginCode = vi.fn(
 			async (): Promise<VerifyReusableLoginCodeResult> => ({
 				success: false,
 				reason: "invalid_or_expired_code",
@@ -607,47 +566,9 @@ describe("API application flow routes", () => {
 		expect(response.status).toBe(401);
 	});
 
-	it("returns the current session user when the session cookie is valid", async () => {
-		const services = makeServices();
-		const app = createTestApp(services);
-
-		const response = await app.request("/auth/email/session", {
-			headers: {
-				Cookie: "session=session-1",
-			},
-		});
-
-		expect(response.status).toBe(200);
-		expect(
-			(await response.json()) as {
-				user: { id: string; email: string; globalRole: string };
-			},
-		).toEqual({
-			user: {
-				id: "user-1",
-				email: "alex@example.com",
-				globalRole: "applicant",
-			},
-		});
-		expect(services.authService.getSessionUser).toHaveBeenCalledWith(
-			"session-1",
-		);
-	});
-
-	it("returns 401 for the current session user when the session cookie is missing", async () => {
-		const app = createTestApp();
-
-		const response = await app.request("/auth/email/session");
-
-		expect(response.status).toBe(401);
-		expect((await response.json()) as { error: string }).toEqual({
-			error: "unauthorized",
-		});
-	});
-
 	it("returns validation errors for invalid application creation", async () => {
 		const services = makeServices();
-		services.applicationService.createApplication = mock(
+		services.applicationService.createApplication = vi.fn(
 			async (): Promise<CreateApplicationResult> => ({
 				success: false,
 				errors: [
@@ -740,8 +661,9 @@ describe("API application flow routes", () => {
 			updatedAt: "2026-01-01 00:00:00",
 			residents: [],
 			pets: [],
+			documents: [],
 		};
-		services.applicationService.getApplicationWithDetails = mock(
+		services.applicationService.getApplicationWithDetails = vi.fn(
 			async (): Promise<GetApplicationWithDetailsResult> => ({
 				success: true,
 				application,
@@ -864,7 +786,7 @@ describe("API application flow routes", () => {
 
 	it("returns 404 when the income route targets a missing application", async () => {
 		const services = makeServices();
-		services.applicationService.addIncomeSources = mock(
+		services.applicationService.addIncomeSources = vi.fn(
 			async (): Promise<AddIncomeSourcesResult> => ({
 				success: false,
 				reason: "not_found",
@@ -889,7 +811,7 @@ describe("API application flow routes", () => {
 
 	it("returns validation errors for malformed income payloads", async () => {
 		const services = makeServices();
-		services.applicationService.addIncomeSources = mock(
+		services.applicationService.addIncomeSources = vi.fn(
 			async (): Promise<AddIncomeSourcesResult> => ({
 				success: false,
 				errors: [
@@ -978,7 +900,7 @@ describe("API application flow routes", () => {
 
 	it("returns 409 when submitting a non-pending application", async () => {
 		const services = makeServices();
-		services.applicationService.submitApplication = mock(
+		services.applicationService.submitApplication = vi.fn(
 			async (): Promise<SubmitApplicationResult> => ({
 				success: false,
 				reason: "not_pending",
@@ -1064,7 +986,7 @@ describe("API application flow routes", () => {
 
 	it("returns 422 when completing an upload fails", async () => {
 		const services = makeServices();
-		services.fileService.attachDocumentToApplication = mock(
+		services.fileService.attachDocumentToApplication = vi.fn(
 			async (): Promise<AttachDocumentResult> => ({
 				success: false,
 				reason: "missing_object",
@@ -1107,15 +1029,19 @@ describe("API application flow routes", () => {
 		expect(await getResponse.text()).toBe("hello world");
 	});
 
-	it("blocks path traversal in the storage route", async () => {
+	it("treats encoded traversal-like strings as opaque storage keys", async () => {
 		const app = createTestApp();
+		const route = "/storage/%252E%252E/forbidden.txt";
 
-		const response = await app.request("/storage/%252E%252E/forbidden.txt", {
+		const putResponse = await app.request(route, {
 			method: "PUT",
 			body: "nope",
 		});
+		expect(putResponse.status).toBe(200);
 
-		expect(response.status).toBe(403);
+		const getResponse = await app.request(route);
+		expect(getResponse.status).toBe(200);
+		expect(await getResponse.text()).toBe("nope");
 	});
 
 	it("returns 404 for missing storage objects", async () => {
@@ -1128,7 +1054,7 @@ describe("API application flow routes", () => {
 
 	it("keeps landlord application reads working", async () => {
 		const services = makeServices();
-		services.authService.getSessionUser = mock(
+		services.authService.getSessionUser = vi.fn(
 			async (): Promise<GetSessionUserResult> => ({
 				success: true,
 				user: {
@@ -1158,8 +1084,9 @@ describe("API application flow routes", () => {
 			updatedAt: "2026-03-29T00:00:00.000Z",
 			residents: [],
 			pets: [],
+			documents: [],
 		};
-		services.applicationService.getApplicationWithDetails = mock(
+		services.applicationService.getApplicationWithDetails = vi.fn(
 			async (): Promise<GetApplicationWithDetailsResult> => ({
 				success: true,
 				application,
@@ -1181,7 +1108,7 @@ describe("API application flow routes", () => {
 
 	it("returns the applicant signup url for landlords", async () => {
 		const services = makeServices();
-		services.authService.getSessionUser = mock(
+		services.authService.getSessionUser = vi.fn(
 			async (): Promise<GetSessionUserResult> => ({
 				success: true,
 				user: {

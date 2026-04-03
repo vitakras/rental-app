@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { loginCodesTable, sessionsTable, usersTable } from "~/db/schema";
 import { loginCodeRepository } from "~/repositories/login-code.repository";
@@ -14,8 +14,8 @@ describe("auth repositories", () => {
 		testDb = await createTestDb();
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
 	it("finds a user by normalized email", async () => {

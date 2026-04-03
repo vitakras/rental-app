@@ -1,48 +1,93 @@
-import { existsSync, unlinkSync } from "node:fs";
-import { createClient } from "@libsql/client";
-import {
-	generateSQLiteDrizzleJson,
-	generateSQLiteMigration,
-} from "drizzle-kit/api";
-import { drizzle } from "drizzle-orm/libsql";
-import * as schema from "~/db/schema";
+import { env } from "cloudflare:test";
+import { createDb, type DbInstance } from "~/db";
 
-export interface TestDb {
-	db: Awaited<ReturnType<typeof buildDb>>;
-	cleanup: () => void;
+export type TestDb = {
+	db: DbInstance;
+	cleanup: () => Promise<void>;
+};
+
+const tablesToClear = [
+	"application_access",
+	"application_documents",
+	"income_sources",
+	"residences",
+	"pets",
+	"residents",
+	"files",
+	"login_codes",
+	"sessions",
+	"applications",
+	"users",
+] as const;
+
+let migrationsReady: Promise<void> | null = null;
+
+type MigrationJournal = {
+	entries: Array<{
+		tag: string;
+	}>;
+};
+
+const journalModule = import.meta.glob("../../db/migrations/meta/_journal.json", {
+	eager: true,
+	import: "default",
+}) as Record<string, MigrationJournal>;
+
+const sqlModules = import.meta.glob("../../db/migrations/*.sql", {
+	eager: true,
+	query: "?raw",
+	import: "default",
+}) as Record<string, string>;
+
+async function ensureMigrations() {
+	migrationsReady ??= (async () => {
+		const journal = Object.values(journalModule)[0];
+
+		if (!journal) {
+			throw new Error("Could not load Drizzle migration journal for tests");
+		}
+
+		for (const entry of journal.entries) {
+			const migration = Object.entries(sqlModules).find(([path]) =>
+				path.endsWith(`/${entry.tag}.sql`),
+			)?.[1];
+
+			if (!migration) {
+				throw new Error(`Missing migration file for ${entry.tag}`);
+			}
+
+			const statements = migration
+				.split("--> statement-breakpoint")
+				.map((statement) => statement.trim())
+				.filter(Boolean);
+
+			for (const statement of statements) {
+				await env.DB.prepare(statement).run();
+			}
+		}
+	})();
+	await migrationsReady;
 }
 
-async function buildDb(url: string) {
-	const client = createClient({ url });
-	const db = drizzle(client, { casing: "snake_case" });
+async function clearTestDb() {
+	await env.DB.exec("PRAGMA foreign_keys = OFF");
 
-	// Derive CREATE TABLE statements from the Drizzle schema so the test
-	// database always matches the source of truth without duplication.
-	const [empty, current] = await Promise.all([
-		generateSQLiteDrizzleJson({}),
-		generateSQLiteDrizzleJson(schema, undefined, "snake_case"),
-	]);
-	const statements = await generateSQLiteMigration(empty, current);
-
-	for (const stmt of statements) {
-		await client.execute(stmt);
+	for (const table of tablesToClear) {
+		await env.DB.prepare(`DELETE FROM ${table}`).run();
 	}
 
-	return db;
+	await env.DB.prepare("DELETE FROM sqlite_sequence").run();
+	await env.DB.exec("PRAGMA foreign_keys = ON");
 }
 
-// @libsql/client resets its internal connection to null after each
-// transaction(), causing the next #getDb() call to open a brand-new
-// Database(":memory:") — an empty database with no tables.
-// A unique temp file avoids this: reconnections reopen the same file.
 export async function createTestDb(): Promise<TestDb> {
-	const path = `/tmp/rental_test_${Date.now()}_${Math.random().toString(36).slice(2)}.sqlite`;
-	const db = await buildDb(`file:${path}`);
+	await ensureMigrations();
+	await clearTestDb();
 
 	return {
-		db,
-		cleanup: () => {
-			if (existsSync(path)) unlinkSync(path);
+		db: createDb(env.DB) as unknown as DbInstance,
+		cleanup: async () => {
+			await clearTestDb();
 		},
 	};
 }

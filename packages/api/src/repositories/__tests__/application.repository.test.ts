@@ -1,6 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { applicationsTable, petsTable, residentsTable } from "~/db/schema";
+import {
+	applicationsTable,
+	petsTable,
+	residentsTable,
+	usersTable,
+} from "~/db/schema";
 import { applicationRepository } from "../application.repository";
 import { createTestDb, type TestDb } from "./db.helper";
 
@@ -13,161 +18,51 @@ describe("applicationRepository.create", () => {
 		repo = applicationRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
-	const baseInput = {
-		desiredMoveInDate: "2026-06-01",
-		owner: {
-			fullName: "Alex Johnson",
-			dateOfBirth: "1990-05-15",
-			email: "alex@example.com",
-			phone: "555-000-0001",
-		},
-		additionalAdults: [],
-		children: [],
-		pets: [],
-	};
-
 	it("creates the application row with correct fields", async () => {
-		const application = await repo.create(baseInput);
+		const application = await repo.create({});
 
-		expect(application.id).toBeNumber();
-		expect(application.status).toBe("pending");
-		expect(application.desiredMoveInDate).toBe("2026-06-01");
+		expect(typeof application.id).toBe("number");
+		expect(application.status).toBe("draft");
+		expect(application.desiredMoveInDate).toBeNull();
 		expect(application.smokes).toBe(false);
 	});
 
-	it("creates the primary resident linked to the application", async () => {
-		const application = await repo.create(baseInput);
+	it("creates a draft application without residents", async () => {
+		const application = await repo.create({});
 
 		const residents = await testDb.db
 			.select()
 			.from(residentsTable)
 			.where(eq(residentsTable.applicationId, application.id));
 
-		expect(residents).toHaveLength(1);
-
-		const primary = residents[0];
-		expect(primary.role).toBe("primary");
-		expect(primary.fullName).toBe("Alex Johnson");
-		expect(primary.dateOfBirth).toBe("1990-05-15");
-		expect(primary.email).toBe("alex@example.com");
-		expect(primary.phone).toBe("555-000-0001");
+		expect(residents).toHaveLength(0);
 	});
 
-	it("creates co-applicant residents with email", async () => {
+	it("stores the creator when provided", async () => {
+		await testDb.db.insert(usersTable).values({
+			id: "user-123",
+			email: "user-123@example.com",
+			globalRole: "applicant",
+		});
+
 		const application = await repo.create({
-			...baseInput,
-			additionalAdults: [
-				{
-					fullName: "Jane Smith",
-					dateOfBirth: "1992-03-20",
-					role: "co-applicant",
-					email: "jane@example.com",
-				},
-			],
+			createdByUserId: "user-123",
 		});
 
-		const residents = await testDb.db
-			.select()
-			.from(residentsTable)
-			.where(eq(residentsTable.applicationId, application.id));
-
-		expect(residents).toHaveLength(2);
-
-		const coApplicant = residents.find((r) => r.role === "co-applicant");
-		expect(coApplicant).toBeDefined();
-		expect(coApplicant?.fullName).toBe("Jane Smith");
-		expect(coApplicant?.email).toBe("jane@example.com");
-		expect(coApplicant?.phone).toBeNull();
+		expect(application.createdByUserId).toBe("user-123");
 	});
 
-	it("creates dependent residents without email", async () => {
-		const application = await repo.create({
-			...baseInput,
-			additionalAdults: [
-				{
-					fullName: "Bob Johnson",
-					dateOfBirth: "1988-07-11",
-					role: "dependent",
-				},
-			],
-		});
-
-		const residents = await testDb.db
-			.select()
-			.from(residentsTable)
-			.where(eq(residentsTable.applicationId, application.id));
-
-		const dependent = residents.find((r) => r.role === "dependent");
-		expect(dependent).toBeDefined();
-		expect(dependent?.fullName).toBe("Bob Johnson");
-		expect(dependent?.email).toBeNull();
-	});
-
-	it("creates child residents", async () => {
-		const application = await repo.create({
-			...baseInput,
-			children: [
-				{ fullName: "Sam Johnson", dateOfBirth: "2018-09-01" },
-				{ fullName: "Lily Johnson", dateOfBirth: "2020-02-14" },
-			],
-		});
-
-		const residents = await testDb.db
-			.select()
-			.from(residentsTable)
-			.where(eq(residentsTable.applicationId, application.id));
-
-		const children = residents.filter((r) => r.role === "child");
-		expect(children).toHaveLength(2);
-		expect(children.map((c) => c.fullName)).toContain("Sam Johnson");
-		expect(children.map((c) => c.fullName)).toContain("Lily Johnson");
-		children.forEach((c) => {
-			expect(c.email).toBeNull();
-			expect(c.phone).toBeNull();
-		});
-	});
-
-	it("creates all resident types together", async () => {
-		const application = await repo.create({
-			...baseInput,
-			additionalAdults: [
-				{
-					fullName: "Jane Smith",
-					dateOfBirth: "1992-03-20",
-					role: "co-applicant",
-					email: "jane@example.com",
-				},
-				{ fullName: "Bob Jones", dateOfBirth: "1985-11-30", role: "dependent" },
-			],
-			children: [{ fullName: "Sam Johnson", dateOfBirth: "2019-06-15" }],
-		});
-
-		const residents = await testDb.db
-			.select()
-			.from(residentsTable)
-			.where(eq(residentsTable.applicationId, application.id));
-
-		expect(residents).toHaveLength(4);
-		expect(residents.filter((r) => r.role === "primary")).toHaveLength(1);
-		expect(residents.filter((r) => r.role === "co-applicant")).toHaveLength(1);
-		expect(residents.filter((r) => r.role === "dependent")).toHaveLength(1);
-		expect(residents.filter((r) => r.role === "child")).toHaveLength(1);
-	});
-
-	it("rolls back the application insert if residents insert fails", async () => {
-		const badInput = {
-			...baseInput,
-			owner: { ...baseInput.owner, fullName: null as unknown as string },
-		};
-
-		await expect(repo.create(badInput)).rejects.toThrow();
-
+	it("persists the application row", async () => {
+		const application = await repo.create({});
 		const applications = await testDb.db.select().from(applicationsTable);
-		expect(applications).toHaveLength(0);
+
+		expect(applications).toHaveLength(1);
+		expect(applications[0].id).toBe(application.id);
+		expect(applications[0].status).toBe("draft");
 	});
 });
 
@@ -180,30 +75,17 @@ describe("applicationRepository.findById", () => {
 		repo = applicationRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
-	const baseInput = {
-		desiredMoveInDate: "2026-06-01",
-		owner: {
-			fullName: "Alex Johnson",
-			dateOfBirth: "1990-05-15",
-			email: "alex@example.com",
-			phone: "555-000-0001",
-		},
-		additionalAdults: [],
-		children: [],
-		pets: [],
-	};
-
 	it("returns the application when found", async () => {
-		const created = await repo.create(baseInput);
+		const created = await repo.create({});
 		const app = await repo.findById(created.id);
 
 		expect(app).not.toBeNull();
 		expect(app?.id).toBe(created.id);
-		expect(app?.status).toBe("pending");
+		expect(app?.status).toBe("draft");
 	});
 
 	it("returns null for a non-existent id", async () => {
@@ -221,25 +103,12 @@ describe("applicationRepository.submit", () => {
 		repo = applicationRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
-	const baseInput = {
-		desiredMoveInDate: "2026-06-01",
-		owner: {
-			fullName: "Alex Johnson",
-			dateOfBirth: "1990-05-15",
-			email: "alex@example.com",
-			phone: "555-000-0001",
-		},
-		additionalAdults: [],
-		children: [],
-		pets: [],
-	};
-
 	it("updates status to submitted and returns the application", async () => {
-		const created = await repo.create(baseInput);
+		const created = await repo.create({});
 		const updated = await repo.submit(created.id);
 
 		expect(updated).not.toBeNull();
@@ -248,7 +117,7 @@ describe("applicationRepository.submit", () => {
 	});
 
 	it("persists the submitted status in the database", async () => {
-		const created = await repo.create(baseInput);
+		const created = await repo.create({});
 		await repo.submit(created.id);
 
 		const [app] = await testDb.db
@@ -269,17 +138,12 @@ describe("applicationRepository.updateOccupants", () => {
 	let testDb: TestDb;
 	let repo: ReturnType<typeof applicationRepository>;
 
-	const baseInput = {
+	const primaryApplicantInput = {
 		desiredMoveInDate: "2026-06-01",
-		owner: {
-			fullName: "Alex Johnson",
-			dateOfBirth: "1990-05-15",
-			email: "alex@example.com",
-			phone: "555-000-0001",
-		},
-		additionalAdults: [],
-		children: [],
-		pets: [],
+		fullName: "Alex Johnson",
+		dateOfBirth: "1990-05-15",
+		email: "alex@example.com",
+		phone: "555-000-0001",
 	};
 
 	beforeEach(async () => {
@@ -287,12 +151,18 @@ describe("applicationRepository.updateOccupants", () => {
 		repo = applicationRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
+	async function createApplicationWithPrimary() {
+		const created = await repo.create({});
+		await repo.upsertPrimaryApplicant(created.id, primaryApplicantInput);
+		return created;
+	}
+
 	it("updates smokes on the application", async () => {
-		const created = await repo.create(baseInput);
+		const created = await createApplicationWithPrimary();
 		await repo.updateOccupants(created.id, {
 			smokes: true,
 			additionalAdults: [],
@@ -309,7 +179,7 @@ describe("applicationRepository.updateOccupants", () => {
 	});
 
 	it("inserts additional adults and children", async () => {
-		const created = await repo.create(baseInput);
+		const created = await createApplicationWithPrimary();
 		await repo.updateOccupants(created.id, {
 			smokes: false,
 			additionalAdults: [
@@ -336,7 +206,7 @@ describe("applicationRepository.updateOccupants", () => {
 	});
 
 	it("does not touch the primary resident", async () => {
-		const created = await repo.create(baseInput);
+		const created = await createApplicationWithPrimary();
 		await repo.updateOccupants(created.id, {
 			smokes: false,
 			additionalAdults: [],
@@ -354,9 +224,11 @@ describe("applicationRepository.updateOccupants", () => {
 		expect(residents[0].fullName).toBe("Alex Johnson");
 	});
 
-	it("replaces non-primary residents on repeated calls", async () => {
-		const created = await repo.create({
-			...baseInput,
+	it("updates existing non-primary residents when existingId is provided", async () => {
+		const created = await createApplicationWithPrimary();
+
+		await repo.updateOccupants(created.id, {
+			smokes: false,
 			additionalAdults: [
 				{
 					fullName: "Old Adult",
@@ -364,12 +236,25 @@ describe("applicationRepository.updateOccupants", () => {
 					role: "dependent",
 				},
 			],
+			children: [],
+			pets: [],
 		});
+
+		const residentsAfterFirstUpdate = await testDb.db
+			.select()
+			.from(residentsTable)
+			.where(eq(residentsTable.applicationId, created.id));
+		const existingResident = residentsAfterFirstUpdate.find(
+			(r) => r.role === "dependent",
+		);
+
+		expect(existingResident).toBeDefined();
 
 		await repo.updateOccupants(created.id, {
 			smokes: false,
 			additionalAdults: [
 				{
+					existingId: existingResident!.id,
 					fullName: "New Adult",
 					dateOfBirth: "1990-06-15",
 					role: "co-applicant",
@@ -389,11 +274,18 @@ describe("applicationRepository.updateOccupants", () => {
 		const names = residents.map((r) => r.fullName);
 		expect(names).toContain("New Adult");
 		expect(names).not.toContain("Old Adult");
+		expect(residents.find((r) => r.id === existingResident!.id)?.role).toBe(
+			"co-applicant",
+		);
 	});
 
 	it("inserts and replaces pets", async () => {
-		const created = await repo.create({
-			...baseInput,
+		const created = await createApplicationWithPrimary();
+
+		await repo.updateOccupants(created.id, {
+			smokes: false,
+			additionalAdults: [],
+			children: [],
 			pets: [{ type: "Dog", name: "Rex" }],
 		});
 
@@ -415,9 +307,11 @@ describe("applicationRepository.updateOccupants", () => {
 		expect(petNames).not.toContain("Rex");
 	});
 
-	it("removes all occupants and pets when called with empty arrays", async () => {
-		const created = await repo.create({
-			...baseInput,
+	it("removes pets but leaves existing residents untouched when called with empty arrays", async () => {
+		const created = await createApplicationWithPrimary();
+
+		await repo.updateOccupants(created.id, {
+			smokes: false,
 			additionalAdults: [
 				{
 					fullName: "Jane Smith",
@@ -426,6 +320,7 @@ describe("applicationRepository.updateOccupants", () => {
 					email: "jane@example.com",
 				},
 			],
+			children: [],
 			pets: [{ type: "Dog", name: "Rex" }],
 		});
 
@@ -446,7 +341,13 @@ describe("applicationRepository.updateOccupants", () => {
 			.from(petsTable)
 			.where(eq(petsTable.applicationId, created.id));
 
-		expect(residents).toHaveLength(1); // only primary
+		expect(residents).toHaveLength(2);
+		expect(residents.filter((resident) => resident.role === "primary")).toHaveLength(
+			1,
+		);
+		expect(
+			residents.filter((resident) => resident.role === "co-applicant"),
+		).toHaveLength(1);
 		expect(pets).toHaveLength(0);
 	});
 });

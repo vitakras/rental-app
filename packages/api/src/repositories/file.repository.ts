@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
-import { db as defaultDb } from "~/db";
+import type { DbInstance } from "~/db";
 import type { FileStatus } from "~/db/schema";
 import { filesTable } from "~/db/schema";
-
-type DbInstance = typeof defaultDb;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,7 +37,7 @@ export interface FileRepository {
 
 // ── Factory ───────────────────────────────────────────────────────────────────
 
-export function fileRepository(db: DbInstance = defaultDb): FileRepository {
+export function fileRepository(db: DbInstance): FileRepository {
 	return {
 		async createPendingUpload(input) {
 			const [file] = await db

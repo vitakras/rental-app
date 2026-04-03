@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, vi } from "vitest";
 import type {
 	ApplicationRepository,
 	IncomeSourceRepository,
@@ -21,15 +21,16 @@ function makeRepo(
 	overrides?: Partial<ApplicationRepository>,
 ): ApplicationRepository {
 	return {
-		create: mock(async () => ({ id: 1 })),
-		findById: mock(async () => ({ id: 1, status: "pending" })),
-		submit: mock(async () => ({ id: 1 })),
-		updateOccupants: mock(async () => {}),
-		upsertResidences: mock(async () => {}),
-		deleteResident: mock(async () => {}),
-		findAllSubmitted: mock(async () => []),
-		findByIdWithDetails: mock(async () => null),
-		findAllByUserId: mock(async () => []),
+		create: vi.fn(async () => ({ id: 1 })),
+		upsertPrimaryApplicant: vi.fn(async () => {}),
+		findById: vi.fn(async () => ({ id: 1, status: "pending" })),
+		submit: vi.fn(async () => ({ id: 1 })),
+		updateOccupants: vi.fn(async () => {}),
+		upsertResidences: vi.fn(async () => {}),
+		deleteResident: vi.fn(async () => {}),
+		findAllSubmitted: vi.fn(async () => []),
+		findByIdWithDetails: vi.fn(async () => null),
+		findAllByUserId: vi.fn(async () => []),
 		...overrides,
 	};
 }
@@ -38,218 +39,52 @@ function makeIncomeSourceRepo(
 	overrides?: Partial<IncomeSourceRepository>,
 ): IncomeSourceRepository {
 	return {
-		createMany: mock(async () => {}),
+		createMany: vi.fn(async () => {}),
 		...overrides,
 	};
 }
 
+const applicantInfoInput = {
+	desiredMoveInDate: baseInput.desiredMoveInDate,
+	fullName: baseInput.owner.fullName,
+	dateOfBirth: baseInput.owner.dateOfBirth,
+	email: baseInput.owner.email,
+	phone: baseInput.owner.phone,
+};
+
 describe("createApplicationService", () => {
-	describe("validation", () => {
-		it("rejects a missing desiredMoveInDate", async () => {
-			const repo = makeRepo();
-			const result = await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				desiredMoveInDate: "",
-			});
-
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(
-					result.errors.some((e) => e.path.includes("desiredMoveInDate")),
-				).toBe(true);
-			}
-		});
-
-		it("rejects an invalid date format", async () => {
-			const repo = makeRepo();
-			const result = await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				desiredMoveInDate: "06/01/2026",
-			});
-
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(
-					result.errors.some((e) => e.path.includes("desiredMoveInDate")),
-				).toBe(true);
-			}
-		});
-
-		it("rejects a missing owner fullName", async () => {
-			const repo = makeRepo();
-			const result = await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				owner: { ...baseInput.owner, fullName: "" },
-			});
-
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(
-					result.errors.some((e) =>
-						e.path.join(".").includes("owner.fullName"),
-					),
-				).toBe(true);
-			}
-		});
-
-		it("rejects an invalid owner email", async () => {
-			const repo = makeRepo();
-			const result = await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				owner: { ...baseInput.owner, email: "not-an-email" },
-			});
-
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(
-					result.errors.some((e) => e.path.join(".").includes("owner.email")),
-				).toBe(true);
-			}
-		});
-
-		it("rejects an invalid role for additional adult", async () => {
-			const repo = makeRepo();
-			const result = await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				additionalAdults: [
-					{
-						fullName: "Jane Smith",
-						dateOfBirth: "1992-03-20",
-						role: "primary" as "co-applicant",
-					},
-				],
-			});
-
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(
-					result.errors.some((e) => e.path.some((p) => p === "role")),
-				).toBe(true);
-			}
-		});
-
-		it("rejects an invalid email for additional adult", async () => {
-			const repo = makeRepo();
-			const result = await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				additionalAdults: [
-					{
-						fullName: "Jane Smith",
-						dateOfBirth: "1992-03-20",
-						role: "co-applicant",
-						email: "bad-email",
-					},
-				],
-			});
-
-			expect(result.success).toBe(false);
-		});
-
-		it("rejects a missing child fullName", async () => {
-			const repo = makeRepo();
-			const result = await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				children: [{ fullName: "", dateOfBirth: "2020-01-01" }],
-			});
-
-			expect(result.success).toBe(false);
-		});
-	});
-
 	describe("success path", () => {
-		it("calls repo.create with validated data and returns applicationId", async () => {
+		it("calls repo.create with an empty payload and returns applicationId", async () => {
 			const repo = makeRepo();
 			const result = await createApplicationService({
 				applicationRepository: repo,
-			}).createApplication(baseInput);
+			}).createApplication();
 
 			expect(result.success).toBe(true);
 			if (result.success) {
 				expect(result.applicationId).toBe(1);
 			}
 			expect(repo.create).toHaveBeenCalledTimes(1);
-			expect(repo.create).toHaveBeenCalledWith({
-				desiredMoveInDate: "2026-06-01",
-				owner: baseInput.owner,
-				additionalAdults: [],
-				children: [],
-				pets: [],
-			});
+			expect(repo.create).toHaveBeenCalledWith({});
 		});
 
-		it("does not call repo.create when validation fails", async () => {
-			const repo = makeRepo();
-			await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				desiredMoveInDate: "",
-			});
-
-			expect(repo.create).not.toHaveBeenCalled();
-		});
-
-		it("passes optional adult email through when provided", async () => {
+		it("passes createdByUserId when a user id is provided", async () => {
 			const repo = makeRepo();
 			const result = await createApplicationService({
 				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				additionalAdults: [
-					{
-						fullName: "Jane Smith",
-						dateOfBirth: "1992-03-20",
-						role: "co-applicant",
-						email: "jane@example.com",
-					},
-				],
-			});
+			}).createApplication({ userId: "user-123" });
 
 			expect(result.success).toBe(true);
-			expect(
-				(repo.create as ReturnType<typeof mock>).mock.calls[0][0]
-					.additionalAdults[0].email,
-			).toBe("jane@example.com");
-		});
-
-		it("omits optional adult email when not provided", async () => {
-			const repo = makeRepo();
-			await createApplicationService({
-				applicationRepository: repo,
-			}).createApplication({
-				...baseInput,
-				additionalAdults: [
-					{
-						fullName: "Bob Jones",
-						dateOfBirth: "1988-07-11",
-						role: "dependent",
-					},
-				],
+			expect(repo.create).toHaveBeenCalledWith({
+				createdByUserId: "user-123",
 			});
-
-			const callArg = (repo.create as ReturnType<typeof mock>).mock.calls[0][0];
-			expect(callArg.additionalAdults[0].email).toBeUndefined();
 		});
 	});
 
 	describe("repository errors", () => {
 		it("propagates errors thrown by repo.create", async () => {
 			const repo = makeRepo({
-				create: mock(async () => {
+				create: vi.fn(async () => {
 					throw new Error("DB error");
 				}),
 			});
@@ -257,9 +92,89 @@ describe("createApplicationService", () => {
 			await expect(
 				createApplicationService({
 					applicationRepository: repo,
-				}).createApplication(baseInput),
+				}).createApplication(),
 			).rejects.toThrow("DB error");
 		});
+	});
+});
+
+describe("upsertApplicantInfo", () => {
+	it("returns not_found when the application does not exist", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => null),
+		});
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertApplicantInfo(12, applicantInfoInput);
+
+		expect(result.success).toBe(false);
+		if (!result.success && "reason" in result) {
+			expect(result.reason).toBe("not_found");
+		}
+		expect(repo.upsertPrimaryApplicant).not.toHaveBeenCalled();
+	});
+
+	it("returns validation errors for an invalid desiredMoveInDate", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertApplicantInfo(1, {
+			...applicantInfoInput,
+			desiredMoveInDate: "06/01/2026",
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(
+				result.errors.some((e) => e.path.includes("desiredMoveInDate")),
+			).toBe(true);
+		}
+		expect(repo.upsertPrimaryApplicant).not.toHaveBeenCalled();
+	});
+
+	it("returns validation errors for an invalid applicant email", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertApplicantInfo(1, {
+			...applicantInfoInput,
+			email: "not-an-email",
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.errors.some((e) => e.path.includes("email"))).toBe(true);
+		}
+		expect(repo.upsertPrimaryApplicant).not.toHaveBeenCalled();
+	});
+
+	it("returns validation errors for an empty full name", async () => {
+		const repo = makeRepo();
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertApplicantInfo(1, {
+			...applicantInfoInput,
+			fullName: "",
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.errors.some((e) => e.path.includes("fullName"))).toBe(true);
+		}
+		expect(repo.upsertPrimaryApplicant).not.toHaveBeenCalled();
+	});
+
+	it("calls repo.upsertPrimaryApplicant with validated data", async () => {
+		const repo = makeRepo();
+		const payload = applicantInfoInput;
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertApplicantInfo(1, payload);
+
+		expect(result.success).toBe(true);
+		expect(repo.upsertPrimaryApplicant).toHaveBeenCalledWith(1, payload);
 	});
 });
 
@@ -280,7 +195,7 @@ describe("submitApplication", () => {
 
 	it("returns not_found when the application does not exist", async () => {
 		const repo = makeRepo({
-			findById: mock(async () => null),
+			findById: vi.fn(async () => null),
 		});
 		const result = await createApplicationService({
 			applicationRepository: repo,
@@ -295,7 +210,7 @@ describe("submitApplication", () => {
 
 	it("returns not_pending when the application is not in pending state", async () => {
 		const repo = makeRepo({
-			findById: mock(async () => ({ id: 1, status: "submitted" })),
+			findById: vi.fn(async () => ({ id: 1, status: "submitted" })),
 		});
 		const result = await createApplicationService({
 			applicationRepository: repo,
@@ -310,7 +225,7 @@ describe("submitApplication", () => {
 
 	it("propagates errors thrown by repo.submit", async () => {
 		const repo = makeRepo({
-			submit: mock(async () => {
+			submit: vi.fn(async () => {
 				throw new Error("DB error");
 			}),
 		});
@@ -410,7 +325,7 @@ describe("updateOccupants", () => {
 
 	it("propagates errors thrown by repo.updateOccupants", async () => {
 		const repo = makeRepo({
-			updateOccupants: mock(async () => {
+			updateOccupants: vi.fn(async () => {
 				throw new Error("DB error");
 			}),
 		});
@@ -437,7 +352,7 @@ describe("deleteResident", () => {
 
 	it("propagates errors thrown by repo.deleteResident", async () => {
 		const repo = makeRepo({
-			deleteResident: mock(async () => {
+			deleteResident: vi.fn(async () => {
 				throw new Error("DB error");
 			}),
 		});
@@ -531,7 +446,7 @@ describe("addIncomeSources", () => {
 	it("returns not_found for a missing application", async () => {
 		const result = await createApplicationService({
 			applicationRepository: makeRepo({
-				findById: mock(async () => null),
+				findById: vi.fn(async () => null),
 			}),
 			incomeSourceRepository: makeIncomeSourceRepo(),
 		}).addIncomeSources(999, baseIncome);
@@ -602,7 +517,7 @@ describe("upsertResidence", () => {
 
 	it("returns not_found when the application does not exist", async () => {
 		const repo = makeRepo({
-			findById: mock(async () => null),
+			findById: vi.fn(async () => null),
 		});
 
 		const result = await createApplicationService({

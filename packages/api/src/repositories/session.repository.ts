@@ -1,8 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db as defaultDb } from "~/db";
+import type { DbInstance } from "~/db";
 import { sessionsTable } from "~/db/schema";
-
-type DbInstance = typeof defaultDb;
 
 export interface SessionRecord {
 	id: string;
@@ -30,9 +28,7 @@ export interface SessionRepository {
 	deleteById(id: string): Promise<void>;
 }
 
-export function sessionRepository(
-	db: DbInstance = defaultDb,
-): SessionRepository {
+export function sessionRepository(db: DbInstance): SessionRepository {
 	return {
 		async create(input) {
 			const [session] = await db

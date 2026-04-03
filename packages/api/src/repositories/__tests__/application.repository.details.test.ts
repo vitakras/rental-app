@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	applicationDocumentsTable,
 	applicationsTable,
@@ -17,8 +17,8 @@ describe("applicationRepository.findByIdWithDetails", () => {
 		repo = applicationRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
 	it("includes uploaded application documents in the details payload", async () => {

@@ -1,9 +1,7 @@
 import { eq, sql } from "drizzle-orm";
-import { db as defaultDb } from "~/db";
+import type { DbInstance } from "~/db";
 import type { UserGlobalRole } from "~/db/schema";
 import { usersTable } from "~/db/schema";
-
-type DbInstance = typeof defaultDb;
 
 export interface UserRecord {
 	id: string;
@@ -28,7 +26,7 @@ export interface CreateUserInput {
 	globalRole?: UserGlobalRole;
 }
 
-export function userRepository(db: DbInstance = defaultDb): UserRepository {
+export function userRepository(db: DbInstance): UserRepository {
 	return {
 		async create(input) {
 			const [user] = await db

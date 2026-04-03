@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, vi } from "vitest";
 import crypto from "node:crypto";
 import type { AuthConfig } from "~/auth/config";
 import type {
@@ -62,10 +62,10 @@ function makeUserRepository(
 	overrides?: Partial<UserRepository>,
 ): UserRepository {
 	return {
-		create: mock(async () => baseUser),
-		findById: mock(async () => baseUser),
-		findByEmail: mock(async () => baseUser),
-		markEmailVerified: mock(async () => {}),
+		create: vi.fn(async () => baseUser),
+		findById: vi.fn(async () => baseUser),
+		findByEmail: vi.fn(async () => baseUser),
+		markEmailVerified: vi.fn(async () => {}),
 		...overrides,
 	};
 }
@@ -74,9 +74,9 @@ function makeSessionRepository(
 	overrides?: Partial<SessionRepository>,
 ): SessionRepository {
 	return {
-		create: mock(async () => baseSession),
-		findById: mock(async () => baseSession),
-		deleteById: mock(async () => {}),
+		create: vi.fn(async () => baseSession),
+		findById: vi.fn(async () => baseSession),
+		deleteById: vi.fn(async () => {}),
 		...overrides,
 	};
 }
@@ -85,11 +85,11 @@ function makeLoginCodeRepository(
 	overrides?: Partial<LoginCodeRepository>,
 ): LoginCodeRepository {
 	return {
-		create: mock(async () => baseLoginCode),
-		findActiveByUserId: mock(async () => baseLoginCode),
-		invalidateActiveByUserId: mock(async () => {}),
-		recordSuccessfulUse: mock(async () => {}),
-		recordFailedAttempt: mock(async () => {}),
+		create: vi.fn(async () => baseLoginCode),
+		findActiveByUserId: vi.fn(async () => baseLoginCode),
+		invalidateActiveByUserId: vi.fn(async () => {}),
+		recordSuccessfulUse: vi.fn(async () => {}),
+		recordFailedAttempt: vi.fn(async () => {}),
 		...overrides,
 	};
 }
@@ -97,7 +97,7 @@ function makeLoginCodeRepository(
 describe("createAuthService", () => {
 	it("creates an applicant user and session on successful signup", async () => {
 		const userRepo = makeUserRepository({
-			findByEmail: mock(async () => null),
+			findByEmail: vi.fn(async () => null),
 		});
 		const sessionRepo = makeSessionRepository();
 		const loginCodeRepo = makeLoginCodeRepository();
@@ -134,7 +134,7 @@ describe("createAuthService", () => {
 
 	it("rejects applicant signup with an invalid token", async () => {
 		const userRepo = makeUserRepository({
-			findByEmail: mock(async () => null),
+			findByEmail: vi.fn(async () => null),
 		});
 		const sessionRepo = makeSessionRepository();
 
@@ -207,7 +207,7 @@ describe("createAuthService", () => {
 			userRepository: makeUserRepository(),
 			loginCodeRepository: makeLoginCodeRepository(),
 			sessionRepository: makeSessionRepository({
-				findById: mock(async () => ({
+				findById: vi.fn(async () => ({
 					...baseSession,
 					expiresAt: "2020-01-01T00:00:00.000Z",
 				})),
@@ -224,7 +224,7 @@ describe("createAuthService", () => {
 	it("creates a session and records a successful reusable code login", async () => {
 		const userRepo = makeUserRepository();
 		const loginCodeRepo = makeLoginCodeRepository({
-			findActiveByUserId: mock(async () => ({
+			findActiveByUserId: vi.fn(async () => ({
 				...baseLoginCode,
 				codeHash: crypto
 					.createHmac("sha256", authConfig.loginCodePepper)
@@ -258,7 +258,7 @@ describe("createAuthService", () => {
 
 	it("increments failed attempts for a wrong reusable code", async () => {
 		const loginCodeRepo = makeLoginCodeRepository({
-			findActiveByUserId: mock(async () => baseLoginCode),
+			findActiveByUserId: vi.fn(async () => baseLoginCode),
 		});
 
 		const result = await createAuthService({
@@ -282,7 +282,7 @@ describe("createAuthService", () => {
 
 	it("invalidates the reusable code on the fifth wrong attempt", async () => {
 		const loginCodeRepo = makeLoginCodeRepository({
-			findActiveByUserId: mock(async () => ({
+			findActiveByUserId: vi.fn(async () => ({
 				...baseLoginCode,
 				failedAttempts: 4,
 			})),
@@ -332,7 +332,7 @@ describe("createAuthService", () => {
 
 	it("returns reusable login code status for the active code", async () => {
 		const loginCodeRepo = makeLoginCodeRepository({
-			findActiveByUserId: mock(async () => ({
+			findActiveByUserId: vi.fn(async () => ({
 				...baseLoginCode,
 				failedAttempts: 2,
 				successfulUses: 3,

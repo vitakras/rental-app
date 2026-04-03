@@ -1,21 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { incomeSourcesTable, residentsTable } from "~/db/schema";
 import { applicationRepository } from "../application.repository";
 import { incomeSourceRepository } from "../income-source.repository";
 import { createTestDb, type TestDb } from "./db.helper";
 
-const baseAppInput = {
+const primaryApplicantInput = {
 	desiredMoveInDate: "2026-06-01",
-	owner: {
-		fullName: "Alex Johnson",
-		dateOfBirth: "1990-05-15",
-		email: "alex@example.com",
-		phone: "555-000-0001",
-	},
-	additionalAdults: [],
-	children: [],
-	pets: [],
+	fullName: "Alex Johnson",
+	dateOfBirth: "1990-05-15",
+	email: "alex@example.com",
+	phone: "555-000-0001",
 };
 
 describe("incomeSourceRepository.createMany", () => {
@@ -29,21 +24,24 @@ describe("incomeSourceRepository.createMany", () => {
 		repo = incomeSourceRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
-	async function getPrimaryResidentId(applicationId: number) {
+	async function createApplicationWithPrimaryResident() {
+		const app = await appRepo.create({});
+		await appRepo.upsertPrimaryApplicant(app.id, primaryApplicantInput);
+
 		const [resident] = await testDb.db
 			.select({ id: residentsTable.id })
 			.from(residentsTable)
-			.where(eq(residentsTable.applicationId, applicationId));
-		return resident.id;
+			.where(eq(residentsTable.applicationId, app.id));
+
+		return { app, residentId: resident.id };
 	}
 
 	it("inserts income sources with correct fields", async () => {
-		const app = await appRepo.create(baseAppInput);
-		const residentId = await getPrimaryResidentId(app.id);
+		const { residentId } = await createApplicationWithPrimaryResident();
 
 		await repo.createMany([
 			{
@@ -71,8 +69,7 @@ describe("incomeSourceRepository.createMany", () => {
 	});
 
 	it("inserts multiple income sources for the same resident", async () => {
-		const app = await appRepo.create(baseAppInput);
-		const residentId = await getPrimaryResidentId(app.id);
+		const { residentId } = await createApplicationWithPrimaryResident();
 
 		await repo.createMany([
 			{
@@ -103,7 +100,7 @@ describe("incomeSourceRepository.createMany", () => {
 	});
 
 	it("is a no-op when given an empty array", async () => {
-		await appRepo.create(baseAppInput);
+		await createApplicationWithPrimaryResident();
 		await expect(repo.createMany([])).resolves.toBeUndefined();
 
 		const sources = await testDb.db.select().from(incomeSourcesTable);
@@ -122,21 +119,24 @@ describe("incomeSourceRepository.findByResidentId", () => {
 		repo = incomeSourceRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
-	async function getPrimaryResidentId(applicationId: number) {
+	async function createApplicationWithPrimaryResident() {
+		const app = await appRepo.create({});
+		await appRepo.upsertPrimaryApplicant(app.id, primaryApplicantInput);
+
 		const [resident] = await testDb.db
 			.select({ id: residentsTable.id })
 			.from(residentsTable)
-			.where(eq(residentsTable.applicationId, applicationId));
-		return resident.id;
+			.where(eq(residentsTable.applicationId, app.id));
+
+		return { app, residentId: resident.id };
 	}
 
 	it("returns income sources for the given resident", async () => {
-		const app = await appRepo.create(baseAppInput);
-		const residentId = await getPrimaryResidentId(app.id);
+		const { residentId } = await createApplicationWithPrimaryResident();
 
 		await repo.createMany([
 			{
@@ -156,22 +156,24 @@ describe("incomeSourceRepository.findByResidentId", () => {
 	});
 
 	it("returns an empty array when the resident has no income sources", async () => {
-		const app = await appRepo.create(baseAppInput);
-		const residentId = await getPrimaryResidentId(app.id);
+		const { residentId } = await createApplicationWithPrimaryResident();
 
 		const sources = await repo.findByResidentId(residentId);
 		expect(sources).toHaveLength(0);
 	});
 
 	it("only returns sources for the requested resident", async () => {
-		const app1 = await appRepo.create(baseAppInput);
-		const app2 = await appRepo.create({
-			...baseAppInput,
-			owner: { ...baseAppInput.owner, email: "other@example.com" },
+		const { residentId: residentId1 } = await createApplicationWithPrimaryResident();
+		const secondApp = await appRepo.create({});
+		await appRepo.upsertPrimaryApplicant(secondApp.id, {
+			...primaryApplicantInput,
+			email: "other@example.com",
 		});
-
-		const residentId1 = await getPrimaryResidentId(app1.id);
-		const residentId2 = await getPrimaryResidentId(app2.id);
+		const [secondResident] = await testDb.db
+			.select({ id: residentsTable.id })
+			.from(residentsTable)
+			.where(eq(residentsTable.applicationId, secondApp.id));
+		const residentId2 = secondResident.id;
 
 		await repo.createMany([
 			{

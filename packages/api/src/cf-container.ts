@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/d1";
 import { getAuthConfig } from "~/auth/config";
+import { createDb } from "~/db";
 import logger from "~/cf-logger";
 import { applicationRepository } from "~/repositories/application.repository";
 import { applicationDocumentRepository } from "~/repositories/application-document.repository";
@@ -15,10 +15,8 @@ import { createFileService } from "~/services/file.service";
 import { createR2BlobStorage } from "~/storage/r2.blob.storage";
 import type { CloudflareBindings } from "~/worker-env";
 
-type DbInstance = typeof import("~/db").db;
-
 export function createCfServices(env: CloudflareBindings): AppServices {
-	const db = drizzle(env.DB, { casing: "snake_case" }) as unknown as DbInstance;
+	const db = createDb(env.DB);
 
 	const repositories = {
 		userRepository: userRepository(db),

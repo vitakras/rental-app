@@ -1,13 +1,11 @@
 import { eq } from "drizzle-orm";
-import { db as defaultDb } from "~/db";
+import type { DbInstance } from "~/db";
 import type {
 	ApplicationDocumentCategory,
 	ApplicationDocumentStatus,
 	ApplicationDocumentType,
 } from "~/db/schema";
 import { applicationDocumentsTable } from "~/db/schema";
-
-type DbInstance = typeof defaultDb;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,7 +50,7 @@ export interface ApplicationDocumentRepository {
 // ── Factory ───────────────────────────────────────────────────────────────────
 
 export function applicationDocumentRepository(
-	db: DbInstance = defaultDb,
+	db: DbInstance,
 ): ApplicationDocumentRepository {
 	return {
 		async create(input) {

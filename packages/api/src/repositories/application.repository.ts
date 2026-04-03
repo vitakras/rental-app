@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, not } from "drizzle-orm";
-import { db as defaultDb } from "~/db";
+import type { DbInstance } from "~/db";
 import type { ResidentRole } from "~/db/schema";
 import {
 	applicationAccessTable,
@@ -11,8 +11,6 @@ import {
 	residentsTable,
 } from "~/db/schema";
 import type { UpsertResidencePayload } from "~/services/application.service";
-
-type DbInstance = typeof defaultDb;
 
 // ── Input types ───────────────────────────────────────────────────────────────
 
@@ -58,7 +56,7 @@ interface UpdateOccupantsInput {
 
 // ── Factory ───────────────────────────────────────────────────────────────────
 
-export function applicationRepository(db: DbInstance = defaultDb) {
+export function applicationRepository(db: DbInstance) {
 	return {
 		async create(input: CreateApplicationInput) {
 			const [application] = await db
@@ -76,184 +74,175 @@ export function applicationRepository(db: DbInstance = defaultDb) {
 			applicationId: number,
 			input: UpsertPrimaryApplicantInput,
 		) {
-			return db.transaction(async (tx) => {
-				await tx
-					.update(applicationsTable)
-					.set({ desiredMoveInDate: input.desiredMoveInDate })
-					.where(eq(applicationsTable.id, applicationId));
+			await db
+				.update(applicationsTable)
+				.set({ desiredMoveInDate: input.desiredMoveInDate })
+				.where(eq(applicationsTable.id, applicationId));
 
-				const [existing] = await tx
-					.select({ id: residentsTable.id })
-					.from(residentsTable)
-					.where(
-						and(
-							eq(residentsTable.applicationId, applicationId),
-							eq(residentsTable.role, "primary"),
-						),
-					);
+			const [existing] = await db
+				.select({ id: residentsTable.id })
+				.from(residentsTable)
+				.where(
+					and(
+						eq(residentsTable.applicationId, applicationId),
+						eq(residentsTable.role, "primary"),
+					),
+				);
 
-				if (existing) {
-					await tx
-						.update(residentsTable)
-						.set({
-							fullName: input.fullName,
-							dateOfBirth: input.dateOfBirth,
-							email: input.email,
-							phone: input.phone,
-						})
-						.where(eq(residentsTable.id, existing.id));
-				} else {
-					await tx.insert(residentsTable).values({
-						applicationId,
-						role: "primary" as ResidentRole,
+			if (existing) {
+				await db
+					.update(residentsTable)
+					.set({
 						fullName: input.fullName,
 						dateOfBirth: input.dateOfBirth,
 						email: input.email,
 						phone: input.phone,
-					});
-				}
+					})
+					.where(eq(residentsTable.id, existing.id));
+				return;
+			}
+
+			await db.insert(residentsTable).values({
+				applicationId,
+				role: "primary" as ResidentRole,
+				fullName: input.fullName,
+				dateOfBirth: input.dateOfBirth,
+				email: input.email,
+				phone: input.phone,
 			});
 		},
 
 		async updateOccupants(id: number, input: UpdateOccupantsInput) {
-			return db.transaction(async (tx) => {
-				await tx
-					.update(applicationsTable)
-					.set({ smokes: input.smokes })
-					.where(eq(applicationsTable.id, id));
+			await db
+				.update(applicationsTable)
+				.set({ smokes: input.smokes })
+				.where(eq(applicationsTable.id, id));
 
-				const allResidents = [
-					...input.additionalAdults.map((adult) => ({
-						...adult,
-						role: adult.role as ResidentRole,
-						email: adult.email ?? null,
-					})),
-					...input.children.map((child) => ({
-						...child,
-						role: "child" as ResidentRole,
-						email: null,
-					})),
-				];
+			const allResidents = [
+				...input.additionalAdults.map((adult) => ({
+					...adult,
+					role: adult.role as ResidentRole,
+					email: adult.email ?? null,
+				})),
+				...input.children.map((child) => ({
+					...child,
+					role: "child" as ResidentRole,
+					email: null,
+				})),
+			];
 
-				for (const resident of allResidents) {
-					if (resident.existingId) {
-						await tx
-							.update(residentsTable)
-							.set({
-								fullName: resident.fullName,
-								dateOfBirth: resident.dateOfBirth,
-								role: resident.role,
-								email: resident.email,
-							})
-							.where(
-								and(
-									eq(residentsTable.id, resident.existingId),
-									eq(residentsTable.applicationId, id),
-								),
-							);
-						continue;
-					}
+			for (const resident of allResidents) {
+				if (resident.existingId) {
+					await db
+						.update(residentsTable)
+						.set({
+							fullName: resident.fullName,
+							dateOfBirth: resident.dateOfBirth,
+							role: resident.role,
+							email: resident.email,
+						})
+						.where(
+							and(
+								eq(residentsTable.id, resident.existingId),
+								eq(residentsTable.applicationId, id),
+							),
+						);
+					continue;
+				}
 
-					await tx.insert(residentsTable).values({
+				await db.insert(residentsTable).values({
+					applicationId: id,
+					role: resident.role,
+					fullName: resident.fullName,
+					dateOfBirth: resident.dateOfBirth,
+					email: resident.email,
+					phone: null,
+				});
+			}
+
+			await db.delete(petsTable).where(eq(petsTable.applicationId, id));
+
+			if (input.pets.length > 0) {
+				await db.insert(petsTable).values(
+					input.pets.map((pet) => ({
 						applicationId: id,
-						role: resident.role,
-						fullName: resident.fullName,
-						dateOfBirth: resident.dateOfBirth,
-						email: resident.email,
-						phone: null,
-					});
-				}
-
-				await tx.delete(petsTable).where(eq(petsTable.applicationId, id));
-
-				if (input.pets.length > 0) {
-					await tx.insert(petsTable).values(
-						input.pets.map((pet) => ({
-							applicationId: id,
-							type: pet.type,
-							name: pet.name ?? null,
-							breed: pet.breed ?? null,
-							notes: pet.notes ?? null,
-						})),
-					);
-				}
-			});
+						type: pet.type,
+						name: pet.name ?? null,
+						breed: pet.breed ?? null,
+						notes: pet.notes ?? null,
+					})),
+				);
+			}
 		},
 
 		async upsertResidences(
 			applicationId: number,
 			input: UpsertResidencePayload,
 		) {
-			return db.transaction(async (tx) => {
-				await tx
-					.update(applicationsTable)
-					.set({ notes: input.notes ?? null })
-					.where(eq(applicationsTable.id, applicationId));
+			await db
+				.update(applicationsTable)
+				.set({ notes: input.notes ?? null })
+				.where(eq(applicationsTable.id, applicationId));
 
-				const residentIds = input.residents.map(
-					(resident) => resident.residentId,
-				);
+			const residentIds = input.residents.map((resident) => resident.residentId);
 
-				if (residentIds.length > 0) {
-					await tx
-						.delete(residencesTable)
-						.where(
-							and(
-								eq(residencesTable.applicationId, applicationId),
-								inArray(residencesTable.residentId, residentIds),
-							),
-						);
-				}
+			if (residentIds.length > 0) {
+				await db
+					.delete(residencesTable)
+					.where(
+						and(
+							eq(residencesTable.applicationId, applicationId),
+							inArray(residencesTable.residentId, residentIds),
+						),
+					);
+			}
 
-				const rows = input.residents.flatMap(({ residentId, residences }) =>
-					residences.map((residence) => ({
-						applicationId,
-						residentId,
-						address: residence.address,
-						fromDate: residence.fromDate,
-						toDate: residence.toDate ?? null,
-						reasonForLeaving: residence.reasonForLeaving ?? null,
-						isRental: residence.isRental,
-						landlordName: residence.landlordName ?? null,
-						landlordPhone: residence.landlordPhone ?? null,
-					})),
-				);
+			const rows = input.residents.flatMap(({ residentId, residences }) =>
+				residences.map((residence) => ({
+					applicationId,
+					residentId,
+					address: residence.address,
+					fromDate: residence.fromDate,
+					toDate: residence.toDate ?? null,
+					reasonForLeaving: residence.reasonForLeaving ?? null,
+					isRental: residence.isRental,
+					landlordName: residence.landlordName ?? null,
+					landlordPhone: residence.landlordPhone ?? null,
+				})),
+			);
 
-				if (rows.length > 0) {
-					await tx.insert(residencesTable).values(rows);
-				}
-			});
+			if (rows.length > 0) {
+				await db.insert(residencesTable).values(rows);
+			}
 		},
 
 		async deleteResident(applicationId: number, residentId: number) {
-			return db.transaction(async (tx) => {
-				await tx
-					.delete(incomeSourcesTable)
-					.where(eq(incomeSourcesTable.residentId, residentId));
+			await db
+				.delete(incomeSourcesTable)
+				.where(eq(incomeSourcesTable.residentId, residentId));
 
-				await tx
-					.delete(residencesTable)
-					.where(eq(residencesTable.residentId, residentId));
+			await db
+				.delete(residencesTable)
+				.where(eq(residencesTable.residentId, residentId));
 
-				await tx
-					.update(applicationDocumentsTable)
-					.set({ residentId: null })
-					.where(eq(applicationDocumentsTable.residentId, residentId));
+			await db
+				.update(applicationDocumentsTable)
+				.set({ residentId: null })
+				.where(eq(applicationDocumentsTable.residentId, residentId));
 
-				await tx
-					.delete(applicationAccessTable)
-					.where(eq(applicationAccessTable.residentId, residentId));
+			await db
+				.delete(applicationAccessTable)
+				.where(eq(applicationAccessTable.residentId, residentId));
 
-				await tx
-					.delete(residentsTable)
-					.where(
-						and(
-							eq(residentsTable.id, residentId),
-							eq(residentsTable.applicationId, applicationId),
-							not(eq(residentsTable.role, "primary")),
-						),
-					);
-			});
+			await db
+				.delete(residentsTable)
+				.where(
+					and(
+						eq(residentsTable.id, residentId),
+						eq(residentsTable.applicationId, applicationId),
+						not(eq(residentsTable.role, "primary")),
+					),
+				);
 		},
 
 		async findById(id: number) {

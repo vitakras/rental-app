@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import {
 	applicationAccessTable,
@@ -21,8 +21,8 @@ describe("applicationRepository occupant editing", () => {
 		repo = applicationRepository(testDb.db);
 	});
 
-	afterEach(() => {
-		testDb.cleanup();
+	afterEach(async () => {
+		await testDb?.cleanup();
 	});
 
 	async function seedApplication() {

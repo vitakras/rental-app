@@ -1,8 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { db as defaultDb } from "~/db";
+import type { DbInstance } from "~/db";
 import { loginCodesTable } from "~/db/schema";
-
-type DbInstance = typeof defaultDb;
 
 export interface LoginCodeRecord {
 	id: string;
@@ -45,9 +43,7 @@ export interface LoginCodeRepository {
 	): Promise<void>;
 }
 
-export function loginCodeRepository(
-	db: DbInstance = defaultDb,
-): LoginCodeRepository {
+export function loginCodeRepository(db: DbInstance): LoginCodeRepository {
 	return {
 		async create(input) {
 			const [record] = await db
