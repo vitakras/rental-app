@@ -1,4 +1,3 @@
-import type { ApplicationWithDetails } from "api";
 import { useState } from "react";
 import { data, redirect, useLoaderData, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
@@ -7,6 +6,10 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { apiClient } from "~/lib/api";
+import {
+	loadEditableApplication,
+	parseApplicationParam,
+} from "./form-route";
 import type { Route } from "./+types/residence";
 
 export function meta() {
@@ -14,19 +17,8 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-	const id = Number(params.id);
-	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
-
-	const response = await apiClient.applications[":id"].$get({
-		param: { id: String(id) },
-	});
-
-	if (response.status === 404) throw data(null, { status: 404 });
-	if (!response.ok) throw data(null, { status: response.status });
-
-	const { application } = (await response.json()) as {
-		application: ApplicationWithDetails;
-	};
+	const id = parseApplicationParam(params.id);
+	const application = await loadEditableApplication(id);
 
 	const residents = application.residents
 		.filter((resident) => resident.role !== "child")
@@ -47,8 +39,8 @@ export async function clientAction({
 	request,
 	params,
 }: Route.ClientActionArgs) {
-	const id = Number(params.id);
-	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+	const id = parseApplicationParam(params.id);
+	await loadEditableApplication(id);
 
 	const formData = await request.formData();
 	const raw = JSON.parse(formData.get("data") as string) as {
@@ -73,6 +65,7 @@ export async function clientAction({
 	});
 
 	if (response.status === 404) throw data(null, { status: 404 });
+	if (response.status === 409) return redirect(`/a/applications/${id}`);
 	if (response.status === 422) return await response.json();
 	if (!response.ok) throw data(null, { status: response.status });
 

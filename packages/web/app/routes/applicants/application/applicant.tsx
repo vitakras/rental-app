@@ -5,6 +5,10 @@ import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { apiClient } from "~/lib/api";
+import {
+	loadEditableApplication,
+	parseApplicationParam,
+} from "./form-route";
 import type { Route } from "./+types/applicant";
 
 export function meta() {
@@ -12,31 +16,12 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-	const id = Number(params.id);
-	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+	const id = parseApplicationParam(params.id);
 
-	const [applicationResponse, sessionResponse] = await Promise.all([
-		apiClient.applications[":id"].$get({ param: { id: String(id) } }),
+	const [application, sessionResponse] = await Promise.all([
+		loadEditableApplication(id),
 		apiClient.auth.email.session.$get(),
 	]);
-
-	if (applicationResponse.status === 404) throw data(null, { status: 404 });
-	if (!applicationResponse.ok)
-		throw data(null, { status: applicationResponse.status });
-
-	const { application } = (await applicationResponse.json()) as {
-		application: {
-			id: number;
-			desiredMoveInDate: string | null;
-			residents: Array<{
-				role: string;
-				fullName: string;
-				dateOfBirth: string;
-				email: string | null;
-				phone: string | null;
-			}>;
-		};
-	};
 
 	const sessionEmail = sessionResponse.ok
 		? ((await sessionResponse.json()) as { user: { email: string } }).user.email
@@ -59,8 +44,8 @@ export async function clientAction({
 	request,
 	params,
 }: Route.ClientActionArgs) {
-	const id = Number(params.id);
-	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+	const id = parseApplicationParam(params.id);
+	await loadEditableApplication(id);
 
 	const formData = await request.formData();
 	const raw = JSON.parse(formData.get("data") as string);
@@ -74,6 +59,7 @@ export async function clientAction({
 		const result = await response.json();
 		return { errors: result.issues };
 	}
+	if (response.status === 409) return redirect(`/a/applications/${id}`);
 	if (!response.ok) throw data(null, { status: response.status });
 
 	return redirect(`/a/applications/${id}/occupants`);

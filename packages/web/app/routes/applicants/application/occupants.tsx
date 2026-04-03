@@ -1,4 +1,3 @@
-import type { ApplicationWithDetails } from "api";
 import { useState } from "react";
 import { data, redirect, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
@@ -7,6 +6,10 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { apiClient } from "~/lib/api";
+import {
+	loadEditableApplication,
+	parseApplicationParam,
+} from "./form-route";
 import type { Route } from "./+types/occupants";
 
 export function meta() {
@@ -14,18 +17,8 @@ export function meta() {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-	const id = Number(params.id);
-	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
-	const response = await apiClient.applications[":id"].$get({
-		param: { id: String(id) },
-	});
-
-	if (response.status === 404) throw data(null, { status: 404 });
-	if (!response.ok) throw data(null, { status: response.status });
-
-	const { application } = (await response.json()) as {
-		application: ApplicationWithDetails;
-	};
+	const id = parseApplicationParam(params.id);
+	const application = await loadEditableApplication(id);
 
 	const additionalAdults = application.residents
 		.filter(
@@ -72,8 +65,8 @@ export async function clientAction({
 	request,
 	params,
 }: Route.ClientActionArgs) {
-	const id = Number(params.id);
-	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+	const id = parseApplicationParam(params.id);
+	await loadEditableApplication(id);
 	const formData = await request.formData();
 	const intent = formData.get("intent");
 
@@ -85,6 +78,7 @@ export async function clientAction({
 			param: { id: String(id), residentId: String(residentId) },
 		});
 
+		if (response.status === 409) return redirect(`/a/applications/${id}`);
 		if (!response.ok) throw data(null, { status: response.status });
 		return { removed: true };
 	}
@@ -99,6 +93,7 @@ export async function clientAction({
 		const result = await response.json();
 		return { errors: result.issues };
 	}
+	if (response.status === 409) return redirect(`/a/applications/${id}`);
 	if (!response.ok) throw data(null, { status: response.status });
 
 	return redirect(`/a/applications/${id}/income`);

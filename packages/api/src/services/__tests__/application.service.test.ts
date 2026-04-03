@@ -125,7 +125,7 @@ describe("upsertApplicantInfo", () => {
 		});
 
 		expect(result.success).toBe(false);
-		if (!result.success) {
+		if (!result.success && "errors" in result) {
 			expect(
 				result.errors.some((e) => e.path.includes("desiredMoveInDate")),
 			).toBe(true);
@@ -143,7 +143,7 @@ describe("upsertApplicantInfo", () => {
 		});
 
 		expect(result.success).toBe(false);
-		if (!result.success) {
+		if (!result.success && "errors" in result) {
 			expect(result.errors.some((e) => e.path.includes("email"))).toBe(true);
 		}
 		expect(repo.upsertPrimaryApplicant).not.toHaveBeenCalled();
@@ -159,7 +159,7 @@ describe("upsertApplicantInfo", () => {
 		});
 
 		expect(result.success).toBe(false);
-		if (!result.success) {
+		if (!result.success && "errors" in result) {
 			expect(result.errors.some((e) => e.path.includes("fullName"))).toBe(true);
 		}
 		expect(repo.upsertPrimaryApplicant).not.toHaveBeenCalled();
@@ -175,6 +175,19 @@ describe("upsertApplicantInfo", () => {
 
 		expect(result.success).toBe(true);
 		expect(repo.upsertPrimaryApplicant).toHaveBeenCalledWith(1, payload);
+	});
+
+	it("returns not_editable when the application has already been submitted", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => ({ id: 1, status: "submitted" })),
+		});
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertApplicantInfo(1, applicantInfoInput);
+
+		expect(result).toEqual({ success: false, reason: "not_editable" });
+		expect(repo.upsertPrimaryApplicant).not.toHaveBeenCalled();
 	});
 });
 
@@ -291,7 +304,7 @@ describe("updateOccupants", () => {
 		});
 
 		expect(result.success).toBe(false);
-		if (!result.success) {
+		if (!result.success && "errors" in result) {
 			expect(result.errors.some((e) => e.path.includes("role"))).toBe(true);
 		}
 	});
@@ -306,7 +319,7 @@ describe("updateOccupants", () => {
 		});
 
 		expect(result.success).toBe(false);
-		if (!result.success) {
+		if (!result.success && "errors" in result) {
 			expect(result.errors.some((e) => e.path.includes("smokes"))).toBe(true);
 		}
 	});
@@ -337,6 +350,19 @@ describe("updateOccupants", () => {
 			),
 		).rejects.toThrow("DB error");
 	});
+
+	it("returns not_editable when the application has already been submitted", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => ({ id: 1, status: "submitted" })),
+		});
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).updateOccupants(1, baseOccupants);
+
+		expect(result).toEqual({ success: false, reason: "not_editable" });
+		expect(repo.updateOccupants).not.toHaveBeenCalled();
+	});
 });
 
 describe("deleteResident", () => {
@@ -348,6 +374,19 @@ describe("deleteResident", () => {
 
 		expect(result).toEqual({ success: true });
 		expect(repo.deleteResident).toHaveBeenCalledWith(12, 44);
+	});
+
+	it("returns not_editable when the application has already been submitted", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => ({ id: 12, status: "submitted" })),
+		});
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).deleteResident(12, 44);
+
+		expect(result).toEqual({ success: false, reason: "not_editable" });
+		expect(repo.deleteResident).not.toHaveBeenCalled();
 	});
 
 	it("propagates errors thrown by repo.deleteResident", async () => {
@@ -453,6 +492,17 @@ describe("addIncomeSources", () => {
 
 		expect(result).toEqual({ success: false, reason: "not_found" });
 	});
+
+	it("returns not_editable when the application has already been submitted", async () => {
+		const result = await createApplicationService({
+			applicationRepository: makeRepo({
+				findById: vi.fn(async () => ({ id: 1, status: "submitted" })),
+			}),
+			incomeSourceRepository: makeIncomeSourceRepo(),
+		}).addIncomeSources(1, baseIncome);
+
+		expect(result).toEqual({ success: false, reason: "not_editable" });
+	});
 });
 
 describe("upsertResidence", () => {
@@ -525,6 +575,19 @@ describe("upsertResidence", () => {
 		}).upsertResidence(999, baseResidence);
 
 		expect(result).toEqual({ success: false, reason: "not_found" });
+		expect(repo.upsertResidences).not.toHaveBeenCalled();
+	});
+
+	it("returns not_editable when the application has already been submitted", async () => {
+		const repo = makeRepo({
+			findById: vi.fn(async () => ({ id: 1, status: "submitted" })),
+		});
+
+		const result = await createApplicationService({
+			applicationRepository: repo,
+		}).upsertResidence(1, baseResidence);
+
+		expect(result).toEqual({ success: false, reason: "not_editable" });
 		expect(repo.upsertResidences).not.toHaveBeenCalled();
 	});
 });

@@ -630,6 +630,36 @@ describe("API application flow routes", () => {
 		);
 	});
 
+	it("returns 409 when updating occupants for a submitted application", async () => {
+		const services = makeServices();
+		services.applicationService.updateOccupants = vi.fn(
+			async (): Promise<UpdateOccupantsResult> => ({
+				success: false,
+				reason: "not_editable",
+			}),
+		);
+		const app = createTestApp(services);
+
+		const response = await app.request("/applications/12/occupants", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
+			body: JSON.stringify({
+				smokes: false,
+				additionalAdults: [],
+				children: [],
+				pets: [],
+			}),
+		});
+
+		expect(response.status).toBe(409);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "application_not_editable",
+		});
+	});
+
 	it("deletes a resident", async () => {
 		const services = makeServices();
 		const app = createTestApp(services);
@@ -647,6 +677,27 @@ describe("API application flow routes", () => {
 			12,
 			77,
 		);
+	});
+
+	it("returns 409 when deleting a resident from a submitted application", async () => {
+		const services = makeServices();
+		services.applicationService.deleteResident = vi.fn(
+			async (): Promise<DeleteResidentResult> => ({
+				success: false,
+				reason: "not_editable",
+			}),
+		);
+		const app = createTestApp(services);
+
+		const response = await app.request("/applications/12/residents/77", {
+			method: "DELETE",
+			headers: { Cookie: applicantSessionCookie },
+		});
+
+		expect(response.status).toBe(409);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "application_not_editable",
+		});
 	});
 
 	it("returns an applicant application detail payload", async () => {
@@ -784,6 +835,31 @@ describe("API application flow routes", () => {
 		);
 	});
 
+	it("returns 409 when adding income to a submitted application", async () => {
+		const services = makeServices();
+		services.applicationService.addIncomeSources = vi.fn(
+			async (): Promise<AddIncomeSourcesResult> => ({
+				success: false,
+				reason: "not_editable",
+			}),
+		);
+		const app = createTestApp(services);
+
+		const response = await app.request("/applications/12/income", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
+			body: JSON.stringify([]),
+		});
+
+		expect(response.status).toBe(409);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "application_not_editable",
+		});
+	});
+
 	it("returns 404 when the income route targets a missing application", async () => {
 		const services = makeServices();
 		services.applicationService.addIncomeSources = vi.fn(
@@ -881,6 +957,31 @@ describe("API application flow routes", () => {
 			12,
 			payload,
 		);
+	});
+
+	it("returns 409 when updating residence for a submitted application", async () => {
+		const services = makeServices();
+		services.applicationService.upsertResidence = vi.fn(
+			async (): Promise<UpsertResidenceResult> => ({
+				success: false,
+				reason: "not_editable",
+			}),
+		);
+		const app = createTestApp(services);
+
+		const response = await app.request("/applications/12/residence", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Cookie: applicantSessionCookie,
+			},
+			body: JSON.stringify({ residents: [], notes: "" }),
+		});
+
+		expect(response.status).toBe(409);
+		expect((await response.json()) as { error: string }).toEqual({
+			error: "application_not_editable",
+		});
 	});
 
 	it("submits an application", async () => {

@@ -97,6 +97,10 @@ export function createApplicantApplicationsRoutes({
 						return c.json({ error: "application_not_found" }, 404);
 					}
 
+					if ("reason" in result && result.reason === "not_editable") {
+						return c.json({ error: "application_not_editable" }, 409);
+					}
+
 					if ("errors" in result) {
 						return c.json(
 							{ error: "validation_failed", issues: result.errors },
@@ -123,10 +127,20 @@ export function createApplicantApplicationsRoutes({
 				const result = await applicationService.updateOccupants(id, body);
 
 				if (!result.success) {
-					return c.json(
-						{ error: "validation_failed", issues: result.errors },
-						422,
-					);
+					if ("reason" in result && result.reason === "not_found") {
+						return c.json({ error: "application_not_found" }, 404);
+					}
+
+					if ("reason" in result && result.reason === "not_editable") {
+						return c.json({ error: "application_not_editable" }, 409);
+					}
+
+					if ("errors" in result) {
+						return c.json(
+							{ error: "validation_failed", issues: result.errors },
+							422,
+						);
+					}
 				}
 
 				return c.json({ success: true }, 200);
@@ -149,6 +163,10 @@ export function createApplicantApplicationsRoutes({
 				if (!result.success) {
 					if ("reason" in result && result.reason === "not_found") {
 						return c.json({ error: "application_not_found" }, 404);
+					}
+
+					if ("reason" in result && result.reason === "not_editable") {
+						return c.json({ error: "application_not_editable" }, 409);
 					}
 
 					if ("errors" in result) {
@@ -183,6 +201,10 @@ export function createApplicantApplicationsRoutes({
 						return c.json({ error: "application_not_found" }, 404);
 					}
 
+					if ("reason" in result && result.reason === "not_editable") {
+						return c.json({ error: "application_not_editable" }, 409);
+					}
+
 					if ("errors" in result) {
 						return c.json(
 							{ error: "validation_failed", issues: result.errors },
@@ -205,7 +227,16 @@ export function createApplicantApplicationsRoutes({
 					return c.json({ error: "invalid_id" }, 400);
 				}
 
-				await applicationService.deleteResident(id, residentId);
+				const result = await applicationService.deleteResident(id, residentId);
+
+				if (!result.success) {
+					if (result.reason === "not_found") {
+						return c.json({ error: "application_not_found" }, 404);
+					}
+
+					return c.json({ error: "application_not_editable" }, 409);
+				}
+
 				return c.json({ success: true }, 200);
 			},
 		)

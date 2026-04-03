@@ -250,6 +250,7 @@ export type CreateApplicationResult =
 
 export type UpdateOccupantsResult =
 	| { success: true }
+	| { success: false; reason: "not_found" | "not_editable" }
 	| { success: false; errors: z.ZodIssue[] };
 
 export type SubmitApplicationResult =
@@ -258,20 +259,22 @@ export type SubmitApplicationResult =
 
 export type AddIncomeSourcesResult =
 	| { success: true }
-	| { success: false; reason: "not_found" }
+	| { success: false; reason: "not_found" | "not_editable" }
 	| { success: false; errors: z.ZodIssue[] };
 
 export type UpsertApplicantInfoResult =
 	| { success: true }
-	| { success: false; reason: "not_found" }
+	| { success: false; reason: "not_found" | "not_editable" }
 	| { success: false; errors: z.ZodIssue[] };
 
 export type UpsertResidenceResult =
 	| { success: true }
-	| { success: false; reason: "not_found" }
+	| { success: false; reason: "not_found" | "not_editable" }
 	| { success: false; errors: z.ZodIssue[] };
 
-export type DeleteResidentResult = { success: true };
+export type DeleteResidentResult =
+	| { success: true }
+	| { success: false; reason: "not_found" | "not_editable" };
 
 export type ListSubmittedApplicationsResult = {
 	success: true;
@@ -288,6 +291,10 @@ export type GetApplicationWithDetailsResult =
 	| { success: false; reason: "not_found" };
 
 const noopLogger = pino({ level: "silent" });
+
+function isApplicationEditable(status: string) {
+	return status === "draft" || status === "pending";
+}
 
 export function createApplicationService({
 	applicationRepository,
@@ -331,6 +338,14 @@ export function createApplicationService({
 				return { success: false, reason: "not_found" };
 			}
 
+			if (!isApplicationEditable(app.status)) {
+				logger.warn(
+					{ applicationId, status: app.status },
+					"Cannot update applicant: application is not editable",
+				);
+				return { success: false, reason: "not_editable" };
+			}
+
 			const parsed = upsertApplicantInfoSchema.safeParse(data);
 
 			if (!parsed.success) {
@@ -364,6 +379,24 @@ export function createApplicationService({
 				return { success: false, errors: parsed.error.issues };
 			}
 
+			const app = await applicationRepository.findById(applicationId);
+
+			if (!app) {
+				logger.warn(
+					{ applicationId },
+					"Cannot update occupants: application not found",
+				);
+				return { success: false, reason: "not_found" };
+			}
+
+			if (!isApplicationEditable(app.status)) {
+				logger.warn(
+					{ applicationId, status: app.status },
+					"Cannot update occupants: application is not editable",
+				);
+				return { success: false, reason: "not_editable" };
+			}
+
 			const { additionalAdults, children, pets, smokes } = parsed.data;
 			logger.info(
 				{
@@ -386,6 +419,24 @@ export function createApplicationService({
 			applicationId: number,
 			residentId: number,
 		): Promise<DeleteResidentResult> {
+			const app = await applicationRepository.findById(applicationId);
+
+			if (!app) {
+				logger.warn(
+					{ applicationId, residentId },
+					"Cannot delete resident: application not found",
+				);
+				return { success: false, reason: "not_found" };
+			}
+
+			if (!isApplicationEditable(app.status)) {
+				logger.warn(
+					{ applicationId, residentId, status: app.status },
+					"Cannot delete resident: application is not editable",
+				);
+				return { success: false, reason: "not_editable" };
+			}
+
 			logger.info({ applicationId, residentId }, "Deleting resident");
 			await applicationRepository.deleteResident(applicationId, residentId);
 			logger.info({ applicationId, residentId }, "Resident deleted");
@@ -404,6 +455,14 @@ export function createApplicationService({
 					"Cannot add income sources: application not found",
 				);
 				return { success: false, reason: "not_found" };
+			}
+
+			if (!isApplicationEditable(app.status)) {
+				logger.warn(
+					{ applicationId, status: app.status },
+					"Cannot add income sources: application is not editable",
+				);
+				return { success: false, reason: "not_editable" };
 			}
 
 			const parsed = addIncomeSourcesSchema.safeParse(data);
@@ -462,6 +521,14 @@ export function createApplicationService({
 					"Cannot update residence: application not found",
 				);
 				return { success: false, reason: "not_found" };
+			}
+
+			if (!isApplicationEditable(existing.status)) {
+				logger.warn(
+					{ applicationId, status: existing.status },
+					"Cannot update residence: application is not editable",
+				);
+				return { success: false, reason: "not_editable" };
 			}
 
 			await applicationRepository.upsertResidences(applicationId, parsed.data);
