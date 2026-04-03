@@ -7,7 +7,7 @@
 		"skipLibCheck": true,
 		"noEmit": true,
 		"lib": ["ESNext"],
-		"types": ["node", "bun"],
+		"types": ["node"],
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx",
 		"paths": {
