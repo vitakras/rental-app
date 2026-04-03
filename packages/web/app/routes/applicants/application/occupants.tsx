@@ -1,6 +1,6 @@
 import type { ApplicationWithDetails } from "api";
 import { useState } from "react";
-import { data, redirect, useNavigate, useSubmit } from "react-router";
+import { data, redirect, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
@@ -359,7 +359,6 @@ export default function ApplicationOccupants({
 	loaderData,
 }: Route.ComponentProps) {
 	const submit = useSubmit();
-	const navigate = useNavigate();
 
 	// Occupants
 	const [adults, setAdults] = useState(1 + loaderData.additionalAdults.length);

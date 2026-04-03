@@ -249,12 +249,17 @@ describe("applicationRepository.updateOccupants", () => {
 		);
 
 		expect(existingResident).toBeDefined();
+		if (!existingResident) {
+			throw new Error(
+				"Expected dependent resident to exist after first update",
+			);
+		}
 
 		await repo.updateOccupants(created.id, {
 			smokes: false,
 			additionalAdults: [
 				{
-					existingId: existingResident!.id,
+					existingId: existingResident.id,
 					fullName: "New Adult",
 					dateOfBirth: "1990-06-15",
 					role: "co-applicant",
@@ -274,7 +279,7 @@ describe("applicationRepository.updateOccupants", () => {
 		const names = residents.map((r) => r.fullName);
 		expect(names).toContain("New Adult");
 		expect(names).not.toContain("Old Adult");
-		expect(residents.find((r) => r.id === existingResident!.id)?.role).toBe(
+		expect(residents.find((r) => r.id === existingResident.id)?.role).toBe(
 			"co-applicant",
 		);
 	});

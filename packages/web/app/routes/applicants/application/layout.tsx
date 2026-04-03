@@ -46,9 +46,8 @@ function StepNavigator({
 	onNavigate: (slug: string) => void;
 }) {
 	return (
-		<div
+		<ol
 			className="flex items-start justify-between"
-			role="list"
 			aria-label="Application steps"
 		>
 			{STEPS.map((step, i) => {
@@ -61,11 +60,7 @@ function StepNavigator({
 				const isLast = i === STEPS.length - 1;
 
 				return (
-					<div
-						key={step.slug}
-						className="flex items-start flex-1"
-						role="listitem"
-					>
+					<li key={step.slug} className="flex items-start flex-1">
 						<div className="flex flex-col items-center flex-shrink-0">
 							<button
 								type="button"
@@ -117,10 +112,10 @@ function StepNavigator({
 								}}
 							/>
 						)}
-					</div>
+					</li>
 				);
 			})}
-		</div>
+		</ol>
 	);
 }
 

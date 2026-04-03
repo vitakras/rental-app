@@ -342,7 +342,7 @@ function ResidentIncomeSection({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ApplicationIncome() {
-	const { applicationId, residents } = useLoaderData<typeof clientLoader>();
+	const { residents } = useLoaderData<typeof clientLoader>();
 	const submit = useSubmit();
 
 	const [residentSources, setResidentSources] = useState<

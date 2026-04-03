@@ -103,7 +103,7 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 				{label}
 			</p>
 			<p className="text-sm text-[#1C1A17]">
-				{value && value.trim() ? value : "Not provided"}
+				{value?.trim() ? value : "Not provided"}
 			</p>
 		</div>
 	);

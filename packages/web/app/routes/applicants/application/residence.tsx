@@ -309,11 +309,8 @@ function ResidentResidenceSection({
 }
 
 export default function ApplicationResidence() {
-	const {
-		applicationId,
-		residents,
-		notes: initialNotes,
-	} = useLoaderData<typeof clientLoader>();
+	const { residents, notes: initialNotes } =
+		useLoaderData<typeof clientLoader>();
 	const submit = useSubmit();
 
 	const [residentResidences, setResidentResidences] = useState<
