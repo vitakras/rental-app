@@ -222,6 +222,9 @@ describe("API application flow routes", () => {
 		expect(services.applicationService.createApplication).toHaveBeenCalledTimes(
 			1,
 		);
+		expect(services.applicationService.createApplication).toHaveBeenCalledWith({
+			userId: "user-1",
+		});
 	});
 
 	it("rejects applicant application routes without a session", async () => {
@@ -622,6 +625,7 @@ describe("API application flow routes", () => {
 				children: [],
 				pets: [],
 			},
+			"user-1",
 		);
 	});
 
@@ -671,6 +675,7 @@ describe("API application flow routes", () => {
 		expect(services.applicationService.deleteResident).toHaveBeenCalledWith(
 			12,
 			77,
+			"user-1",
 		);
 	});
 
@@ -727,7 +732,7 @@ describe("API application flow routes", () => {
 		).toEqual({ application });
 		expect(
 			services.applicationService.getApplicationWithDetails,
-		).toHaveBeenCalledWith(12);
+		).toHaveBeenCalledWith(12, "user-1");
 	});
 
 	it("rejects an invalid application id for applicant reads", async () => {
@@ -827,6 +832,7 @@ describe("API application flow routes", () => {
 		expect(services.applicationService.addIncomeSources).toHaveBeenCalledWith(
 			12,
 			payload,
+			"user-1",
 		);
 	});
 
@@ -951,6 +957,7 @@ describe("API application flow routes", () => {
 		expect(services.applicationService.upsertResidence).toHaveBeenCalledWith(
 			12,
 			payload,
+			"user-1",
 		);
 	});
 
@@ -992,6 +999,10 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { applicationId: number }).toEqual({
 			applicationId: 12,
 		});
+		expect(services.applicationService.submitApplication).toHaveBeenCalledWith(
+			12,
+			"user-1",
+		);
 	});
 
 	it("returns 409 when submitting a non-pending application", async () => {
@@ -1069,6 +1080,9 @@ describe("API application flow routes", () => {
 		expect((await response.json()) as { fileId: string }).toEqual({
 			fileId: "file-1",
 		});
+		expect(
+			services.applicationService.getApplicationWithDetails,
+		).toHaveBeenCalledWith(12, "user-1");
 		expect(services.fileService.uploadDocument).toHaveBeenCalledWith({
 			applicationId: 12,
 			residentId: 8,

@@ -81,7 +81,10 @@ export function createApplicantUploadsRoutes({
 			}
 
 			const applicationResult =
-				await applicationService.getApplicationWithDetails(applicationId);
+				await applicationService.getApplicationWithDetails(
+					applicationId,
+					sessionResult.user.id,
+				);
 			if (!applicationResult.success) {
 				return c.json({ error: "application_not_found" }, 404);
 			}

@@ -219,7 +219,9 @@ export interface ApplicationRepository {
 		applicationId: number,
 		input: UpsertApplicantInfoPayload,
 	): Promise<void>;
-	findById(id: number): Promise<{ id: number; status: string } | null>;
+	findById(
+		id: number,
+	): Promise<{ id: number; status: string; createdByUserId: string | null } | null>;
 	submit(id: number): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
 	upsertResidences(
@@ -305,6 +307,13 @@ export function createApplicationService({
 	incomeSourceRepository?: IncomeSourceRepository;
 	logger?: Logger;
 }) {
+	function isOwnedByUser(
+		application: { createdByUserId: string | null },
+		userId?: string,
+	) {
+		return userId === undefined || application.createdByUserId === userId;
+	}
+
 	return {
 		async createApplication(options?: {
 			userId?: string;
@@ -327,12 +336,13 @@ export function createApplicationService({
 		async upsertApplicantInfo(
 			applicationId: number,
 			data: UpsertApplicantInfoData,
+			userId?: string,
 		): Promise<UpsertApplicantInfoResult> {
 			const app = await applicationRepository.findById(applicationId);
 
-			if (!app) {
+			if (!app || !isOwnedByUser(app, userId)) {
 				logger.warn(
-					{ applicationId },
+					{ applicationId, userId },
 					"Cannot update applicant: application not found",
 				);
 				return { success: false, reason: "not_found" };
@@ -368,6 +378,7 @@ export function createApplicationService({
 		async updateOccupants(
 			applicationId: number,
 			data: UpdateOccupantsData,
+			userId?: string,
 		): Promise<UpdateOccupantsResult> {
 			const parsed = updateOccupantsSchema.safeParse(data);
 
@@ -381,9 +392,9 @@ export function createApplicationService({
 
 			const app = await applicationRepository.findById(applicationId);
 
-			if (!app) {
+			if (!app || !isOwnedByUser(app, userId)) {
 				logger.warn(
-					{ applicationId },
+					{ applicationId, userId },
 					"Cannot update occupants: application not found",
 				);
 				return { success: false, reason: "not_found" };
@@ -418,12 +429,13 @@ export function createApplicationService({
 		async deleteResident(
 			applicationId: number,
 			residentId: number,
+			userId?: string,
 		): Promise<DeleteResidentResult> {
 			const app = await applicationRepository.findById(applicationId);
 
-			if (!app) {
+			if (!app || !isOwnedByUser(app, userId)) {
 				logger.warn(
-					{ applicationId, residentId },
+					{ applicationId, residentId, userId },
 					"Cannot delete resident: application not found",
 				);
 				return { success: false, reason: "not_found" };
@@ -446,12 +458,13 @@ export function createApplicationService({
 		async addIncomeSources(
 			applicationId: number,
 			data: AddIncomeSourcesData,
+			userId?: string,
 		): Promise<AddIncomeSourcesResult> {
 			const app = await applicationRepository.findById(applicationId);
 
-			if (!app) {
+			if (!app || !isOwnedByUser(app, userId)) {
 				logger.warn(
-					{ applicationId },
+					{ applicationId, userId },
 					"Cannot add income sources: application not found",
 				);
 				return { success: false, reason: "not_found" };
@@ -502,6 +515,7 @@ export function createApplicationService({
 		async upsertResidence(
 			applicationId: number,
 			input: UpsertResidenceData,
+			userId?: string,
 		): Promise<UpsertResidenceResult> {
 			const parsed = upsertResidenceSchema.safeParse(input);
 
@@ -515,9 +529,9 @@ export function createApplicationService({
 
 			const existing = await applicationRepository.findById(applicationId);
 
-			if (!existing) {
+			if (!existing || !isOwnedByUser(existing, userId)) {
 				logger.warn(
-					{ applicationId },
+					{ applicationId, userId },
 					"Cannot update residence: application not found",
 				);
 				return { success: false, reason: "not_found" };
@@ -555,8 +569,16 @@ export function createApplicationService({
 
 		async getApplicationWithDetails(
 			applicationId: number,
+			userId?: string,
 		): Promise<GetApplicationWithDetailsResult> {
 			logger.info({ applicationId }, "Fetching application with details");
+			const existing = await applicationRepository.findById(applicationId);
+
+			if (!existing || !isOwnedByUser(existing, userId)) {
+				logger.warn({ applicationId, userId }, "Application not found");
+				return { success: false, reason: "not_found" };
+			}
+
 			const application =
 				await applicationRepository.findByIdWithDetails(applicationId);
 
@@ -571,11 +593,15 @@ export function createApplicationService({
 
 		async submitApplication(
 			applicationId: number,
+			userId?: string,
 		): Promise<SubmitApplicationResult> {
 			const app = await applicationRepository.findById(applicationId);
 
-			if (!app) {
-				logger.warn({ applicationId }, "Cannot submit application: not found");
+			if (!app || !isOwnedByUser(app, userId)) {
+				logger.warn(
+					{ applicationId, userId },
+					"Cannot submit application: not found",
+				);
 				return { success: false, reason: "not_found" };
 			}
 

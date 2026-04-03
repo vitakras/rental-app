@@ -1,3 +1,6 @@
+
+
+
 Next Steps
 - Make sure i can still run the app after cloudflare migration
 - Refactor file upload to use upload through my server for up to 10MB

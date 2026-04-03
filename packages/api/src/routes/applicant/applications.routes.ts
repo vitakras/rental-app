@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { createRequireApplicantSession } from "~/auth/applicant-session";
 import { getAuthConfig } from "~/auth/config";
 import { getSessionCookie } from "~/auth/cookies";
@@ -24,6 +24,21 @@ const authConfig = getAuthConfig();
 type ApplicationService = ReturnType<typeof createApplicationService>;
 type AuthService = ReturnType<typeof createAuthService>;
 
+async function getAuthenticatedApplicantUserId(c: Context, authService: AuthService) {
+	const sessionId = getSessionCookie(c, {
+		cookieName: authConfig.cookieName,
+	});
+	const sessionResult = await authService.getSessionUser(sessionId ?? "");
+	if (!sessionResult.success) {
+		return {
+			success: false as const,
+			response: c.json({ error: "unauthorized" }, 401),
+		};
+	}
+
+	return { success: true as const, userId: sessionResult.user.id };
+}
+
 export function createApplicantApplicationsRoutes({
 	authService,
 	applicationService,
@@ -34,26 +49,24 @@ export function createApplicantApplicationsRoutes({
 	return new Hono()
 		.use("*", createRequireApplicantSession({ authService }))
 		.get("/", async (c) => {
-			const sessionId = getSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-			});
-			const sessionResult = await authService.getSessionUser(sessionId ?? "");
-			if (!sessionResult.success) {
-				return c.json({ error: "unauthorized" }, 401);
+			const authResult = await getAuthenticatedApplicantUserId(c, authService);
+			if (!authResult.success) {
+				return authResult.response;
 			}
 			const result = await applicationService.listApplicationsByUser(
-				sessionResult.user.id,
+				authResult.userId,
 			);
 			return c.json({ applications: result.applications }, 200);
 		})
 		.post("/", async (c) => {
-			const sessionId = getSessionCookie(c, {
-				cookieName: authConfig.cookieName,
-			});
-			const sessionResult = await authService.getSessionUser(sessionId ?? "");
-			const userId = sessionResult.success ? sessionResult.user.id : undefined;
+			const authResult = await getAuthenticatedApplicantUserId(c, authService);
+			if (!authResult.success) {
+				return authResult.response;
+			}
 
-			const result = await applicationService.createApplication({ userId });
+			const result = await applicationService.createApplication({
+				userId: authResult.userId,
+			});
 			if (!result.success) {
 				return c.json(
 					{ error: "validation_failed", issues: result.errors },
@@ -70,7 +83,15 @@ export function createApplicantApplicationsRoutes({
 				return c.json({ error: "invalid_application_id" }, 400);
 			}
 
-			const result = await applicationService.getApplicationWithDetails(id);
+			const authResult = await getAuthenticatedApplicantUserId(c, authService);
+			if (!authResult.success) {
+				return authResult.response;
+			}
+
+			const result = await applicationService.getApplicationWithDetails(
+				id,
+				authResult.userId,
+			);
 
 			if (!result.success) {
 				return c.json({ error: "application_not_found" }, 404);
@@ -90,7 +111,16 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as UpsertApplicantInfoData;
-				const result = await applicationService.upsertApplicantInfo(id, body);
+				const authResult = await getAuthenticatedApplicantUserId(c, authService);
+				if (!authResult.success) {
+					return authResult.response;
+				}
+
+				const result = await applicationService.upsertApplicantInfo(
+					id,
+					body,
+					authResult.userId,
+				);
 
 				if (!result.success) {
 					if ("reason" in result && result.reason === "not_found") {
@@ -124,7 +154,16 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as UpdateOccupantsData;
-				const result = await applicationService.updateOccupants(id, body);
+				const authResult = await getAuthenticatedApplicantUserId(c, authService);
+				if (!authResult.success) {
+					return authResult.response;
+				}
+
+				const result = await applicationService.updateOccupants(
+					id,
+					body,
+					authResult.userId,
+				);
 
 				if (!result.success) {
 					if ("reason" in result && result.reason === "not_found") {
@@ -158,7 +197,16 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as AddIncomeSourcesData;
-				const result = await applicationService.addIncomeSources(id, body);
+				const authResult = await getAuthenticatedApplicantUserId(c, authService);
+				if (!authResult.success) {
+					return authResult.response;
+				}
+
+				const result = await applicationService.addIncomeSources(
+					id,
+					body,
+					authResult.userId,
+				);
 
 				if (!result.success) {
 					if ("reason" in result && result.reason === "not_found") {
@@ -194,7 +242,16 @@ export function createApplicantApplicationsRoutes({
 				}
 
 				const body = c.req.valid("json") as UpsertResidenceData;
-				const result = await applicationService.upsertResidence(id, body);
+				const authResult = await getAuthenticatedApplicantUserId(c, authService);
+				if (!authResult.success) {
+					return authResult.response;
+				}
+
+				const result = await applicationService.upsertResidence(
+					id,
+					body,
+					authResult.userId,
+				);
 
 				if (!result.success) {
 					if ("reason" in result && result.reason === "not_found") {
@@ -227,7 +284,16 @@ export function createApplicantApplicationsRoutes({
 					return c.json({ error: "invalid_id" }, 400);
 				}
 
-				const result = await applicationService.deleteResident(id, residentId);
+				const authResult = await getAuthenticatedApplicantUserId(c, authService);
+				if (!authResult.success) {
+					return authResult.response;
+				}
+
+				const result = await applicationService.deleteResident(
+					id,
+					residentId,
+					authResult.userId,
+				);
 
 				if (!result.success) {
 					if (result.reason === "not_found") {
@@ -247,7 +313,15 @@ export function createApplicantApplicationsRoutes({
 				return c.json({ error: "invalid_application_id" }, 400);
 			}
 
-			const result = await applicationService.submitApplication(id);
+			const authResult = await getAuthenticatedApplicantUserId(c, authService);
+			if (!authResult.success) {
+				return authResult.response;
+			}
+
+			const result = await applicationService.submitApplication(
+				id,
+				authResult.userId,
+			);
 
 			if (!result.success) {
 				if (result.reason === "not_found") {
