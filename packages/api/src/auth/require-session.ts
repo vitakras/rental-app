@@ -1,13 +1,10 @@
 import type { Context, MiddlewareHandler } from "hono";
-import { getAuthConfig } from "~/auth/config";
 import { getSessionCookie } from "~/auth/cookies";
 import { type AuthContextEnv, setAuthContext } from "~/auth/session-context";
 import type { UserGlobalRole } from "~/db/schema";
 import type { createAuthService } from "~/services/auth.service";
 
 type AuthService = ReturnType<typeof createAuthService>;
-
-const authConfig = getAuthConfig();
 
 function unauthorized(c: Context<AuthContextEnv>) {
 	return c.json({ error: "unauthorized" }, 401);
@@ -23,9 +20,7 @@ export function createRequireSession({
 	role?: UserGlobalRole;
 }): MiddlewareHandler<AuthContextEnv> {
 	return async (c, next) => {
-		const sessionId = getSessionCookie(c, {
-			cookieName: authConfig.cookieName,
-		});
+		const sessionId = getSessionCookie(c);
 
 		if (!sessionId) {
 			return unauthorized(c);

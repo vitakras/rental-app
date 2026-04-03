@@ -1,4 +1,4 @@
-import { getAuthConfig } from "~/auth/config";
+import { authConfig } from "~/auth/config";
 import logger from "~/cf-logger";
 import { createDb } from "~/db";
 import { applicationRepository } from "~/repositories/application.repository";
@@ -29,8 +29,6 @@ export function createCfServices(env: CloudflareBindings): AppServices {
 	};
 
 	const blobStorage = createR2BlobStorage(env.STORAGE);
-	const authConfig = getAuthConfig();
-
 	return {
 		authService: createAuthService({
 			userRepository: repositories.userRepository,

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
-import { getAuthConfig } from "~/auth/config";
+import { authConfig } from "~/auth/config";
 import { setSessionCookie } from "~/auth/cookies";
 import { createRequireSession } from "~/auth/require-session";
 import { type AuthContextEnv, getAuthContext } from "~/auth/session-context";
@@ -12,8 +12,6 @@ import {
 } from "~/services/auth.service";
 
 type AuthService = ReturnType<typeof createAuthService>;
-const authConfig = getAuthConfig();
-
 function getClientIp(c: Context) {
 	const forwardedFor = c.req.header("x-forwarded-for");
 	return forwardedFor?.split(",")[0]?.trim() || null;

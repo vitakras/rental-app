@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { getAuthConfig } from "~/auth/config";
+import { authConfig } from "~/auth/config";
 import { createApplicantApplicationsRoutes } from "~/routes/applicant/applications.routes";
 import { createApplicantUploadsRoutes } from "~/routes/applicant/uploads.routes";
 import { createAuthCodeRoutes } from "~/routes/auth/code.routes";
@@ -11,7 +11,7 @@ import { createLandlordSignupRoutes } from "~/routes/landlord/signup.routes";
 import type { AppServices } from "~/runtime-services";
 
 const allowedCorsOrigins = new Set([
-	new URL(getAuthConfig().webBaseUrl).origin,
+	new URL(authConfig.webBaseUrl).origin,
 ]);
 
 function resolveCorsOrigin(origin: string) {
