@@ -3,10 +3,15 @@ import type {
 	ApplicationDocumentType,
 	ApplicationWithDetails,
 } from "api";
-import { data, useLoaderData, useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { data, useFetcher, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
-import { type ExistingFile, useFileUpload } from "~/hooks/use-file-upload";
 import { apiClient } from "~/lib/api";
+import {
+	ACCEPT_ATTRIBUTE,
+	validateFile,
+	validationMessage,
+} from "~/lib/upload-validation";
 import type { Route } from "./+types/documents";
 
 export function meta() {
@@ -25,11 +30,28 @@ interface DocumentSlot {
 	existingFiles: ExistingFile[];
 }
 
+interface ExistingFile {
+	fileId: string;
+	filename: string;
+}
+
 interface ResidentSlots {
 	id: number;
 	fullName: string;
 	slots: DocumentSlot[];
 }
+
+interface SlotFileEntry {
+	clientId: string;
+	filename: string;
+	file?: File;
+	fileId?: string;
+	isExisting: boolean;
+}
+
+type UploadSuccess = { ok: true; fileId: string };
+type UploadFailure = { ok: false; errorMessage: string };
+type ClientActionResult = UploadSuccess | UploadFailure | { ok: true };
 
 // ── Loader ────────────────────────────────────────────────────────────────────
 
@@ -123,6 +145,59 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	return { applicationId: id, residents };
 }
 
+// ── Action ────────────────────────────────────────────────────────────────────
+
+export async function clientAction({
+	request,
+	params,
+}: Route.ClientActionArgs): Promise<ClientActionResult> {
+	const id = Number(params.id);
+	if (!Number.isInteger(id) || id <= 0) throw data(null, { status: 404 });
+
+	const formData = await request.formData();
+	const intent = formData.get("intent") as string;
+
+	if (intent === "delete") {
+		const fileId = formData.get("fileId") as string;
+		await apiClient.applications[":id"].documents[":fileId"].$delete({
+			param: { id: String(id), fileId },
+		});
+		return { ok: true };
+	}
+
+	// intent === "upload"
+	const file = formData.get("file") as File;
+
+	const failure = validateFile(file);
+	if (failure) {
+		return { ok: false, errorMessage: validationMessage(failure) };
+	}
+
+	const res = await apiClient.applications[":id"].documents.$post(
+		{ param: { id: String(id) } },
+		{ init: { body: formData } },
+	);
+
+	if (!res.ok) {
+		const payload = (await res.json().catch(() => null)) as {
+			error?: string;
+		} | null;
+		if (payload?.error === "file_too_large") {
+			return { ok: false, errorMessage: "File must be 10 MB or smaller." };
+		}
+		if (payload?.error === "unsupported_file_type") {
+			return {
+				ok: false,
+				errorMessage: "Only PDF, PNG, and JPG files are allowed.",
+			};
+		}
+		return { ok: false, errorMessage: "Upload failed. Please try again." };
+	}
+
+	const { fileId } = (await res.json()) as { fileId: string };
+	return { ok: true, fileId };
+}
+
 // ── Shared primitives ─────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -136,6 +211,212 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 	);
 }
 
+// ── File row ──────────────────────────────────────────────────────────────────
+
+function FileRow({
+	entry,
+	applicationId: _applicationId,
+	slot,
+	onRemove,
+}: {
+	entry: SlotFileEntry;
+	applicationId: number;
+	slot: Pick<DocumentSlot, "residentId" | "category" | "documentType">;
+	onRemove: (clientId: string) => void;
+}) {
+	const fetcher = useFetcher<typeof clientAction>({
+		key: `file-${entry.clientId}`,
+	});
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional one-shot effect on mount
+	useEffect(() => {
+		if (!entry.file || entry.isExisting) return;
+		const fd = new FormData();
+		fd.set("intent", "upload");
+		fd.set("file", entry.file);
+		fd.set("residentId", String(slot.residentId));
+		fd.set("category", slot.category);
+		fd.set("documentType", slot.documentType);
+		fetcher.submit(fd, { method: "post", encType: "multipart/form-data" });
+	}, []);
+
+	function handleDelete() {
+		const result = fetcher.data as ClientActionResult | undefined;
+		const fileId =
+			entry.fileId ??
+			(result?.ok === true && "fileId" in result ? result.fileId : undefined);
+		onRemove(entry.clientId);
+		if (fileId) {
+			const fd = new FormData();
+			fd.set("intent", "delete");
+			fd.set("fileId", fileId);
+			fetcher.submit(fd, { method: "post" });
+		}
+	}
+
+	function handleRetry() {
+		if (!entry.file) return;
+		const fd = new FormData();
+		fd.set("intent", "upload");
+		fd.set("file", entry.file);
+		fd.set("residentId", String(slot.residentId));
+		fd.set("category", slot.category);
+		fd.set("documentType", slot.documentType);
+		fetcher.submit(fd, { method: "post", encType: "multipart/form-data" });
+	}
+
+	const isUploading = !entry.isExisting && fetcher.state !== "idle";
+	const result = fetcher.data as ClientActionResult | undefined;
+	const isError = result !== undefined && !result.ok;
+	const errorMessage = isError
+		? (result as UploadFailure).errorMessage
+		: undefined;
+
+	if (isError) {
+		return (
+			<li className="rounded-xl bg-[#FDF0EE] border border-[#F0C4BC] px-3 py-2.5">
+				<div className="flex items-start gap-2.5">
+					<svg
+						aria-hidden="true"
+						className="text-[#C45A4A] flex-shrink-0 mt-0.5"
+						width="14"
+						height="14"
+						viewBox="0 0 14 14"
+						fill="none"
+					>
+						<circle
+							cx="7"
+							cy="7"
+							r="6.5"
+							fill="#C45A4A"
+							fillOpacity="0.12"
+							stroke="#C45A4A"
+							strokeWidth="1.25"
+						/>
+						<path
+							d="M7 4v3.5M7 9.5v.5"
+							stroke="#C45A4A"
+							strokeWidth="1.5"
+							strokeLinecap="round"
+						/>
+					</svg>
+					<div className="flex-1 min-w-0">
+						<p
+							className="text-xs font-medium text-[#9B3E31] truncate"
+							style={{ fontFamily: "'DM Sans', sans-serif" }}
+						>
+							{entry.filename}
+						</p>
+						<p
+							className="text-xs text-[#B05040] mt-0.5"
+							style={{ fontFamily: "'DM Sans', sans-serif" }}
+						>
+							{errorMessage ?? "Upload failed."}
+						</p>
+					</div>
+					<div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+						<button
+							type="button"
+							onClick={handleRetry}
+							className="text-xs font-medium text-[#C45A4A] hover:text-[#9B3E31] transition-colors underline underline-offset-2"
+							style={{ fontFamily: "'DM Sans', sans-serif" }}
+						>
+							Retry
+						</button>
+						<button
+							type="button"
+							aria-label="Dismiss"
+							onClick={() => onRemove(entry.clientId)}
+							className="text-[#C45A4A] hover:text-[#9B3E31] transition-colors"
+						>
+							<svg
+								aria-hidden="true"
+								width="12"
+								height="12"
+								viewBox="0 0 12 12"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeLinecap="round"
+							>
+								<path d="M1 1l10 10M11 1L1 11" />
+							</svg>
+						</button>
+					</div>
+				</div>
+			</li>
+		);
+	}
+
+	return (
+		<li className="flex items-center gap-2">
+			{isUploading ? (
+				<svg
+					aria-hidden="true"
+					className="animate-spin text-[#C4714A] flex-shrink-0"
+					width="14"
+					height="14"
+					viewBox="0 0 14 14"
+					fill="none"
+				>
+					<circle
+						cx="7"
+						cy="7"
+						r="5.5"
+						stroke="currentColor"
+						strokeWidth="1.5"
+						strokeDasharray="22"
+						strokeDashoffset="8"
+						strokeLinecap="round"
+					/>
+				</svg>
+			) : (
+				<svg
+					aria-hidden="true"
+					className="text-[#5A9E6F] flex-shrink-0"
+					width="14"
+					height="14"
+					viewBox="0 0 14 14"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				>
+					<path d="M2 7l4 4 6-6" />
+				</svg>
+			)}
+			<span
+				className="text-sm truncate max-w-[240px] text-[#1C1A17]"
+				style={{ fontFamily: "'DM Sans', sans-serif" }}
+			>
+				{entry.filename}
+			</span>
+			{!isUploading && (
+				<button
+					type="button"
+					aria-label="Remove"
+					onClick={handleDelete}
+					className="ml-auto flex-shrink-0 text-[#7A7268] hover:text-[#C45A4A] transition-colors"
+				>
+					<svg
+						aria-hidden="true"
+						width="12"
+						height="12"
+						viewBox="0 0 12 12"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+					>
+						<path d="M1 1l10 10M11 1L1 11" />
+					</svg>
+				</button>
+			)}
+		</li>
+	);
+}
+
 // ── Slot card ─────────────────────────────────────────────────────────────────
 
 function SlotCard({
@@ -145,16 +426,36 @@ function SlotCard({
 	slot: DocumentSlot;
 	applicationId: number;
 }) {
-	const { uploadedFiles, uploadFiles, removeFile, retryFile } = useFileUpload(
-		applicationId,
-		slot,
-		slot.existingFiles,
+	const [entries, setEntries] = useState<SlotFileEntry[]>(() =>
+		slot.existingFiles.map((f) => ({
+			clientId: f.fileId,
+			filename: f.filename,
+			fileId: f.fileId,
+			isExisting: true,
+		})),
 	);
-	const hasUploads = uploadedFiles.length > 0;
+
+	function handleFilesSelected(files: FileList) {
+		setEntries((prev) => [
+			...prev,
+			...Array.from(files).map((file) => ({
+				clientId: Math.random().toString(36).slice(2),
+				filename: file.name,
+				file,
+				isExisting: false,
+			})),
+		]);
+	}
+
+	function removeEntry(clientId: string) {
+		setEntries((prev) => prev.filter((e) => e.clientId !== clientId));
+	}
+
+	const hasEntries = entries.length > 0;
 
 	return (
 		<div className="bg-white rounded-2xl p-5 mb-3 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
-			<div className={hasUploads ? "mb-3" : "mb-4"}>
+			<div className={hasEntries ? "mb-3" : "mb-4"}>
 				<p
 					className="text-sm font-medium text-[#1C1A17]"
 					style={{ fontFamily: "'DM Sans', sans-serif" }}
@@ -171,144 +472,17 @@ function SlotCard({
 				)}
 			</div>
 
-			{hasUploads && (
+			{hasEntries && (
 				<ul className="mb-3 space-y-1.5">
-					{uploadedFiles.map((file) => {
-						if (file.status === "error") {
-							return (
-								<li
-									key={file.clientId}
-									className="rounded-xl bg-[#FDF0EE] border border-[#F0C4BC] px-3 py-2.5"
-								>
-									<div className="flex items-start gap-2.5">
-										<svg
-											aria-hidden="true"
-											className="text-[#C45A4A] flex-shrink-0 mt-0.5"
-											width="14"
-											height="14"
-											viewBox="0 0 14 14"
-											fill="none"
-										>
-											<circle cx="7" cy="7" r="6.5" fill="#C45A4A" fillOpacity="0.12" stroke="#C45A4A" strokeWidth="1.25" />
-											<path d="M7 4v3.5M7 9.5v.5" stroke="#C45A4A" strokeWidth="1.5" strokeLinecap="round" />
-										</svg>
-										<div className="flex-1 min-w-0">
-											<p
-												className="text-xs font-medium text-[#9B3E31] truncate"
-												style={{ fontFamily: "'DM Sans', sans-serif" }}
-											>
-												{file.filename}
-											</p>
-											<p
-												className="text-xs text-[#B05040] mt-0.5"
-												style={{ fontFamily: "'DM Sans', sans-serif" }}
-											>
-												{file.errorMessage ?? "Upload failed."}
-											</p>
-										</div>
-										<div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
-											<button
-												type="button"
-												onClick={() => retryFile(file.clientId)}
-												className="text-xs font-medium text-[#C45A4A] hover:text-[#9B3E31] transition-colors underline underline-offset-2"
-												style={{ fontFamily: "'DM Sans', sans-serif" }}
-											>
-												Retry
-											</button>
-											<button
-												type="button"
-												aria-label="Dismiss"
-												onClick={() => removeFile(file.clientId)}
-												className="text-[#C45A4A] hover:text-[#9B3E31] transition-colors"
-											>
-												<svg
-													aria-hidden="true"
-													width="12"
-													height="12"
-													viewBox="0 0 12 12"
-													fill="none"
-													stroke="currentColor"
-													strokeWidth="2"
-													strokeLinecap="round"
-												>
-													<path d="M1 1l10 10M11 1L1 11" />
-												</svg>
-											</button>
-										</div>
-									</div>
-								</li>
-							);
-						}
-
-						return (
-							<li key={file.clientId} className="flex items-center gap-2">
-								{file.status === "uploading" && (
-									<svg
-										aria-hidden="true"
-										className="animate-spin text-[#C4714A] flex-shrink-0"
-										width="14"
-										height="14"
-										viewBox="0 0 14 14"
-										fill="none"
-									>
-										<circle
-											cx="7"
-											cy="7"
-											r="5.5"
-											stroke="currentColor"
-											strokeWidth="1.5"
-											strokeDasharray="22"
-											strokeDashoffset="8"
-											strokeLinecap="round"
-										/>
-									</svg>
-								)}
-								{file.status === "done" && (
-									<svg
-										aria-hidden="true"
-										className="text-[#5A9E6F] flex-shrink-0"
-										width="14"
-										height="14"
-										viewBox="0 0 14 14"
-										fill="none"
-										stroke="currentColor"
-										strokeWidth="2"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-									>
-										<path d="M2 7l4 4 6-6" />
-									</svg>
-								)}
-								<span
-									className="text-sm truncate max-w-[240px] text-[#1C1A17]"
-									style={{ fontFamily: "'DM Sans', sans-serif" }}
-								>
-									{file.filename}
-								</span>
-								{file.status === "done" && (
-									<button
-										type="button"
-										aria-label="Remove"
-										onClick={() => removeFile(file.clientId)}
-										className="ml-auto flex-shrink-0 text-[#7A7268] hover:text-[#C45A4A] transition-colors"
-									>
-										<svg
-											aria-hidden="true"
-											width="12"
-											height="12"
-											viewBox="0 0 12 12"
-											fill="none"
-											stroke="currentColor"
-											strokeWidth="2"
-											strokeLinecap="round"
-										>
-											<path d="M1 1l10 10M11 1L1 11" />
-										</svg>
-									</button>
-								)}
-							</li>
-						);
-					})}
+					{entries.map((entry) => (
+						<FileRow
+							key={entry.clientId}
+							entry={entry}
+							applicationId={applicationId}
+							slot={slot}
+							onRemove={removeEntry}
+						/>
+					))}
 				</ul>
 			)}
 
@@ -316,10 +490,10 @@ function SlotCard({
 				<input
 					type="file"
 					multiple
-					accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+					accept={ACCEPT_ATTRIBUTE}
 					className="sr-only"
 					onChange={(e) => {
-						if (e.target.files?.length) uploadFiles(e.target.files);
+						if (e.target.files?.length) handleFilesSelected(e.target.files);
 						e.target.value = "";
 					}}
 				/>
@@ -336,7 +510,7 @@ function SlotCard({
 					<path d="M7 1v12M1 7h12" />
 				</svg>
 				<span style={{ fontFamily: "'DM Sans', sans-serif" }}>
-					{hasUploads ? "Add more" : "Add document"}
+					{hasEntries ? "Add more" : "Add document"}
 				</span>
 			</label>
 		</div>
@@ -352,7 +526,7 @@ export default function ApplicationDocuments() {
 	return (
 		<>
 			{/* ── Scrollable content ── */}
-			<div className="max-w-lg mx-auto px-5 pt-24 pb-36">
+			<div className="max-w-lg mx-auto px-5 pt-0 pb-36">
 				{/* Heading */}
 				<div className="mt-8 mb-8">
 					<h1
@@ -387,8 +561,8 @@ export default function ApplicationDocuments() {
 			</div>
 
 			{/* ── Fixed footer CTA ── */}
-			<div className="fixed bottom-0 left-0 right-0 pointer-events-none z-20">
-				<div className="bg-gradient-to-t from-[#F5F0E8] via-[#F5F0E8]/95 to-transparent pt-8 pb-10 px-5 pointer-events-auto">
+			<div className="fixed bottom-0 left-0 right-0 z-20 bg-[#F5F0E8] border-t border-[#E8E1D9] shadow-[0_-4px_12px_rgba(28,26,23,0.06)]">
+				<div className="pt-4 pb-10 px-5">
 					<div className="max-w-lg mx-auto">
 						<Button
 							variant="continue"
@@ -401,7 +575,7 @@ export default function ApplicationDocuments() {
 							className="text-center text-xs text-[#7A7268] mt-3"
 							style={{ fontFamily: "'DM Sans', sans-serif" }}
 						>
-							You can skip this step and add documents later
+							Adding documents strengthens your application
 						</p>
 					</div>
 				</div>

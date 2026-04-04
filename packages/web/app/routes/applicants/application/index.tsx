@@ -178,7 +178,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 
 	return (
 		<>
-			<div className="max-w-lg mx-auto px-5 pt-24 pb-40">
+			<div className="max-w-lg mx-auto px-5 pt-0 pb-40">
 				<div className="mt-8 mb-8">
 					<p className="text-xs text-[#C4714A] tracking-widest uppercase font-medium mb-3">
 						Application #{applicationId}
@@ -513,8 +513,8 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 				</div>
 			</div>
 
-			<div className="fixed bottom-0 left-0 right-0 pointer-events-none z-20">
-				<div className="bg-gradient-to-t from-[#F5F0E8] via-[#F5F0E8]/95 to-transparent pt-8 pb-10 px-5 pointer-events-auto">
+			<div className="fixed bottom-0 left-0 right-0 z-20 bg-[#F5F0E8] border-t border-[#E8E1D9] shadow-[0_-4px_12px_rgba(28,26,23,0.06)]">
+				<div className="pt-4 pb-10 px-5">
 					<div className="max-w-lg mx-auto">
 						{isSubmittable ? (
 							<Form method="post">

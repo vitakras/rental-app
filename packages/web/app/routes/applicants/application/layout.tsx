@@ -16,14 +16,14 @@ const STEPS = [
 	{ slug: "", label: "Review" },
 ] as const;
 
-// ── Check icon ────────────────────────────────────────────────────────────────
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
 function CheckIcon() {
 	return (
 		<svg
 			aria-hidden="true"
-			width="14"
-			height="14"
+			width="13"
+			height="13"
 			viewBox="0 0 14 14"
 			fill="none"
 			stroke="currentColor"
@@ -32,6 +32,24 @@ function CheckIcon() {
 			strokeLinejoin="round"
 		>
 			<path d="M2.5 7l3.5 3.5 5.5-6" />
+		</svg>
+	);
+}
+
+function ChevronLeftIcon({ size = 16 }: { size?: number }) {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 16 16"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="1.75"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<path d="M10 3L5 8l5 5" />
 		</svg>
 	);
 }
@@ -60,7 +78,7 @@ function StepNavigator({
 				const isLast = i === STEPS.length - 1;
 
 				return (
-					<li key={step.slug} className="flex items-start flex-1">
+					<li key={step.slug} className="flex items-start flex-1 min-w-0">
 						<div className="flex flex-col items-center flex-shrink-0">
 							<button
 								type="button"
@@ -68,7 +86,7 @@ function StepNavigator({
 								aria-label={`${step.label}${state === "completed" ? " (completed)" : ""}`}
 								onClick={() => onNavigate(step.slug)}
 								className={cn(
-									"w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300",
+									"w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-300",
 									"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4714A]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F0E8]",
 									state === "completed" && "bg-[#C4714A] text-white",
 									state === "current" &&
@@ -82,7 +100,7 @@ function StepNavigator({
 								) : (
 									<span
 										className={cn(
-											"text-sm leading-none",
+											"text-xs leading-none",
 											state === "current" && "font-semibold",
 										)}
 									>
@@ -93,7 +111,7 @@ function StepNavigator({
 
 							<span
 								className={cn(
-									"mt-1.5 text-[10px] tracking-wide text-center leading-tight",
+									"mt-1.5 text-[9px] sm:text-[10px] tracking-wide text-center leading-tight",
 									state === "current" && "text-[#1C1A17] font-semibold",
 									state === "completed" && "text-[#7A7268] font-medium",
 									state === "upcoming" && "text-[#B5AFA8]",
@@ -105,7 +123,7 @@ function StepNavigator({
 
 						{!isLast && (
 							<div
-								className="flex-1 h-[1.5px] mt-[22px] mx-1 transition-colors duration-500"
+								className="flex-1 h-[1.5px] mt-[18px] sm:mt-[22px] mx-0.5 sm:mx-1 transition-colors duration-500"
 								style={{
 									backgroundColor:
 										state === "completed" ? "#C4714A" : "#E8E1D9",
@@ -132,36 +150,46 @@ export default function ApplicationShell() {
 			? location.pathname.endsWith(`/${step.slug}`)
 			: location.pathname === basePath,
 	);
+	const currentStep = STEPS[currentIndex];
 
 	return (
 		<div
 			className="min-h-screen bg-[#F5F0E8]"
 			style={{ fontFamily: "'DM Sans', sans-serif" }}
 		>
-			<div className="fixed top-0 left-0 right-0 z-30 bg-[#F5F0E8]/90 backdrop-blur-sm border-b border-[#E8E1D9]/60">
-				<div className="max-w-lg mx-auto px-5 pt-3 pb-4">
-					<div className="flex items-center justify-between mb-3">
-						<Link
-							to="/a"
-							className="flex items-center gap-1 text-xs text-[#7A7268] hover:text-[#1C1A17] transition-colors"
-							style={{ fontFamily: "'DM Sans', sans-serif" }}
-						>
-							<svg
-								width="13"
-								height="13"
-								viewBox="0 0 13 13"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="1.5"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-								aria-hidden="true"
-							>
-								<path d="M8.5 2.5l-5 4 5 4" />
-							</svg>
-							My Applications
-						</Link>
-					</div>
+			{/* ── Header ── */}
+			<div className="fixed top-0 left-0 right-0 z-30 bg-[#F5F0E8]/90 backdrop-blur-sm border-b border-[#E8E1D9]">
+				{/* Top row — matches home page header */}
+				<div className="max-w-lg mx-auto px-5 py-4 flex items-center justify-between">
+					<span
+						className="text-[#C4714A] text-sm"
+						style={{
+							fontFamily: "'Fraunces', serif",
+							fontStyle: "italic",
+							fontWeight: 300,
+						}}
+					>
+						Find Your Home
+					</span>
+					<Link
+						to="/a"
+						className="flex items-center gap-1 text-xs text-[#7A7268] hover:text-[#1C1A17] transition-colors"
+						style={{ fontFamily: "'DM Sans', sans-serif" }}
+					>
+						<ChevronLeftIcon size={13} />
+						My Applications
+					</Link>
+				</div>
+
+				{/* Divider */}
+				<div className="border-t border-[#E8E1D9]/60" />
+
+				{/* Step progress row */}
+				<div className="max-w-lg mx-auto px-5 pt-3 pb-3">
+					{/* Current step label on mobile */}
+					<p className="sm:hidden text-[10px] uppercase tracking-widest text-[#C4714A] font-semibold mb-2 text-center">
+						{currentStep?.label}
+					</p>
 					<StepNavigator
 						currentIndex={currentIndex}
 						onNavigate={(slug) =>
@@ -171,7 +199,9 @@ export default function ApplicationShell() {
 				</div>
 			</div>
 
-			<Outlet />
+			<div className="pt-36">
+				<Outlet />
+			</div>
 		</div>
 	);
 }

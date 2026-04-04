@@ -432,7 +432,7 @@ export default function ApplicationResidence() {
 
 	return (
 		<>
-			<div className="max-w-lg mx-auto px-5 pt-24 pb-36">
+			<div className="max-w-lg mx-auto px-5 pt-0 pb-36">
 				<div className="mt-8 mb-8">
 					<h1
 						className="text-[1.55rem] leading-[1.25] text-[#1C1A17] mb-3"
@@ -444,8 +444,7 @@ export default function ApplicationResidence() {
 						className="text-[#7A7268] text-sm leading-relaxed"
 						style={{ fontFamily: "'DM Sans', sans-serif" }}
 					>
-						Add addresses for the past 2 years for each applicant. You can skip
-						this step if you prefer.
+						Add addresses for the past 2 years for each applicant.
 					</p>
 				</div>
 
@@ -467,13 +466,18 @@ export default function ApplicationResidence() {
 				))}
 			</div>
 
-			<div className="fixed bottom-0 left-0 right-0 pointer-events-none z-20">
-				<div className="bg-gradient-to-t from-[#F5F0E8] via-[#F5F0E8]/95 to-transparent pt-8 pb-10 px-5 pointer-events-auto">
+			<div className="fixed bottom-0 left-0 right-0 z-20 bg-[#F5F0E8] border-t border-[#E8E1D9] shadow-[0_-4px_12px_rgba(28,26,23,0.06)]">
+				<div className="pt-4 pb-10 px-5">
 					<div className="max-w-lg mx-auto">
 						<Button variant="continue" type="button" onClick={handleContinue}>
 							Continue
 						</Button>
-
+						<p
+							className="text-center text-xs text-[#7A7268] mt-3"
+							style={{ fontFamily: "'DM Sans', sans-serif" }}
+						>
+							Your progress is saved automatically
+						</p>
 					</div>
 				</div>
 			</div>
