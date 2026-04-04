@@ -1,4 +1,8 @@
-import type { ApplicationWithDetails } from "api";
+import type {
+	ApplicationDocumentDetail,
+	ApplicationWithDetails,
+	ResidenceDetail,
+} from "api";
 import { Link } from "react-router";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
@@ -25,7 +29,7 @@ export function meta({ data }: Route.MetaArgs) {
 	];
 }
 
-function formatDate(dateStr: string | null): string {
+function formatDate(dateStr: string | null | undefined): string {
 	if (!dateStr) return "—";
 	const normalized = dateStr.length > 10 ? dateStr.replace(" ", "T") : dateStr;
 	return new Intl.DateTimeFormat("en-US", {
@@ -54,12 +58,48 @@ const INCOME_TYPE_LABELS: Record<string, string> = {
 	other: "Other",
 };
 
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+	government_id: "Government ID",
+	paystub: "Paystubs",
+	employment_letter: "Employment letter",
+	bank_statement: "Bank statements",
+	other: "Supporting document",
+};
+
 function formatCurrency(cents: number): string {
 	return new Intl.NumberFormat("en-US", {
 		style: "currency",
 		currency: "USD",
 		maximumFractionDigits: 0,
 	}).format(cents / 100);
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+	return (
+		<p className="text-[10px] text-[#C4714A] tracking-widest uppercase font-medium mb-3">
+			{children}
+		</p>
+	);
+}
+
+function Field({
+	label,
+	value,
+	fallback,
+}: {
+	label: string;
+	value?: string | null;
+	fallback?: string;
+}) {
+	if (!value && fallback === undefined) return null;
+	return (
+		<div>
+			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
+				{label}
+			</p>
+			<p className="text-sm text-[#1C1A17]">{value || fallback}</p>
+		</div>
+	);
 }
 
 function IncomeSection({
@@ -72,6 +112,8 @@ function IncomeSection({
 		titleOrOccupation?: string | null;
 		monthlyAmountCents: number;
 		startDate: string;
+		endDate?: string | null;
+		notes?: string | null;
 	}[];
 }) {
 	if (incomeSources.length === 0) return null;
@@ -81,23 +123,36 @@ function IncomeSection({
 				Income
 			</p>
 			<div className="space-y-4">
-				{incomeSources.map((source) => (
-					<div key={source.id} className="grid grid-cols-2 gap-3">
-						<div className="col-span-2">
-							<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
-								{INCOME_TYPE_LABELS[source.type] ?? source.type}
-							</p>
-							<p className="text-sm text-[#1C1A17]">
-								{source.employerOrSourceName}
-							</p>
+				{incomeSources.map((source, i) => (
+					<div key={source.id}>
+						{i > 0 && <div className="border-t border-[#F0EBE3] mb-4" />}
+						<div className="grid grid-cols-2 gap-3">
+							<div className="col-span-2">
+								<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
+									{INCOME_TYPE_LABELS[source.type] ?? source.type}
+								</p>
+								<p className="text-sm text-[#1C1A17]">
+									{source.employerOrSourceName}
+								</p>
+							</div>
+							{source.titleOrOccupation && (
+								<Field label="Title" value={source.titleOrOccupation} />
+							)}
+							<Field
+								label="Monthly income"
+								value={`${formatCurrency(source.monthlyAmountCents)}/mo`}
+							/>
+							<Field label="Start date" value={formatDate(source.startDate)} />
+							<Field
+								label="End date"
+								value={source.endDate ? formatDate(source.endDate) : "Current"}
+							/>
+							{source.notes && (
+								<div className="col-span-2">
+									<Field label="Notes" value={source.notes} />
+								</div>
+							)}
 						</div>
-						{source.titleOrOccupation && (
-							<Field label="Title" value={source.titleOrOccupation} />
-						)}
-						<Field
-							label="Monthly income"
-							value={`${formatCurrency(source.monthlyAmountCents)}/mo`}
-						/>
 					</div>
 				))}
 			</div>
@@ -105,22 +160,114 @@ function IncomeSection({
 	);
 }
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function ResidenceSection({
+	residences,
+}: {
+	residences: ResidenceDetail[];
+}) {
 	return (
-		<p className="text-[10px] text-[#C4714A] tracking-widest uppercase font-medium mb-3">
-			{children}
-		</p>
+		<div className="mt-4 pt-4 border-t border-[#F0EBE3]">
+			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
+				Residence History
+			</p>
+			{residences.length === 0 ? (
+				<p className="text-sm text-[#9E9589]">No residence history provided</p>
+			) : (
+				<div className="space-y-4">
+					{residences.map((r, i) => (
+						<div key={r.id}>
+							{i > 0 && <div className="border-t border-[#F0EBE3] mb-4" />}
+							<div className="grid grid-cols-2 gap-3">
+								<div className="col-span-2">
+									<Field label="Address" value={r.address} fallback="—" />
+								</div>
+								<Field label="From" value={formatDate(r.fromDate)} />
+								<Field
+									label="To"
+									value={r.toDate ? formatDate(r.toDate) : "Present"}
+								/>
+								<Field label="Rental" value={r.isRental ? "Yes" : "No"} />
+								<Field
+									label="Reason for leaving"
+									value={r.reasonForLeaving}
+								/>
+								{r.isRental && (
+									<>
+										<Field
+											label="Landlord name"
+											value={r.landlordName}
+											fallback="—"
+										/>
+										<Field
+											label="Landlord phone"
+											value={r.landlordPhone}
+											fallback="—"
+										/>
+									</>
+								)}
+								{r.notes && (
+									<div className="col-span-2">
+										<Field label="Notes" value={r.notes} />
+									</div>
+								)}
+							</div>
+						</div>
+					))}
+				</div>
+			)}
+		</div>
 	);
 }
 
-function Field({ label, value }: { label: string; value?: string | null }) {
-	if (!value) return null;
+function DocumentsSection({
+	documents,
+	adultResidents,
+}: {
+	documents: ApplicationDocumentDetail[];
+	adultResidents: { id: number; fullName: string }[];
+}) {
+	if (documents.length === 0) {
+		return (
+			<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
+				<p className="text-sm text-[#9E9589]">No documents uploaded</p>
+			</div>
+		);
+	}
+
 	return (
-		<div>
-			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
-				{label}
-			</p>
-			<p className="text-sm text-[#1C1A17]">{value}</p>
+		<div className="space-y-3">
+			{adultResidents.map((resident) => {
+				const residentDocs = documents.filter(
+					(d) => d.residentId === resident.id,
+				);
+				return (
+					<div
+						key={resident.id}
+						className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]"
+					>
+						<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
+							{resident.fullName}
+						</p>
+						{residentDocs.length > 0 ? (
+							<div className="space-y-3">
+								{residentDocs.map((doc) => (
+									<div key={doc.id}>
+										<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
+											{DOCUMENT_TYPE_LABELS[doc.documentType] ??
+												doc.documentType}
+										</p>
+										<p className="text-sm text-[#1C1A17] truncate">
+											{doc.originalFilename}
+										</p>
+									</div>
+								))}
+							</div>
+						) : (
+							<p className="text-sm text-[#9E9589]">No documents uploaded</p>
+						)}
+					</div>
+				);
+			})}
 		</div>
 	);
 }
@@ -130,6 +277,9 @@ export default function LandlordApplicationDetail({
 }: Route.ComponentProps) {
 	const { application } = loaderData;
 	const primary = application.residents.find((r) => r.role === "primary");
+	const adultResidents = application.residents.filter(
+		(r) => r.role !== "child",
+	);
 
 	return (
 		<div
@@ -189,6 +339,11 @@ export default function LandlordApplicationDetail({
 						/>
 						<Field label="Smokes" value={application.smokes ? "Yes" : "No"} />
 						<Field label="Application #" value={String(application.id)} />
+						{application.notes && (
+							<div className="col-span-2">
+								<Field label="Notes" value={application.notes} />
+							</div>
+						)}
 					</div>
 				</div>
 
@@ -216,7 +371,10 @@ export default function LandlordApplicationDetail({
 										)}
 									</div>
 									{resident.role !== "child" && resident.role !== "dependent" && (
-										<IncomeSection incomeSources={resident.incomeSources} />
+										<>
+											<IncomeSection incomeSources={resident.incomeSources} />
+											<ResidenceSection residences={resident.residences} />
+										</>
 									)}
 								</div>
 							))}
@@ -225,9 +383,13 @@ export default function LandlordApplicationDetail({
 				)}
 
 				{/* Pets */}
-				{application.pets.length > 0 && (
-					<div>
-						<SectionHeading>Pets</SectionHeading>
+				<div>
+					<SectionHeading>Pets</SectionHeading>
+					{application.pets.length === 0 ? (
+						<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
+							<p className="text-sm text-[#9E9589]">No pets</p>
+						</div>
+					) : (
 						<div className="space-y-3">
 							{application.pets.map((pet) => (
 								<div
@@ -251,8 +413,17 @@ export default function LandlordApplicationDetail({
 								</div>
 							))}
 						</div>
-					</div>
-				)}
+					)}
+				</div>
+
+				{/* Documents */}
+				<div>
+					<SectionHeading>Documents</SectionHeading>
+					<DocumentsSection
+						documents={application.documents}
+						adultResidents={adultResidents}
+					/>
+				</div>
 			</div>
 		</div>
 	);
