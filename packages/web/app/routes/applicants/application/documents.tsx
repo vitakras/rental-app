@@ -28,8 +28,6 @@ interface DocumentSlot {
 	label: string;
 	hint?: string;
 	existingFiles: ExistingFile[];
-	showNotes?: boolean;
-	existingNotes?: string;
 }
 
 interface ExistingFile {
@@ -49,7 +47,6 @@ interface SlotFileEntry {
 	file?: File;
 	fileId?: string;
 	isExisting: boolean;
-	notes?: string;
 }
 
 type UploadSuccess = { ok: true; fileId: string };
@@ -73,33 +70,20 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 	const adults = application.residents.filter((r) => r.role !== "child");
 
-	const existingByResidentAndType = new Map<
-		string,
-		{ files: ExistingFile[]; firstNote: string | null }
-	>();
+	const existingByResidentAndType = new Map<string, { files: ExistingFile[] }>();
 	for (const doc of application.documents) {
-		const key = `${doc.residentId}-${doc.documentType}`;
-		const bucket = existingByResidentAndType.get(key) ?? {
-			files: [],
-			firstNote: null,
-		};
+		const key = `${doc.residentId}-${doc.category}-${doc.documentType}`;
+		const bucket = existingByResidentAndType.get(key) ?? { files: [] };
 		bucket.files.push({ fileId: doc.fileId, filename: doc.originalFilename });
-		if (bucket.firstNote === null && doc.notes) bucket.firstNote = doc.notes;
 		existingByResidentAndType.set(key, bucket);
 	}
 
 	const getExisting = (
 		residentId: number,
+		category: ApplicationDocumentCategory,
 		documentType: ApplicationDocumentType,
 	): ExistingFile[] =>
-		existingByResidentAndType.get(`${residentId}-${documentType}`)?.files ?? [];
-
-	const getExistingNotes = (
-		residentId: number,
-		documentType: ApplicationDocumentType,
-	): string | undefined =>
-		existingByResidentAndType.get(`${residentId}-${documentType}`)?.firstNote ??
-		undefined;
+		existingByResidentAndType.get(`${residentId}-${category}-${documentType}`)?.files ?? [];
 
 	const residents: ResidentSlots[] = adults.map((resident) => {
 		const slots: DocumentSlot[] = [];
@@ -110,7 +94,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 			category: "identity",
 			documentType: "government_id",
 			label: "Government ID",
-			existingFiles: getExisting(resident.id, "government_id"),
+			existingFiles: getExisting(resident.id, "identity", "government_id"),
 		});
 
 		for (const source of resident.incomeSources) {
@@ -122,7 +106,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "paystub",
 					label: "Paystubs",
 					hint: source.employerOrSourceName,
-					existingFiles: getExisting(resident.id, "paystub"),
+					existingFiles: getExisting(resident.id, "income", "paystub"),
 				});
 				slots.push({
 					key: `${resident.id}-employment_letter-${source.id}`,
@@ -131,7 +115,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "employment_letter",
 					label: "Employment letter",
 					hint: source.employerOrSourceName,
-					existingFiles: getExisting(resident.id, "employment_letter"),
+					existingFiles: getExisting(resident.id, "income", "employment_letter"),
 				});
 			} else if (source.type === "self_employment") {
 				slots.push({
@@ -141,17 +125,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "bank_statement",
 					label: "Bank statements",
 					hint: source.employerOrSourceName,
-					existingFiles: getExisting(resident.id, "bank_statement"),
-				});
-			} else {
-				slots.push({
-					key: `${resident.id}-other-${source.id}`,
-					residentId: resident.id,
-					category: "income",
-					documentType: "other",
-					label: "Supporting document",
-					hint: source.employerOrSourceName,
-					existingFiles: getExisting(resident.id, "other"),
+					existingFiles: getExisting(resident.id, "income", "bank_statement"),
 				});
 			}
 		}
@@ -163,9 +137,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 			documentType: "other",
 			label: "Other documents",
 			hint: "Any additional supporting documents",
-			existingFiles: getExisting(resident.id, "other"),
-			existingNotes: getExistingNotes(resident.id, "other"),
-			showNotes: true,
+			existingFiles: getExisting(resident.id, "other", "other"),
 		});
 
 		return { id: resident.id, fullName: resident.fullName, slots };
@@ -268,7 +240,7 @@ function FileRow({
 		fd.set("residentId", String(slot.residentId));
 		fd.set("category", slot.category);
 		fd.set("documentType", slot.documentType);
-		if (entry.notes) fd.set("notes", entry.notes);
+
 		fetcher.submit(fd, { method: "post", encType: "multipart/form-data" });
 	}, []);
 
@@ -294,7 +266,7 @@ function FileRow({
 		fd.set("residentId", String(slot.residentId));
 		fd.set("category", slot.category);
 		fd.set("documentType", slot.documentType);
-		if (entry.notes) fd.set("notes", entry.notes);
+
 		fetcher.submit(fd, { method: "post", encType: "multipart/form-data" });
 	}
 
@@ -455,11 +427,9 @@ function FileRow({
 function SlotCard({
 	slot,
 	applicationId,
-	showNotes = false,
 }: {
 	slot: DocumentSlot;
 	applicationId: number;
-	showNotes?: boolean;
 }) {
 	const [entries, setEntries] = useState<SlotFileEntry[]>(() =>
 		slot.existingFiles.map((f) => ({
@@ -469,10 +439,8 @@ function SlotCard({
 			isExisting: true,
 		})),
 	);
-	const [notes, setNotes] = useState(slot.existingNotes ?? "");
 
 	function handleFilesSelected(files: FileList) {
-		const capturedNotes = notes;
 		setEntries((prev) => [
 			...prev,
 			...Array.from(files).map((file) => ({
@@ -480,7 +448,6 @@ function SlotCard({
 				filename: file.name,
 				file,
 				isExisting: false,
-				notes: capturedNotes || undefined,
 			})),
 		]);
 	}
@@ -524,27 +491,7 @@ function SlotCard({
 				</ul>
 			)}
 
-			{showNotes && (
-				<div className="mb-3">
-					<label
-						className="block text-xs font-medium text-[#7A7268] mb-1.5"
-						style={{ fontFamily: "'DM Sans', sans-serif" }}
-					>
-						Note (optional)
-					</label>
-					<textarea
-						value={notes}
-						onChange={(e) => setNotes(e.target.value)}
-						rows={3}
-						maxLength={1000}
-						placeholder="Describe what you're uploading…"
-						className="w-full rounded-xl border border-[#E8E1D9] bg-[#FDFAF6] px-3 py-2.5 text-sm text-[#1C1A17] placeholder:text-[#B8B0A6] resize-none focus:outline-none focus:ring-2 focus:ring-[#C4714A]/30 focus:border-[#C4714A] transition-colors"
-						style={{ fontFamily: "'DM Sans', sans-serif" }}
-					/>
-				</div>
-			)}
-
-			<label className="flex items-center gap-2 text-sm text-[#C4714A] cursor-pointer select-none w-fit">
+<label className="flex items-center gap-2 text-sm text-[#C4714A] cursor-pointer select-none w-fit">
 				<input
 					type="file"
 					multiple
@@ -612,7 +559,6 @@ export default function ApplicationDocuments() {
 								key={slot.key}
 								slot={slot}
 								applicationId={applicationId}
-								showNotes={slot.showNotes}
 							/>
 						))}
 					</div>
