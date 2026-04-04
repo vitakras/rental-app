@@ -67,6 +67,15 @@ export type UploadDocumentData = z.input<typeof uploadDocumentSchema>;
 
 // ── Result types ──────────────────────────────────────────────────────────────
 
+export type ServeFileResult =
+	| {
+			success: true;
+			body: ReadableStream;
+			contentType: string;
+			originalFilename: string;
+	  }
+	| { success: false };
+
 export type DeleteDocumentResult =
 	| { success: true }
 	| { success: false; reason: "not_found" };
@@ -95,6 +104,36 @@ export function createFileService({
 	logger?: Logger;
 }) {
 	return {
+		async serveFileForApplication({
+			applicationId,
+			fileId,
+		}: {
+			applicationId: number;
+			fileId: string;
+		}): Promise<ServeFileResult> {
+			const doc = await applicationDocumentRepository.findByFileId(fileId);
+			if (!doc || doc.applicationId !== applicationId) {
+				return { success: false };
+			}
+
+			const file = await fileRepository.findById(fileId);
+			if (!file) {
+				return { success: false };
+			}
+
+			const object = await blobStorage.getObject(file.storageKey);
+			if (!object) {
+				return { success: false };
+			}
+
+			return {
+				success: true,
+				body: object.body,
+				contentType: file.contentType,
+				originalFilename: file.originalFilename,
+			};
+		},
+
 		async deleteDocument({
 			applicationId,
 			fileId,
@@ -102,8 +141,7 @@ export function createFileService({
 			applicationId: number;
 			fileId: string;
 		}): Promise<DeleteDocumentResult> {
-			const doc =
-				await applicationDocumentRepository.findByFileId(fileId);
+			const doc = await applicationDocumentRepository.findByFileId(fileId);
 
 			if (!doc || doc.applicationId !== applicationId) {
 				return { success: false, reason: "not_found" };

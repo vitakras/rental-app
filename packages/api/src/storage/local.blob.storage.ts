@@ -31,6 +31,19 @@ export function createLocalBlobStorage(): BlobStorage {
 			};
 		},
 
+		async getObject(key) {
+			const filePath = path.join(UPLOADS_DIR, key);
+			try {
+				const data = await fs.readFile(filePath);
+				return {
+					body: new Blob([data]).stream(),
+					contentType: "application/octet-stream",
+				};
+			} catch {
+				return null;
+			}
+		},
+
 		async objectExists(key) {
 			const filePath = path.join(UPLOADS_DIR, key);
 

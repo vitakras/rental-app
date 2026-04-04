@@ -28,6 +28,16 @@ export function createR2BlobStorage(bucket: R2Bucket): BlobStorage {
 			};
 		},
 
+		async getObject(key) {
+			const object = await bucket.get(key);
+			if (!object) return null;
+			return {
+				body: object.body,
+				contentType:
+					object.httpMetadata?.contentType ?? "application/octet-stream",
+			};
+		},
+
 		async objectExists(key) {
 			return (await bucket.head(key)) !== null;
 		},

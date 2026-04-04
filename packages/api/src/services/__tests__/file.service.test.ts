@@ -57,6 +57,7 @@ function makeBlobStorage(overrides?: Partial<BlobStorage>): BlobStorage {
 		createDownloadUrl: vi.fn(async () => ({
 			downloadUrl: "/storage/file.pdf",
 		})),
+		getObject: vi.fn(async () => null),
 		objectExists: vi.fn(async () => true),
 		deleteObject: vi.fn(async () => {}),
 		...overrides,

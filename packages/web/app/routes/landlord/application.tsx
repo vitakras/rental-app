@@ -4,6 +4,7 @@ import type {
 	ResidenceDetail,
 } from "api";
 import { Link } from "react-router";
+import { BASE_API_URL } from "~/config/env";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/application";
 
@@ -160,11 +161,7 @@ function IncomeSection({
 	);
 }
 
-function ResidenceSection({
-	residences,
-}: {
-	residences: ResidenceDetail[];
-}) {
+function ResidenceSection({ residences }: { residences: ResidenceDetail[] }) {
 	return (
 		<div className="mt-4 pt-4 border-t border-[#F0EBE3]">
 			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
@@ -187,10 +184,7 @@ function ResidenceSection({
 									value={r.toDate ? formatDate(r.toDate) : "Present"}
 								/>
 								<Field label="Rental" value={r.isRental ? "Yes" : "No"} />
-								<Field
-									label="Reason for leaving"
-									value={r.reasonForLeaving}
-								/>
+								<Field label="Reason for leaving" value={r.reasonForLeaving} />
 								{r.isRental && (
 									<>
 										<Field
@@ -222,9 +216,11 @@ function ResidenceSection({
 function DocumentsSection({
 	documents,
 	adultResidents,
+	applicationId,
 }: {
 	documents: ApplicationDocumentDetail[];
 	adultResidents: { id: number; fullName: string }[];
+	applicationId: number;
 }) {
 	if (documents.length === 0) {
 		return (
@@ -250,17 +246,60 @@ function DocumentsSection({
 						</p>
 						{residentDocs.length > 0 ? (
 							<div className="space-y-3">
-								{residentDocs.map((doc) => (
-									<div key={doc.id}>
-										<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
-											{DOCUMENT_TYPE_LABELS[doc.documentType] ??
-												doc.documentType}
-										</p>
-										<p className="text-sm text-[#1C1A17] truncate">
-											{doc.originalFilename}
-										</p>
-									</div>
-								))}
+								{residentDocs.map((doc) => {
+									const fileUrl = `${BASE_API_URL}/landlord/applications/${applicationId}/files/${doc.fileId}`;
+									return (
+										<div key={doc.id}>
+											<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
+												{DOCUMENT_TYPE_LABELS[doc.documentType] ??
+													doc.documentType}
+											</p>
+											<div className="flex items-center gap-1 mt-0.5">
+												<p className="text-sm text-[#1C1A17] truncate flex-1 min-w-0">
+													{doc.originalFilename}
+												</p>
+												<a
+													href={`${fileUrl}?download=true`}
+													download={doc.originalFilename}
+													className="shrink-0 flex items-center justify-center w-8 h-8 -mr-1 rounded-lg text-[#B0A89E] active:text-[#7A7268] active:bg-[#F0EBE3] transition-colors"
+												>
+													<svg
+														width="14"
+														height="14"
+														viewBox="0 0 14 14"
+														fill="none"
+														aria-hidden="true"
+													>
+														<path
+															d="M7 1v7.5M7 8.5 4 5.5M7 8.5l3-3"
+															stroke="currentColor"
+															strokeWidth="1.4"
+															strokeLinecap="round"
+															strokeLinejoin="round"
+														/>
+														<path
+															d="M1.5 10.5v1A1 1 0 0 0 2.5 12.5h9a1 1 0 0 0 1-1v-1"
+															stroke="currentColor"
+															strokeWidth="1.4"
+															strokeLinecap="round"
+														/>
+													</svg>
+													<span className="sr-only">
+														Download {doc.originalFilename}
+													</span>
+												</a>
+											</div>
+											<a
+												href={fileUrl}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="mt-2 flex items-center justify-center w-full h-9 rounded-lg bg-[#C4714A] text-white text-xs font-medium active:bg-[#A85A36] transition-colors"
+											>
+												View
+											</a>
+										</div>
+									);
+								})}
 							</div>
 						) : (
 							<p className="text-sm text-[#9E9589]">No documents uploaded</p>
@@ -370,12 +409,13 @@ export default function LandlordApplicationDetail({
 											<Field label="Phone" value={resident.phone} />
 										)}
 									</div>
-									{resident.role !== "child" && resident.role !== "dependent" && (
-										<>
-											<IncomeSection incomeSources={resident.incomeSources} />
-											<ResidenceSection residences={resident.residences} />
-										</>
-									)}
+									{resident.role !== "child" &&
+										resident.role !== "dependent" && (
+											<>
+												<IncomeSection incomeSources={resident.incomeSources} />
+												<ResidenceSection residences={resident.residences} />
+											</>
+										)}
 								</div>
 							))}
 						</div>
@@ -422,6 +462,7 @@ export default function LandlordApplicationDetail({
 					<DocumentsSection
 						documents={application.documents}
 						adultResidents={adultResidents}
+						applicationId={application.id}
 					/>
 				</div>
 			</div>

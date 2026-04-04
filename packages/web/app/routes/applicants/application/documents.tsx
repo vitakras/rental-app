@@ -93,7 +93,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 			residentId: resident.id,
 			category: "identity",
 			documentType: "government_id",
-			label: "Government ID",
+			label: "Government-issued ID",
+			hint: "Upload two pieces (e.g. passport, driver's licence)",
 			existingFiles: getExisting(resident.id, "identity", "government_id"),
 		});
 
@@ -129,6 +130,29 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 				});
 			}
 		}
+
+		const hasSelfEmployment = resident.incomeSources.some((s) => s.type === "self_employment");
+		if (!hasSelfEmployment) {
+			slots.push({
+				key: `${resident.id}-bank_statement`,
+				residentId: resident.id,
+				category: "income",
+				documentType: "bank_statement",
+				label: "Bank statements",
+				hint: "Last 3 months",
+				existingFiles: getExisting(resident.id, "income", "bank_statement"),
+			});
+		}
+
+		slots.push({
+			key: `${resident.id}-credit_report`,
+			residentId: resident.id,
+			category: "other",
+			documentType: "reference_letter",
+			label: "Credit score / report",
+			hint: "Optional — upload if available",
+			existingFiles: getExisting(resident.id, "other", "reference_letter"),
+		});
 
 		slots.push({
 			key: `${resident.id}-other`,
@@ -544,7 +568,7 @@ export default function ApplicationDocuments() {
 						className="text-[#7A7268] text-sm leading-relaxed"
 						style={{ fontFamily: "'DM Sans', sans-serif" }}
 					>
-						All documents are optional — you can add more after submitting.
+						The more you provide, the stronger your application. Upload as much as you can — two pieces of ID, recent bank statements, income documents, and anything else that helps.
 					</p>
 				</div>
 
