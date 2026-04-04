@@ -51,6 +51,7 @@ export function createApplicantUploadsRoutes({
 				residentId: Number(formData.get("residentId")),
 				category: formData.get("category"),
 				documentType: formData.get("documentType"),
+				notes: formData.get("notes") ?? undefined,
 			});
 
 			if (!(file instanceof File) || !parsedPayload.success) {
@@ -92,6 +93,7 @@ export function createApplicantUploadsRoutes({
 				residentId: parsedPayload.data.residentId,
 				category: parsedPayload.data.category,
 				documentType: parsedPayload.data.documentType,
+				notes: parsedPayload.data.notes,
 				originalFilename: file.name,
 				contentType: file.type,
 				sizeBytes: file.size,

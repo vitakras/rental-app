@@ -28,6 +28,7 @@ export interface CreateApplicationDocumentInput {
 	fileId: string;
 	category: ApplicationDocumentCategory;
 	documentType: ApplicationDocumentType;
+	notes?: string;
 }
 
 // ── Interface ─────────────────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ export function applicationDocumentRepository(
 					fileId: input.fileId,
 					category: input.category,
 					documentType: input.documentType,
+					notes: input.notes ?? null,
 				})
 				.returning();
 

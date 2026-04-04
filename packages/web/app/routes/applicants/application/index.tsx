@@ -113,10 +113,12 @@ function ReviewSection({
 	title,
 	editTo,
 	children,
+	noCard = false,
 }: {
 	title: string;
 	editTo: string;
 	children: React.ReactNode;
+	noCard?: boolean;
 }) {
 	return (
 		<div>
@@ -131,9 +133,21 @@ function ReviewSection({
 					<Link to={editTo}>Edit</Link>
 				</Button>
 			</div>
-			<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
-				{children}
-			</div>
+			{noCard ? (
+				children
+			) : (
+				<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
+					{children}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function ItemCard({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
+			{children}
 		</div>
 	);
 }
@@ -277,14 +291,12 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					<ReviewSection
 						title="Occupants"
 						editTo={`/a/applications/${applicationId}/occupants`}
+						noCard={otherResidents.length > 0}
 					>
 						{otherResidents.length > 0 ? (
-							<div className="space-y-4">
+							<div className="space-y-3">
 								{otherResidents.map((resident) => (
-									<div
-										key={resident.id}
-										className="border border-[#F0EBE3] rounded-xl p-4"
-									>
+									<ItemCard key={resident.id}>
 										<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
 											{ROLE_LABELS[resident.role] ?? resident.role}
 										</p>
@@ -298,7 +310,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 												<Field label="Email" value={resident.email} />
 											)}
 										</div>
-									</div>
+									</ItemCard>
 								))}
 							</div>
 						) : (
@@ -311,38 +323,41 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					<ReviewSection
 						title="Income"
 						editTo={`/a/applications/${applicationId}/income`}
+						noCard
 					>
-						<div className="space-y-4">
+						<div className="space-y-3">
 							{adultResidents.map((resident) => (
-								<div
-									key={resident.id}
-									className="border border-[#F0EBE3] rounded-xl p-4"
-								>
-									<p className="text-sm font-medium text-[#1C1A17] mb-3">
+								<ItemCard key={resident.id}>
+									<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
 										{resident.fullName}
 									</p>
 									{resident.incomeSources.length > 0 ? (
-										<div className="space-y-3">
-											{resident.incomeSources.map((source) => (
-												<div key={source.id} className="grid grid-cols-2 gap-4">
-													<Field
-														label="Type"
-														value={
-															INCOME_TYPE_LABELS[source.type] ?? source.type
-														}
-													/>
-													<Field
-														label="Monthly amount"
-														value={formatCurrency(source.monthlyAmountCents)}
-													/>
-													<Field
-														label="Source"
-														value={source.employerOrSourceName}
-													/>
-													<Field
-														label="Title or occupation"
-														value={source.titleOrOccupation}
-													/>
+										<div className="space-y-4">
+											{resident.incomeSources.map((source, i) => (
+												<div key={source.id}>
+													{i > 0 && (
+														<div className="border-t border-[#F0EBE3] mb-4" />
+													)}
+													<div className="grid grid-cols-2 gap-4">
+														<Field
+															label="Type"
+															value={
+																INCOME_TYPE_LABELS[source.type] ?? source.type
+															}
+														/>
+														<Field
+															label="Monthly amount"
+															value={formatCurrency(source.monthlyAmountCents)}
+														/>
+														<Field
+															label="Source"
+															value={source.employerOrSourceName}
+														/>
+														<Field
+															label="Title or occupation"
+															value={source.titleOrOccupation}
+														/>
+													</div>
 												</div>
 											))}
 										</div>
@@ -351,7 +366,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 											No income details added yet.
 										</p>
 									)}
-								</div>
+								</ItemCard>
 							))}
 						</div>
 					</ReviewSection>
@@ -359,58 +374,58 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					<ReviewSection
 						title="Residence"
 						editTo={`/a/applications/${applicationId}/residence`}
+						noCard
 					>
-						<div className="space-y-4">
+						<div className="space-y-3">
 							{adultResidents.map((resident) => (
-								<div
-									key={resident.id}
-									className="border border-[#F0EBE3] rounded-xl p-4"
-								>
-									<p className="text-sm font-medium text-[#1C1A17] mb-3">
+								<ItemCard key={resident.id}>
+									<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
 										{resident.fullName}
 									</p>
 									{resident.residences.length > 0 ? (
-										<div className="space-y-3">
-											{resident.residences.map((residence) => (
-												<div
-													key={residence.id}
-													className="grid grid-cols-2 gap-4"
-												>
-													<div className="col-span-2">
-														<Field label="Address" value={residence.address} />
-													</div>
-													<Field
-														label="From"
-														value={formatDate(residence.fromDate)}
-													/>
-													<Field
-														label="To"
-														value={
-															residence.toDate
-																? formatDate(residence.toDate)
-																: "Present"
-														}
-													/>
-													<Field
-														label="Rental"
-														value={residence.isRental ? "Yes" : "No"}
-													/>
-													<Field
-														label="Reason for leaving"
-														value={residence.reasonForLeaving}
-													/>
-													{residence.isRental && (
-														<>
-															<Field
-																label="Landlord name"
-																value={residence.landlordName}
-															/>
-															<Field
-																label="Landlord phone"
-																value={residence.landlordPhone}
-															/>
-														</>
+										<div className="space-y-4">
+											{resident.residences.map((residence, i) => (
+												<div key={residence.id}>
+													{i > 0 && (
+														<div className="border-t border-[#F0EBE3] mb-4" />
 													)}
+													<div className="grid grid-cols-2 gap-4">
+														<div className="col-span-2">
+															<Field label="Address" value={residence.address} />
+														</div>
+														<Field
+															label="From"
+															value={formatDate(residence.fromDate)}
+														/>
+														<Field
+															label="To"
+															value={
+																residence.toDate
+																	? formatDate(residence.toDate)
+																	: "Present"
+															}
+														/>
+														<Field
+															label="Rental"
+															value={residence.isRental ? "Yes" : "No"}
+														/>
+														<Field
+															label="Reason for leaving"
+															value={residence.reasonForLeaving}
+														/>
+														{residence.isRental && (
+															<>
+																<Field
+																	label="Landlord name"
+																	value={residence.landlordName}
+																/>
+																<Field
+																	label="Landlord phone"
+																	value={residence.landlordPhone}
+																/>
+															</>
+														)}
+													</div>
 												</div>
 											))}
 										</div>
@@ -419,7 +434,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 											No residence history added yet.
 										</p>
 									)}
-								</div>
+								</ItemCard>
 							))}
 						</div>
 					</ReviewSection>
@@ -427,21 +442,25 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					<ReviewSection
 						title="Pets"
 						editTo={`/a/applications/${applicationId}/occupants`}
+						noCard={application.pets.length > 0}
 					>
 						{application.pets.length > 0 ? (
-							<div className="space-y-4">
+							<div className="space-y-3">
 								{application.pets.map((pet) => (
-									<div
-										key={pet.id}
-										className="border border-[#F0EBE3] rounded-xl p-4"
-									>
+									<ItemCard key={pet.id}>
+										<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
+											{pet.type}
+										</p>
 										<div className="grid grid-cols-2 gap-4">
-											<Field label="Type" value={pet.type} />
 											<Field label="Name" value={pet.name} />
 											<Field label="Breed" value={pet.breed} />
-											<Field label="Notes" value={pet.notes} />
+											{pet.notes && (
+												<div className="col-span-2">
+													<Field label="Notes" value={pet.notes} />
+												</div>
+											)}
 										</div>
-									</div>
+									</ItemCard>
 								))}
 							</div>
 						) : (
@@ -452,55 +471,40 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					<ReviewSection
 						title="Documents"
 						editTo={`/a/applications/${applicationId}/documents`}
+						noCard={application.documents.length > 0}
 					>
 						{application.documents.length > 0 ? (
-							<div className="space-y-4">
+							<div className="space-y-3">
 								{adultResidents.map((resident) => {
 									const residentDocuments = application.documents.filter(
 										(document) => document.residentId === resident.id,
 									);
 
-									if (residentDocuments.length === 0) {
-										return (
-											<div
-												key={resident.id}
-												className="border border-[#F0EBE3] rounded-xl p-4"
-											>
-												<p className="text-sm font-medium text-[#1C1A17] mb-1">
-													{resident.fullName}
-												</p>
+									return (
+										<ItemCard key={resident.id}>
+											<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
+												{resident.fullName}
+											</p>
+											{residentDocuments.length > 0 ? (
+												<div className="space-y-3">
+													{residentDocuments.map((document) => (
+														<div key={document.id}>
+															<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
+																{DOCUMENT_TYPE_LABELS[document.documentType] ??
+																	document.documentType}
+															</p>
+															<p className="text-sm text-[#1C1A17] truncate">
+																{document.originalFilename}
+															</p>
+														</div>
+													))}
+												</div>
+											) : (
 												<p className="text-sm text-[#7A7268]">
 													No documents uploaded yet.
 												</p>
-											</div>
-										);
-									}
-
-									return (
-										<div
-											key={resident.id}
-											className="border border-[#F0EBE3] rounded-xl p-4"
-										>
-											<p className="text-sm font-medium text-[#1C1A17] mb-3">
-												{resident.fullName}
-											</p>
-											<div className="space-y-2">
-												{residentDocuments.map((document) => (
-													<div
-														key={document.id}
-														className="flex items-center justify-between gap-3 text-sm"
-													>
-														<span className="text-[#1C1A17]">
-															{DOCUMENT_TYPE_LABELS[document.documentType] ??
-																document.documentType}
-														</span>
-														<span className="text-[#7A7268] capitalize">
-															{document.status.replaceAll("_", " ")}
-														</span>
-													</div>
-												))}
-											</div>
-										</div>
+											)}
+										</ItemCard>
 									);
 								})}
 							</div>

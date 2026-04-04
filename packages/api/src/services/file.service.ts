@@ -51,6 +51,7 @@ export const uploadDocumentRequestSchema = z.object({
 	residentId: z.number().int().positive(),
 	category: z.enum(applicationDocumentCategories),
 	documentType: z.enum(applicationDocumentTypes),
+	notes: z.string().max(1000).optional(),
 });
 
 const uploadDocumentSchema = uploadDocumentRequestSchema.extend({
@@ -142,6 +143,7 @@ export function createFileService({
 				residentId,
 				category,
 				documentType,
+				notes,
 				originalFilename,
 				contentType,
 				sizeBytes,
@@ -189,6 +191,7 @@ export function createFileService({
 					fileId,
 					category,
 					documentType,
+					notes,
 				});
 
 				logger.info({ fileId, applicationId, residentId }, "Document uploaded");

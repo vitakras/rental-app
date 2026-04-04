@@ -80,7 +80,7 @@ function IncomeSection({
 			<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
 				Income
 			</p>
-			<div className="space-y-3">
+			<div className="space-y-4">
 				{incomeSources.map((source) => (
 					<div key={source.id} className="grid grid-cols-2 gap-3">
 						<div className="col-span-2">
@@ -130,9 +130,6 @@ export default function LandlordApplicationDetail({
 }: Route.ComponentProps) {
 	const { application } = loaderData;
 	const primary = application.residents.find((r) => r.role === "primary");
-	const otherResidents = application.residents.filter(
-		(r) => r.role !== "primary",
-	);
 
 	return (
 		<div
@@ -195,28 +192,12 @@ export default function LandlordApplicationDetail({
 					</div>
 				</div>
 
-				{/* Primary applicant */}
-				{primary && (
+				{/* Residents — primary + others unified */}
+				{application.residents.length > 0 && (
 					<div>
-						<SectionHeading>Primary Applicant</SectionHeading>
-						<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
-							<div className="grid grid-cols-2 gap-4">
-								<Field label="Name" value={primary.fullName} />
-								<Field label="Date of birth" value={primary.dateOfBirth} />
-								<Field label="Email" value={primary.email} />
-								<Field label="Phone" value={primary.phone} />
-							</div>
-							<IncomeSection incomeSources={primary.incomeSources} />
-						</div>
-					</div>
-				)}
-
-				{/* Other residents */}
-				{otherResidents.length > 0 && (
-					<div>
-						<SectionHeading>Other Residents</SectionHeading>
+						<SectionHeading>Residents</SectionHeading>
 						<div className="space-y-3">
-							{otherResidents.map((resident) => (
+							{application.residents.map((resident) => (
 								<div
 									key={resident.id}
 									className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]"
@@ -230,8 +211,11 @@ export default function LandlordApplicationDetail({
 										{resident.email && (
 											<Field label="Email" value={resident.email} />
 										)}
+										{resident.phone && (
+											<Field label="Phone" value={resident.phone} />
+										)}
 									</div>
-									{resident.role !== "child" && (
+									{resident.role !== "child" && resident.role !== "dependent" && (
 										<IncomeSection incomeSources={resident.incomeSources} />
 									)}
 								</div>
@@ -250,14 +234,11 @@ export default function LandlordApplicationDetail({
 									key={pet.id}
 									className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]"
 								>
-									<div className="flex items-center gap-2 mb-3">
-										<span className="text-base">
-											{PET_EMOJI[pet.type] ?? "🐾"}
-										</span>
-										<p className="text-sm font-medium text-[#1C1A17]">
-											{pet.name ?? pet.type}
-										</p>
-									</div>
+									<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-3">
+										{pet.name
+											? `${PET_EMOJI[pet.type] ?? "🐾"} ${pet.name}`
+											: pet.type}
+									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<Field label="Type" value={pet.type} />
 										<Field label="Breed" value={pet.breed} />
