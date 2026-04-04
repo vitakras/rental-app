@@ -3,6 +3,7 @@ import type {
 	ApplicationWithDetails,
 	ResidenceDetail,
 } from "api";
+import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { BASE_API_URL } from "~/config/env";
 import { apiClient } from "~/lib/api";
@@ -311,14 +312,487 @@ function DocumentsSection({
 	);
 }
 
+type ActionMode = "idle" | "approve" | "reject" | "request-info";
+
+const STATUS_STYLES: Record<
+	string,
+	{ bg: string; color: string; dot: string; label: string }
+> = {
+	draft: {
+		bg: "#F5F0E8",
+		color: "#7A7268",
+		dot: "#B0A89E",
+		label: "Draft",
+	},
+	pending: {
+		bg: "#FFF3EE",
+		color: "#C4714A",
+		dot: "#C4714A",
+		label: "Pending",
+	},
+	submitted: {
+		bg: "#EEF1F8",
+		color: "#4A6C9B",
+		dot: "#4A6C9B",
+		label: "Submitted",
+	},
+	approved: {
+		bg: "#EDFAF4",
+		color: "#2E8A58",
+		dot: "#2E8A58",
+		label: "Approved",
+	},
+	rejected: {
+		bg: "#FFF0F0",
+		color: "#C44A4A",
+		dot: "#C44A4A",
+		label: "Rejected",
+	},
+	"info-requested": {
+		bg: "#FFF9EE",
+		color: "#A0742A",
+		dot: "#C4974A",
+		label: "Info Requested",
+	},
+};
+
+function StatusBadge({ status }: { status: string }) {
+	const s = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
+	return (
+		<span
+			className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+			style={{ background: s.bg, color: s.color }}
+		>
+			<span
+				className="size-1.5 rounded-full"
+				style={{ background: s.dot }}
+				aria-hidden="true"
+			/>
+			{s.label}
+		</span>
+	);
+}
+
+function ActionSheet({
+	mode,
+	applicantName,
+	onClose,
+	onConfirm,
+}: {
+	mode: ActionMode;
+	applicantName: string;
+	onClose: () => void;
+	onConfirm: (note: string) => void;
+}) {
+	const [note, setNote] = useState("");
+	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const open = mode !== "idle";
+
+	const isRequestInfo = mode === "request-info";
+	const isApprove = mode === "approve";
+	const isReject = mode === "reject";
+
+	const canSubmit = !isRequestInfo || note.trim().length > 0;
+
+	const config = {
+		approve: {
+			heading: "Approve application",
+			subtext: `Approve ${applicantName}'s application. They'll be notified right away.`,
+			notePlaceholder: "Add a message for the applicant (optional)",
+			noteLabel: "Message for applicant",
+			noteRequired: false,
+			ctaLabel: "Approve application",
+			ctaBg: "#2E8A58",
+			ctaHover: "#236B45",
+			ctaText: "#FFFFFF",
+		},
+		reject: {
+			heading: "Decline application",
+			subtext: `Let ${applicantName} know you've reviewed and declined their application.`,
+			notePlaceholder: "Let them know why (optional but kind)",
+			noteLabel: "Reason for declining",
+			noteRequired: false,
+			ctaLabel: "Decline application",
+			ctaBg: "#C44A4A",
+			ctaHover: "#A83B3B",
+			ctaText: "#FFFFFF",
+		},
+		"request-info": {
+			heading: "Need more information",
+			subtext: `Tell ${applicantName} exactly what you need to move forward.`,
+			notePlaceholder:
+				"e.g. Please provide the last 3 months of bank statements and a reference from your previous landlord.",
+			noteLabel: "What do you need?",
+			noteRequired: true,
+			ctaLabel: "Send request",
+			ctaBg: "#1C1A17",
+			ctaHover: "#2E2B27",
+			ctaText: "#FFFFFF",
+		},
+	}[mode === "idle" ? "approve" : mode];
+
+	// Auto-focus textarea when sheet opens
+	const handleSheetOpen = () => {
+		setTimeout(() => textareaRef.current?.focus(), 300);
+	};
+
+	if (!open) return null;
+
+	return (
+		<>
+			<style>{`
+        @keyframes as-fade-in {
+          from { opacity: 0 }
+          to   { opacity: 1 }
+        }
+        @keyframes as-slide-up {
+          from { transform: translateY(100%) }
+          to   { transform: translateY(0) }
+        }
+        .as-backdrop { animation: as-fade-in 200ms ease both }
+        .as-sheet    { animation: as-slide-up 280ms cubic-bezier(0.32, 0.72, 0, 1) both }
+      `}</style>
+			{/* Backdrop */}
+			<div
+				className="as-backdrop fixed inset-0 z-40 bg-[#1C1A17]/30 backdrop-blur-[3px]"
+				onClick={onClose}
+				aria-hidden="true"
+			/>
+			{/* Sheet */}
+			<div
+				className="as-sheet fixed bottom-0 left-0 right-0 z-50 max-w-lg mx-auto"
+				onAnimationEnd={handleSheetOpen}
+			>
+				<div
+					className="rounded-t-[28px] px-5 pt-3 pb-8"
+					style={{ background: "#FAF7F2" }}
+				>
+					{/* Drag handle */}
+					<div className="flex justify-center mb-5">
+						<div className="w-9 h-1 rounded-full bg-[#D9D1C7]" />
+					</div>
+
+					{/* Icon */}
+					<div className="mb-4">
+						{isApprove && (
+							<div
+								className="w-10 h-10 rounded-2xl flex items-center justify-center"
+								style={{ background: "#EDFAF4" }}
+							>
+								<svg
+									width="20"
+									height="20"
+									viewBox="0 0 20 20"
+									fill="none"
+									aria-hidden="true"
+								>
+									<path
+										d="M4.5 10.5L8.5 14.5L15.5 6.5"
+										stroke="#2E8A58"
+										strokeWidth="1.6"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+								</svg>
+							</div>
+						)}
+						{isReject && (
+							<div
+								className="w-10 h-10 rounded-2xl flex items-center justify-center"
+								style={{ background: "#FFF0F0" }}
+							>
+								<svg
+									width="20"
+									height="20"
+									viewBox="0 0 20 20"
+									fill="none"
+									aria-hidden="true"
+								>
+									<path
+										d="M6.5 6.5L13.5 13.5M13.5 6.5L6.5 13.5"
+										stroke="#C44A4A"
+										strokeWidth="1.6"
+										strokeLinecap="round"
+									/>
+								</svg>
+							</div>
+						)}
+						{isRequestInfo && (
+							<div
+								className="w-10 h-10 rounded-2xl flex items-center justify-center"
+								style={{ background: "#FFF9EE" }}
+							>
+								<svg
+									width="20"
+									height="20"
+									viewBox="0 0 20 20"
+									fill="none"
+									aria-hidden="true"
+								>
+									<circle
+										cx="10"
+										cy="10"
+										r="7.5"
+										stroke="#C4974A"
+										strokeWidth="1.5"
+									/>
+									<path
+										d="M10 9v5"
+										stroke="#C4974A"
+										strokeWidth="1.6"
+										strokeLinecap="round"
+									/>
+									<circle cx="10" cy="6.5" r="0.75" fill="#C4974A" />
+								</svg>
+							</div>
+						)}
+					</div>
+
+					{/* Heading */}
+					<h2
+						className="text-[1.35rem] text-[#1C1A17] leading-snug mb-1"
+						style={{ fontFamily: "'Fraunces', serif", fontWeight: 400 }}
+					>
+						{config.heading}
+					</h2>
+					<p className="text-sm text-[#7A7268] mb-5 leading-relaxed">
+						{config.subtext}
+					</p>
+
+					{/* Note field */}
+					<div className="mb-5">
+						<label className="block text-[10px] text-[#7A7268] uppercase tracking-wider mb-1.5">
+							{config.noteLabel}
+							{config.noteRequired && (
+								<span className="text-[#C4714A] ml-0.5">*</span>
+							)}
+						</label>
+						<textarea
+							ref={textareaRef}
+							value={note}
+							onChange={(e) => setNote(e.target.value)}
+							placeholder={config.notePlaceholder}
+							rows={isRequestInfo ? 4 : 3}
+							className="w-full rounded-xl border-2 border-[#E8E1D9] px-4 py-3 text-sm text-[#1C1A17] placeholder:text-[#C0B8AF] resize-none focus:outline-none focus:border-[#C4714A] transition-colors leading-relaxed"
+							style={{ background: "#FEFCF9" }}
+						/>
+					</div>
+
+					{/* CTA */}
+					<button
+						type="button"
+						disabled={!canSubmit}
+						onClick={() => onConfirm(note.trim())}
+						className="w-full h-13 rounded-2xl text-sm font-medium tracking-wide transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+						style={{
+							background: canSubmit ? config.ctaBg : "#D9D1C7",
+							color: config.ctaText,
+							minHeight: "52px",
+						}}
+					>
+						{config.ctaLabel}
+					</button>
+
+					{/* Cancel */}
+					<button
+						type="button"
+						onClick={onClose}
+						className="w-full mt-3 h-11 rounded-2xl text-sm text-[#7A7268] transition-colors active:bg-[#EDE8E1]"
+					>
+						Cancel
+					</button>
+				</div>
+			</div>
+		</>
+	);
+}
+
+function ApplicationActionBar({
+	status,
+	applicantName,
+	onAction,
+}: {
+	status: string;
+	applicantName: string;
+	onAction: (
+		action: "approve" | "reject" | "request-info",
+		note: string,
+	) => void;
+}) {
+	const [mode, setMode] = useState<ActionMode>("idle");
+
+	const isDecided =
+		status === "approved" ||
+		status === "rejected" ||
+		status === "info-requested";
+	const isSubmitted = status === "submitted";
+
+	if (!isSubmitted && !isDecided) return null;
+
+	const s = STATUS_STYLES[status];
+
+	return (
+		<>
+			<ActionSheet
+				mode={mode}
+				applicantName={applicantName}
+				onClose={() => setMode("idle")}
+				onConfirm={(note) => {
+					if (mode !== "idle") {
+						onAction(mode, note);
+						setMode("idle");
+					}
+				}}
+			/>
+
+			{/* Outer fixed strip — transparent on desktop so only the card shows */}
+			<div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center">
+				<div
+					className="w-full max-w-lg sm:rounded-t-3xl sm:mx-5 sm:shadow-[0_-2px_24px_rgba(28,26,23,0.10)]"
+					style={{
+						background: "rgba(250,247,242,0.97)",
+						backdropFilter: "blur(12px)",
+						WebkitBackdropFilter: "blur(12px)",
+						borderTop: "1px solid #E8E1D9",
+					}}
+				>
+					<div className="px-5 pt-4 pb-8 sm:pb-6">
+						{isSubmitted && (
+							<>
+								{/* "Need more info" — clearly a button */}
+								<button
+									type="button"
+									onClick={() => setMode("request-info")}
+									className="w-full mb-3 flex items-center justify-center gap-2 h-11 rounded-2xl text-sm font-medium transition-all active:scale-[0.98] border"
+									style={{
+										color: "#A0742A",
+										borderColor: "#DEC98A",
+										background: "#FFFBF2",
+									}}
+								>
+									<svg
+										width="15"
+										height="15"
+										viewBox="0 0 15 15"
+										fill="none"
+										aria-hidden="true"
+									>
+										<circle
+											cx="7.5"
+											cy="7.5"
+											r="6"
+											stroke="currentColor"
+											strokeWidth="1.25"
+										/>
+										<path
+											d="M7.5 6.75v4"
+											stroke="currentColor"
+											strokeWidth="1.3"
+											strokeLinecap="round"
+										/>
+										<circle cx="7.5" cy="4.75" r="0.65" fill="currentColor" />
+									</svg>
+									Need more information
+								</button>
+
+								{/* Primary binary actions */}
+								<div className="grid grid-cols-2 gap-3">
+									<button
+										type="button"
+										onClick={() => setMode("reject")}
+										className="rounded-2xl text-sm font-medium transition-all active:scale-[0.98] border-2 border-[#E8E1D9]"
+										style={{
+											background: "#FEFCF9",
+											color: "#1C1A17",
+											minHeight: "52px",
+										}}
+									>
+										Decline
+									</button>
+									<button
+										type="button"
+										onClick={() => setMode("approve")}
+										className="rounded-2xl text-sm font-medium transition-all active:scale-[0.98]"
+										style={{
+											background: "#1C1A17",
+											color: "#FAFAF9",
+											minHeight: "52px",
+										}}
+									>
+										Approve
+									</button>
+								</div>
+							</>
+						)}
+
+						{isDecided && s && (
+							<div className="flex items-center gap-3">
+								{/* Status summary */}
+								<div
+									className="flex-1 flex items-center gap-2.5 px-4 py-3 rounded-2xl"
+									style={{ background: s.bg }}
+								>
+									<span
+										className="size-2 rounded-full shrink-0"
+										style={{ background: s.dot }}
+										aria-hidden="true"
+									/>
+									<span
+										className="text-sm font-medium"
+										style={{ color: s.color }}
+									>
+										{s.label}
+									</span>
+								</div>
+								{/* Change decision */}
+								<button
+									type="button"
+									onClick={() => {
+										if (status === "approved") setMode("reject");
+										else if (status === "rejected") setMode("approve");
+										else setMode("approve");
+									}}
+									className="shrink-0 h-11 px-4 rounded-2xl text-sm text-[#7A7268] border border-[#E8E1D9] transition-colors active:bg-[#EDE8E1]"
+									style={{ background: "#FEFCF9" }}
+								>
+									Change
+								</button>
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+		</>
+	);
+}
+
 export default function LandlordApplicationDetail({
 	loaderData,
 }: Route.ComponentProps) {
 	const { application } = loaderData;
+	const [localStatus, setLocalStatus] = useState(application.status);
 	const primary = application.residents.find((r) => r.role === "primary");
 	const adultResidents = application.residents.filter(
 		(r) => r.role !== "child",
 	);
+
+	const applicantName = primary?.fullName ?? `Applicant #${application.id}`;
+
+	const handleAction = (
+		action: "approve" | "reject" | "request-info",
+		_note: string,
+	) => {
+		if (action === "approve") setLocalStatus("approved");
+		else if (action === "reject") setLocalStatus("rejected");
+		else setLocalStatus("info-requested");
+	};
+
+	const showActionBar =
+		localStatus === "submitted" ||
+		localStatus === "approved" ||
+		localStatus === "rejected" ||
+		localStatus === "info-requested";
+	const bottomPadding = showActionBar ? "pb-36" : "pb-12";
 
 	return (
 		<div
@@ -355,15 +829,14 @@ export default function LandlordApplicationDetail({
 					>
 						{primary?.fullName ?? `Application #${application.id}`}
 					</h1>
-					<span className="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#F5E8DF] text-[#C4714A]">
-						{application.status.charAt(0).toUpperCase() +
-							application.status.slice(1)}
-					</span>
+					<StatusBadge status={localStatus} />
 				</div>
 			</div>
 
 			{/* Content */}
-			<div className="max-w-lg mx-auto px-5 pt-[72px] pb-12 space-y-4">
+			<div
+				className={`max-w-lg mx-auto px-5 pt-[72px] ${bottomPadding} space-y-4`}
+			>
 				{/* Application details */}
 				<div className="mt-6">
 					<SectionHeading>Application</SectionHeading>
@@ -466,6 +939,12 @@ export default function LandlordApplicationDetail({
 					/>
 				</div>
 			</div>
+
+			<ApplicationActionBar
+				status={localStatus}
+				applicantName={applicantName}
+				onAction={handleAction}
+			/>
 		</div>
 	);
 }
