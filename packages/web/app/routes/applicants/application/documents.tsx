@@ -3,7 +3,7 @@ import type {
 	ApplicationDocumentType,
 	ApplicationWithDetails,
 } from "api";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { data, useFetcher, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { apiClient } from "~/lib/api";
@@ -227,10 +227,12 @@ function FileRow({
 	const fetcher = useFetcher<typeof clientAction>({
 		key: `file-${entry.clientId}`,
 	});
+	const uploadedRef = useRef(false);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional one-shot effect on mount
 	useEffect(() => {
-		if (!entry.file || entry.isExisting) return;
+		if (!entry.file || entry.isExisting || uploadedRef.current) return;
+		uploadedRef.current = true;
 		const fd = new FormData();
 		fd.set("intent", "upload");
 		fd.set("file", entry.file);
