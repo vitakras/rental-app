@@ -21,6 +21,7 @@ const authConfig: AuthConfig = {
 	cookieName: "session",
 	webBaseUrl: "http://127.0.0.1:5173",
 	applicantSignupToken: "11111111-1111-4111-8111-111111111111",
+	landlordSignupToken: "22222222-2222-4222-8222-222222222222",
 	loginCodePepper: "test-pepper",
 };
 

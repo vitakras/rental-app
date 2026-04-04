@@ -49,6 +49,8 @@ type DatePickerProps = {
 	hint?: string;
 	placeholder?: string;
 	disabled?: boolean;
+	disablePastDates?: boolean;
+	disableFutureDates?: boolean;
 	className?: string;
 	buttonClassName?: string;
 	startMonth?: Date;
@@ -63,11 +65,15 @@ function DatePicker({
 	hint,
 	placeholder = "Select date",
 	disabled = false,
+	disablePastDates = false,
+	disableFutureDates = false,
 	className,
 	buttonClassName,
 	startMonth = new Date(1900, 0),
 	endMonth = new Date(new Date().getFullYear() + 10, 11),
 }: DatePickerProps) {
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
 	const generatedId = React.useId();
 	const fieldId = id ?? generatedId;
 	const [open, setOpen] = React.useState(false);
@@ -100,8 +106,15 @@ function DatePicker({
 						selected={selectedDate}
 						defaultMonth={selectedDate}
 						captionLayout="dropdown"
-						startMonth={startMonth}
-						endMonth={endMonth}
+						startMonth={disablePastDates ? today : startMonth}
+						endMonth={disableFutureDates ? today : endMonth}
+						disabled={
+							disablePastDates
+								? { before: today }
+								: disableFutureDates
+									? { after: today }
+									: undefined
+						}
 						onSelect={(date) => {
 							onChange(formatDateValue(date));
 							setOpen(false);

@@ -13,16 +13,19 @@ export function meta() {
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 	const url = new URL(request.url);
 	const token = url.searchParams.get("token");
-	return { signupToken: token ?? null };
+	const roleParam = url.searchParams.get("role");
+	const role = roleParam === "landlord" ? "landlord" : "applicant";
+	return { signupToken: token ?? null, role };
 }
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
 	const formData = await request.formData();
 	const email = formData.get("email") as string;
 	const signupToken = formData.get("signupToken") as string;
+	const role = formData.get("role") === "landlord" ? "landlord" : "applicant";
 
 	const response = await apiClient.auth.email.signup.$post({
-		json: { email, signupToken },
+		json: { email, signupToken, role },
 	});
 
 	if (response.status === 422) {
@@ -56,7 +59,9 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 }
 
 export default function Signup({ loaderData }: Route.ComponentProps) {
-	const { signupToken } = loaderData;
+	const { signupToken, role } = loaderData;
+	const isLandlord = role === "landlord";
+	const portalLabel = isLandlord ? "Landlord Portal" : "Applicant Portal";
 	const actionData = useActionData<typeof clientAction>();
 	const navigation = useNavigation();
 	const submitting = navigation.state === "submitting";
@@ -100,7 +105,7 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 					{/* Heading */}
 					<div className="mb-8">
 						<p className="text-xs text-[#C4714A] font-medium tracking-widest uppercase mb-3">
-							Applicant Portal
+							{portalLabel}
 						</p>
 						<h1
 							className="text-[2.8rem] leading-[1.1] text-[#1C1A17] mb-3"
@@ -205,14 +210,15 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 							<span className="font-medium text-[#1C1A17]">
 								Write this down.
 							</span>{" "}
-							This code is the only way to sign back into your applicant portal.
-							Store it somewhere safe like a notes app or password manager.
+							This code is the only way to sign back into your{" "}
+							{isLandlord ? "landlord" : "applicant"} portal. Store it somewhere
+							safe like a notes app or password manager.
 						</p>
 					</div>
 
 					{/* CTA */}
 					<Link
-						to="/a"
+						to={isLandlord ? "/l/applications" : "/a"}
 						className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1C1A17] px-4 py-3.5 text-sm font-medium text-white hover:bg-[#2E2B26] transition-colors"
 					>
 						I've saved my code — continue
@@ -269,7 +275,7 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 						{/* Heading */}
 						<div className="mb-10">
 							<p className="text-xs text-[#C4714A] font-medium tracking-widest uppercase mb-3">
-								Applicant Portal
+								{portalLabel}
 							</p>
 							<h1
 								className="text-[2.8rem] leading-[1.1] text-[#1C1A17] mb-3"
@@ -288,6 +294,7 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 						{/* Form */}
 						<Form method="post">
 							<input type="hidden" name="signupToken" value={signupToken} />
+							<input type="hidden" name="role" value={role} />
 
 							<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] mb-4">
 								<Label htmlFor="email" className="mb-1.5 block">
@@ -319,7 +326,7 @@ export default function Signup({ loaderData }: Route.ComponentProps) {
 						{/* No token state */}
 						<div className="mb-10">
 							<p className="text-xs text-[#C4714A] font-medium tracking-widest uppercase mb-3">
-								Applicant Portal
+								{portalLabel}
 							</p>
 							<h1
 								className="text-[2.8rem] leading-[1.1] text-[#1C1A17] mb-3"

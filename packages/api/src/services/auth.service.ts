@@ -28,6 +28,7 @@ export const verifyReusableLoginCodeSchema = z.object({
 export const applicantSignupSchema = z.object({
 	email: z.string().trim().email({ error: "Invalid email address" }),
 	signupToken: z.uuid({ error: "Signup token must be a valid UUID" }),
+	role: z.enum(["applicant", "landlord"]).optional().default("applicant"),
 });
 
 export type VerifyReusableLoginCodeData = z.input<
@@ -273,8 +274,14 @@ export function createAuthService({
 				return { success: false, errors: parsed.error.issues };
 			}
 
-			if (parsed.data.signupToken !== authConfig.applicantSignupToken) {
-				logger.warn({ email: parsed.data.email }, "Applicant signup rejected");
+			const role = parsed.data.role;
+			const expectedToken =
+				role === "landlord"
+					? authConfig.landlordSignupToken
+					: authConfig.applicantSignupToken;
+
+			if (parsed.data.signupToken !== expectedToken) {
+				logger.warn({ email: parsed.data.email, role }, "Signup rejected");
 				return { success: false, reason: "invalid_signup_token" };
 			}
 
@@ -290,7 +297,7 @@ export function createAuthService({
 			const user = await userRepository.create({
 				id: crypto.randomUUID(),
 				email,
-				globalRole: "applicant",
+				globalRole: role,
 			});
 
 			const session = await sessionRepository.create({
@@ -303,8 +310,8 @@ export function createAuthService({
 			});
 
 			logger.info(
-				{ email, userId: user.id, sessionId: session.id },
-				"Applicant signup completed",
+				{ email, role, userId: user.id, sessionId: session.id },
+				"Signup completed",
 			);
 
 			return {

@@ -1,5 +1,6 @@
 const LOCAL_WEB_BASE_URL = "http://localhost:5173";
 const LOCAL_APPLICANT_SIGNUP_TOKEN = "11111111-1111-4111-8111-111111111111";
+const LOCAL_LANDLORD_SIGNUP_TOKEN = "22222222-2222-4222-8222-222222222222";
 const LOCAL_LOGIN_CODE_PEPPER = "development-login-code-pepper";
 const runtimeEnv = process.env.NODE_ENV ?? "development";
 
@@ -9,6 +10,7 @@ export interface AuthConfig {
 	cookieName: string;
 	webBaseUrl: string;
 	applicantSignupToken: string;
+	landlordSignupToken: string;
 	loginCodePepper: string;
 }
 
@@ -39,6 +41,7 @@ function getWebBaseUrl() {
 
 function createDevelopmentAuthConfig(): AuthConfig {
 	const applicantSignupToken = process.env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
+	const landlordSignupToken = process.env.AUTH_LANDLORD_SIGNUP_TOKEN?.trim();
 
 	return {
 		loginCodeTtlSeconds: parsePositiveInt(
@@ -52,6 +55,7 @@ function createDevelopmentAuthConfig(): AuthConfig {
 		cookieName: process.env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
 		webBaseUrl: getWebBaseUrl(),
 		applicantSignupToken: applicantSignupToken || LOCAL_APPLICANT_SIGNUP_TOKEN,
+		landlordSignupToken: landlordSignupToken || LOCAL_LANDLORD_SIGNUP_TOKEN,
 		loginCodePepper:
 			process.env.AUTH_LOGIN_CODE_PEPPER?.trim() || LOCAL_LOGIN_CODE_PEPPER,
 	};
@@ -63,10 +67,15 @@ function createTestAuthConfig(): AuthConfig {
 
 function createProductionAuthConfig(): AuthConfig {
 	const applicantSignupToken = process.env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
+	const landlordSignupToken = process.env.AUTH_LANDLORD_SIGNUP_TOKEN?.trim();
 	const loginCodePepper = process.env.AUTH_LOGIN_CODE_PEPPER?.trim();
 
 	if (!applicantSignupToken) {
 		throw new Error("AUTH_APPLICANT_SIGNUP_TOKEN is required");
+	}
+
+	if (!landlordSignupToken) {
+		throw new Error("AUTH_LANDLORD_SIGNUP_TOKEN is required");
 	}
 
 	if (!loginCodePepper) {
@@ -85,6 +94,7 @@ function createProductionAuthConfig(): AuthConfig {
 		cookieName: process.env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
 		webBaseUrl: getWebBaseUrl(),
 		applicantSignupToken,
+		landlordSignupToken,
 		loginCodePepper,
 	};
 }

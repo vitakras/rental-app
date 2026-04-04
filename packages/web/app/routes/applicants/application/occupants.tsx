@@ -123,14 +123,7 @@ interface Pet {
 	notes: string;
 }
 
-const PET_TYPES = [
-	"Dog",
-	"Cat",
-	"Bird",
-	"Reptile",
-	"Fish",
-	"Other",
-];
+const PET_TYPES = ["Dog", "Cat", "Other"];
 
 function emptyPet(): Pet {
 	return {
@@ -212,25 +205,29 @@ function Stepper({
 	onChange,
 	min = 0,
 	max = 10,
+	showDecrement = true,
 }: {
 	value: number;
 	onChange: (v: number) => void;
 	min?: number;
 	max?: number;
+	showDecrement?: boolean;
 }) {
 	return (
 		<div className="flex items-center gap-5">
-			<Button
-				type="button"
-				variant="outline"
-				size="stepper"
-				onClick={() => onChange(Math.max(min, value - 1))}
-				disabled={value <= min}
-				aria-label="Decrease"
-				className="border-2 border-[#C4714A] text-[#C4714A] hover:bg-transparent active:scale-90 disabled:opacity-25"
-			>
-				−
-			</Button>
+			{showDecrement && (
+				<Button
+					type="button"
+					variant="outline"
+					size="stepper"
+					onClick={() => onChange(Math.max(min, value - 1))}
+					disabled={value <= min}
+					aria-label="Decrease"
+					className="border-2 border-[#C4714A] text-[#C4714A] hover:bg-transparent active:scale-90 disabled:opacity-25"
+				>
+					−
+				</Button>
+			)}
 			<span
 				className="w-8 text-center text-3xl text-[#1C1A17] select-none tabular-nums"
 				style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
@@ -512,6 +509,7 @@ export default function ApplicationOccupants({
 							onChange={handleAdultsChange}
 							min={1}
 							max={8}
+							showDecrement={false}
 						/>
 					</div>
 
@@ -525,6 +523,7 @@ export default function ApplicationOccupants({
 							onChange={handleChildrenChange}
 							min={0}
 							max={8}
+							showDecrement={false}
 						/>
 					</div>
 
@@ -638,6 +637,7 @@ export default function ApplicationOccupants({
 												value={adult.dob}
 												onChange={(value) => updateAdult(i, "dob", value)}
 												endMonth={new Date()}
+												disableFutureDates
 											/>
 										</div>
 
@@ -754,6 +754,7 @@ export default function ApplicationOccupants({
 											value={child.dob}
 											onChange={(value) => updateChild(i, "dob", value)}
 											endMonth={new Date()}
+											disableFutureDates
 										/>
 									</>
 								)}
@@ -790,7 +791,7 @@ export default function ApplicationOccupants({
 									Any furry, feathered, or scaly friends?
 								</p>
 							</div>
-							<Stepper value={pets.length} onChange={handlePetsChange} />
+							<Stepper value={pets.length} onChange={handlePetsChange} showDecrement={false} />
 						</div>
 					</div>
 				</div>
@@ -810,9 +811,7 @@ export default function ApplicationOccupants({
 											? "🐕"
 											: pet.type === "Cat"
 												? "🐈"
-												: pet.type === "Bird"
-													? "🐦"
-													: "🐾"}
+												: "🐾"}
 									</div>
 									<div className="flex-1 min-w-0">
 										<p className="text-sm font-medium text-[#1C1A17] truncate">

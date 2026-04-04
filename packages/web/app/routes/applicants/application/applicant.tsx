@@ -4,6 +4,7 @@ import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { PhoneInput } from "~/components/ui/phone-input";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/applicant";
 import { loadEditableApplication, parseApplicationParam } from "./form-route";
@@ -101,8 +102,13 @@ function TextInput({
 
 export default function ApplicationApplicant({
 	loaderData,
+	actionData,
 }: Route.ComponentProps) {
 	const submit = useSubmit();
+	const errorMessage =
+		actionData && "errors" in actionData && actionData.errors?.length
+			? actionData.errors[0].message
+			: null;
 
 	const [fullName, setFullName] = useState(loaderData.fullName);
 	const email = loaderData.email;
@@ -123,10 +129,10 @@ export default function ApplicationApplicant({
 						Let's start with <em>the basics.</em>
 					</h1>
 					<p
-						className="text-[#7A7268] text-sm leading-relaxed"
+						className={`text-sm leading-relaxed ${errorMessage ? "text-red-500" : "text-[#7A7268]"}`}
 						style={{ fontFamily: "'DM Sans', sans-serif" }}
 					>
-						Tell us a little about yourself.
+						{errorMessage ?? "Tell us a little about yourself."}
 					</p>
 				</div>
 
@@ -149,7 +155,7 @@ export default function ApplicationApplicant({
 							label="Date of birth"
 							value={ownerDob}
 							onChange={setOwnerDob}
-							endMonth={new Date()}
+							disableFutureDates
 						/>
 					</div>
 
@@ -164,13 +170,17 @@ export default function ApplicationApplicant({
 						/>
 					</div>
 
-					<TextInput
-						label="Phone number"
-						type="tel"
-						placeholder="(555) 000-0000"
-						value={phone}
-						onChange={(e) => setPhone(e.target.value)}
-					/>
+					<div>
+						<Label htmlFor="phone-number" className="mb-1.5 block">
+							Phone number
+						</Label>
+						<PhoneInput
+							id="phone-number"
+							placeholder="(555) 000-0000"
+							value={phone}
+							onChange={(e) => setPhone(e.target.value)}
+						/>
+					</div>
 				</div>
 
 				{/* ── Move-in date card ── */}
@@ -181,6 +191,7 @@ export default function ApplicationApplicant({
 						value={moveInDate}
 						onChange={setMoveInDate}
 						buttonClassName="text-sm"
+						disablePastDates
 					/>
 					<p
 						className="text-xs text-[#7A7268] mt-2"
