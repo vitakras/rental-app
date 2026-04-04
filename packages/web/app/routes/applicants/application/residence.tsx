@@ -3,6 +3,7 @@ import { data, redirect, useLoaderData, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
+import { PhoneInput } from "~/components/ui/phone-input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { apiClient } from "~/lib/api";
@@ -260,15 +261,16 @@ function ResidentResidenceSection({
 									onUpdate(residence.id, "landlordName", e.target.value)
 								}
 							/>
-							<TextInput
-								label="Landlord phone (optional)"
-								type="tel"
-								placeholder="(555) 123-4567"
-								value={residence.landlordPhone}
-								onChange={(e) =>
-									onUpdate(residence.id, "landlordPhone", e.target.value)
-								}
-							/>
+							<div>
+								<Label className="mb-1.5 block">Landlord phone (optional)</Label>
+								<PhoneInput
+									placeholder="(555) 123-4567"
+									value={residence.landlordPhone}
+									onChange={(e) =>
+										onUpdate(residence.id, "landlordPhone", e.target.value)
+									}
+								/>
+							</div>
 						</div>
 					)}
 				</div>

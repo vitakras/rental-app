@@ -9,6 +9,9 @@ Security
 - Applicant should not be able to see landlord data
 - All api routes should be secured
 
+Open Questions
+- Should I get a proper address for the previous place vs just a single text field
+
 
 Next Steps
 - Make sure i can still run the app after cloudflare migration
@@ -20,3 +23,4 @@ Next Steps
 
 Fast Follow
 - Co applicant support
+- Google Places Autocomplete (Nice to have)
