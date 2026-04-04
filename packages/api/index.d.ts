@@ -176,6 +176,7 @@ export type ApplicationDocumentDetail = {
 	documentType: string;
 	status: string;
 	notes: string | null;
+	originalFilename: string;
 	createdAt: string;
 	updatedAt: string;
 };

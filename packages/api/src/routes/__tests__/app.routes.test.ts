@@ -19,7 +19,10 @@ import type {
 	RotateReusableLoginCodeResult,
 	VerifyReusableLoginCodeResult,
 } from "~/services/auth.service";
-import type { UploadDocumentResult } from "~/services/file.service";
+import type {
+	DeleteDocumentResult,
+	UploadDocumentResult,
+} from "~/services/file.service";
 
 const applicantSessionCookie = "session=session-1";
 
@@ -179,6 +182,9 @@ function makeServices() {
 					},
 				}),
 			),
+			deleteDocument: vi.fn(async (): Promise<DeleteDocumentResult> => ({
+				success: true,
+			})),
 		},
 	};
 }

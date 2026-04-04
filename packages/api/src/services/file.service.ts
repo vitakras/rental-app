@@ -66,6 +66,10 @@ export type UploadDocumentData = z.input<typeof uploadDocumentSchema>;
 
 // ── Result types ──────────────────────────────────────────────────────────────
 
+export type DeleteDocumentResult =
+	| { success: true }
+	| { success: false; reason: "not_found" };
+
 export type UploadDocumentResult =
 	| { success: true; fileId: string; file: FileRecord }
 	| { success: false; errors: z.ZodIssue[] };
@@ -90,6 +94,40 @@ export function createFileService({
 	logger?: Logger;
 }) {
 	return {
+		async deleteDocument({
+			applicationId,
+			fileId,
+		}: {
+			applicationId: number;
+			fileId: string;
+		}): Promise<DeleteDocumentResult> {
+			const doc =
+				await applicationDocumentRepository.findByFileId(fileId);
+
+			if (!doc || doc.applicationId !== applicationId) {
+				return { success: false, reason: "not_found" };
+			}
+
+			const file = await fileRepository.findById(fileId);
+
+			if (file) {
+				try {
+					await blobStorage.deleteObject(file.storageKey);
+				} catch (error) {
+					logger.error(
+						{ err: error, fileId, storageKey: file.storageKey },
+						"Failed to delete document from storage",
+					);
+				}
+			}
+
+			await applicationDocumentRepository.deleteById(doc.id);
+			await fileRepository.deleteById(fileId);
+
+			logger.info({ fileId, applicationId }, "Document deleted");
+			return { success: true };
+		},
+
 		async uploadDocument(
 			data: UploadDocumentData,
 		): Promise<UploadDocumentResult | UploadDocumentFailureResult> {

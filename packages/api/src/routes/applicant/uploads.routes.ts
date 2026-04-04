@@ -116,5 +116,35 @@ export function createApplicantUploadsRoutes({
 			}
 
 			return c.json({ fileId: result.fileId }, 200);
+		})
+		.delete("/:id/documents/:fileId", ensureValidApplicationId, async (c) => {
+			const applicationId = parseApplicationId(c.req.param("id"));
+
+			if (!applicationId) {
+				return c.json({ error: "invalid_application_id" }, 400);
+			}
+
+			const auth = getAuthContext(c);
+			const fileId = c.req.param("fileId");
+
+			const applicationResult =
+				await applicationService.getApplicationWithDetails(
+					applicationId,
+					auth.user.id,
+				);
+			if (!applicationResult.success) {
+				return c.json({ error: "application_not_found" }, 404);
+			}
+
+			const result = await fileService.deleteDocument({
+				applicationId,
+				fileId,
+			});
+
+			if (!result.success) {
+				return c.json({ error: "document_not_found" }, 404);
+			}
+
+			return c.body(null, 204);
 		});
 }

@@ -5,6 +5,7 @@ import {
 	applicationAccessTable,
 	applicationDocumentsTable,
 	applicationsTable,
+	filesTable,
 	incomeSourcesTable,
 	petsTable,
 	residencesTable,
@@ -279,6 +280,29 @@ export function applicationRepository(db: DbInstance) {
 			]);
 
 			const residentIds = residents.map((r) => r.id);
+
+			const fetchDocuments = () =>
+				db
+					.select({
+						id: applicationDocumentsTable.id,
+						applicationId: applicationDocumentsTable.applicationId,
+						residentId: applicationDocumentsTable.residentId,
+						fileId: applicationDocumentsTable.fileId,
+						category: applicationDocumentsTable.category,
+						documentType: applicationDocumentsTable.documentType,
+						status: applicationDocumentsTable.status,
+						notes: applicationDocumentsTable.notes,
+						createdAt: applicationDocumentsTable.createdAt,
+						updatedAt: applicationDocumentsTable.updatedAt,
+						originalFilename: filesTable.originalFilename,
+					})
+					.from(applicationDocumentsTable)
+					.innerJoin(
+						filesTable,
+						eq(applicationDocumentsTable.fileId, filesTable.id),
+					)
+					.where(eq(applicationDocumentsTable.applicationId, id));
+
 			const [incomeSources, residences, documents] =
 				residentIds.length > 0
 					? await Promise.all([
@@ -295,19 +319,9 @@ export function applicationRepository(db: DbInstance) {
 										inArray(residencesTable.residentId, residentIds),
 									),
 								),
-							db
-								.select()
-								.from(applicationDocumentsTable)
-								.where(eq(applicationDocumentsTable.applicationId, id)),
+							fetchDocuments(),
 						])
-					: [
-							[],
-							[],
-							await db
-								.select()
-								.from(applicationDocumentsTable)
-								.where(eq(applicationDocumentsTable.applicationId, id)),
-						];
+					: [[], [], await fetchDocuments()];
 
 			const residentsWithDetails = residents.map((r) => ({
 				...r,

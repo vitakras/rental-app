@@ -37,6 +37,7 @@ export interface ApplicationDocumentRepository {
 		input: CreateApplicationDocumentInput,
 	): Promise<ApplicationDocumentRecord>;
 	findById(id: number): Promise<ApplicationDocumentRecord | null>;
+	findByFileId(fileId: string): Promise<ApplicationDocumentRecord | null>;
 	findByApplicationId(
 		applicationId: number,
 	): Promise<ApplicationDocumentRecord[]>;
@@ -45,6 +46,7 @@ export interface ApplicationDocumentRepository {
 		status: ApplicationDocumentStatus,
 		notes?: string,
 	): Promise<void>;
+	deleteById(id: number): Promise<void>;
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -82,6 +84,21 @@ export function applicationDocumentRepository(
 				.select()
 				.from(applicationDocumentsTable)
 				.where(eq(applicationDocumentsTable.applicationId, applicationId));
+		},
+
+		async findByFileId(fileId) {
+			const [doc] = await db
+				.select()
+				.from(applicationDocumentsTable)
+				.where(eq(applicationDocumentsTable.fileId, fileId));
+
+			return doc ?? null;
+		},
+
+		async deleteById(id) {
+			await db
+				.delete(applicationDocumentsTable)
+				.where(eq(applicationDocumentsTable.id, id));
 		},
 
 		async updateStatus(id, status, notes) {

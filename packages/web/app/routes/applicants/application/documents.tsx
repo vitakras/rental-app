@@ -5,7 +5,7 @@ import type {
 } from "api";
 import { data, useLoaderData, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
-import { useFileUpload } from "~/hooks/use-file-upload";
+import { type ExistingFile, useFileUpload } from "~/hooks/use-file-upload";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/documents";
 
@@ -22,6 +22,7 @@ interface DocumentSlot {
 	documentType: ApplicationDocumentType;
 	label: string;
 	hint?: string;
+	existingFiles: ExistingFile[];
 }
 
 interface ResidentSlots {
@@ -47,6 +48,20 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 	const adults = application.residents.filter((r) => r.role !== "child");
 
+	const existingByResidentAndType = new Map<string, ExistingFile[]>();
+	for (const doc of application.documents) {
+		const key = `${doc.residentId}-${doc.documentType}`;
+		const bucket = existingByResidentAndType.get(key) ?? [];
+		bucket.push({ fileId: doc.fileId, filename: doc.originalFilename });
+		existingByResidentAndType.set(key, bucket);
+	}
+
+	const getExisting = (
+		residentId: number,
+		documentType: ApplicationDocumentType,
+	): ExistingFile[] =>
+		existingByResidentAndType.get(`${residentId}-${documentType}`) ?? [];
+
 	const residents: ResidentSlots[] = adults.map((resident) => {
 		const slots: DocumentSlot[] = [];
 
@@ -56,6 +71,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 			category: "identity",
 			documentType: "government_id",
 			label: "Government ID",
+			existingFiles: getExisting(resident.id, "government_id"),
 		});
 
 		for (const source of resident.incomeSources) {
@@ -67,6 +83,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "paystub",
 					label: "Paystubs",
 					hint: source.employerOrSourceName,
+					existingFiles: getExisting(resident.id, "paystub"),
 				});
 				slots.push({
 					key: `${resident.id}-employment_letter-${source.id}`,
@@ -75,6 +92,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "employment_letter",
 					label: "Employment letter",
 					hint: source.employerOrSourceName,
+					existingFiles: getExisting(resident.id, "employment_letter"),
 				});
 			} else if (source.type === "self_employment") {
 				slots.push({
@@ -84,6 +102,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "bank_statement",
 					label: "Bank statements",
 					hint: source.employerOrSourceName,
+					existingFiles: getExisting(resident.id, "bank_statement"),
 				});
 			} else {
 				slots.push({
@@ -93,6 +112,7 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "other",
 					label: "Supporting document",
 					hint: source.employerOrSourceName,
+					existingFiles: getExisting(resident.id, "other"),
 				});
 			}
 		}
@@ -125,7 +145,11 @@ function SlotCard({
 	slot: DocumentSlot;
 	applicationId: number;
 }) {
-	const { uploadedFiles, uploadFiles } = useFileUpload(applicationId, slot);
+	const { uploadedFiles, uploadFiles, removeFile, retryFile } = useFileUpload(
+		applicationId,
+		slot,
+		slot.existingFiles,
+	);
 	const hasUploads = uploadedFiles.length > 0;
 
 	return (
@@ -149,72 +173,142 @@ function SlotCard({
 
 			{hasUploads && (
 				<ul className="mb-3 space-y-1.5">
-					{uploadedFiles.map((file) => (
-						<li key={file.clientId} className="flex items-center gap-2">
-							{file.status === "uploading" && (
-								<svg
-									aria-hidden="true"
-									className="animate-spin text-[#C4714A] flex-shrink-0"
-									width="14"
-									height="14"
-									viewBox="0 0 14 14"
-									fill="none"
+					{uploadedFiles.map((file) => {
+						if (file.status === "error") {
+							return (
+								<li
+									key={file.clientId}
+									className="rounded-xl bg-[#FDF0EE] border border-[#F0C4BC] px-3 py-2.5"
 								>
-									<circle
-										cx="7"
-										cy="7"
-										r="5.5"
+									<div className="flex items-start gap-2.5">
+										<svg
+											aria-hidden="true"
+											className="text-[#C45A4A] flex-shrink-0 mt-0.5"
+											width="14"
+											height="14"
+											viewBox="0 0 14 14"
+											fill="none"
+										>
+											<circle cx="7" cy="7" r="6.5" fill="#C45A4A" fillOpacity="0.12" stroke="#C45A4A" strokeWidth="1.25" />
+											<path d="M7 4v3.5M7 9.5v.5" stroke="#C45A4A" strokeWidth="1.5" strokeLinecap="round" />
+										</svg>
+										<div className="flex-1 min-w-0">
+											<p
+												className="text-xs font-medium text-[#9B3E31] truncate"
+												style={{ fontFamily: "'DM Sans', sans-serif" }}
+											>
+												{file.filename}
+											</p>
+											<p
+												className="text-xs text-[#B05040] mt-0.5"
+												style={{ fontFamily: "'DM Sans', sans-serif" }}
+											>
+												{file.errorMessage ?? "Upload failed."}
+											</p>
+										</div>
+										<div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
+											<button
+												type="button"
+												onClick={() => retryFile(file.clientId)}
+												className="text-xs font-medium text-[#C45A4A] hover:text-[#9B3E31] transition-colors underline underline-offset-2"
+												style={{ fontFamily: "'DM Sans', sans-serif" }}
+											>
+												Retry
+											</button>
+											<button
+												type="button"
+												aria-label="Dismiss"
+												onClick={() => removeFile(file.clientId)}
+												className="text-[#C45A4A] hover:text-[#9B3E31] transition-colors"
+											>
+												<svg
+													aria-hidden="true"
+													width="12"
+													height="12"
+													viewBox="0 0 12 12"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth="2"
+													strokeLinecap="round"
+												>
+													<path d="M1 1l10 10M11 1L1 11" />
+												</svg>
+											</button>
+										</div>
+									</div>
+								</li>
+							);
+						}
+
+						return (
+							<li key={file.clientId} className="flex items-center gap-2">
+								{file.status === "uploading" && (
+									<svg
+										aria-hidden="true"
+										className="animate-spin text-[#C4714A] flex-shrink-0"
+										width="14"
+										height="14"
+										viewBox="0 0 14 14"
+										fill="none"
+									>
+										<circle
+											cx="7"
+											cy="7"
+											r="5.5"
+											stroke="currentColor"
+											strokeWidth="1.5"
+											strokeDasharray="22"
+											strokeDashoffset="8"
+											strokeLinecap="round"
+										/>
+									</svg>
+								)}
+								{file.status === "done" && (
+									<svg
+										aria-hidden="true"
+										className="text-[#5A9E6F] flex-shrink-0"
+										width="14"
+										height="14"
+										viewBox="0 0 14 14"
+										fill="none"
 										stroke="currentColor"
-										strokeWidth="1.5"
-										strokeDasharray="22"
-										strokeDashoffset="8"
+										strokeWidth="2"
 										strokeLinecap="round"
-									/>
-								</svg>
-							)}
-							{file.status === "done" && (
-								<svg
-									aria-hidden="true"
-									className="text-[#5A9E6F] flex-shrink-0"
-									width="14"
-									height="14"
-									viewBox="0 0 14 14"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-									strokeLinejoin="round"
+										strokeLinejoin="round"
+									>
+										<path d="M2 7l4 4 6-6" />
+									</svg>
+								)}
+								<span
+									className="text-sm truncate max-w-[240px] text-[#1C1A17]"
+									style={{ fontFamily: "'DM Sans', sans-serif" }}
 								>
-									<path d="M2 7l4 4 6-6" />
-								</svg>
-							)}
-							{file.status === "error" && (
-								<svg
-									aria-hidden="true"
-									className="text-[#C45A4A] flex-shrink-0"
-									width="14"
-									height="14"
-									viewBox="0 0 14 14"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-								>
-									<path d="M1 1l12 12M13 1L1 13" />
-								</svg>
-							)}
-							<span
-								className={`text-sm truncate max-w-[240px] ${
-									file.status === "error" ? "text-[#C45A4A]" : "text-[#1C1A17]"
-								}`}
-								style={{ fontFamily: "'DM Sans', sans-serif" }}
-							>
-								{file.status === "error"
-									? `${file.filename} — ${file.errorMessage ?? "upload failed"}`
-									: file.filename}
-							</span>
-						</li>
-					))}
+									{file.filename}
+								</span>
+								{file.status === "done" && (
+									<button
+										type="button"
+										aria-label="Remove"
+										onClick={() => removeFile(file.clientId)}
+										className="ml-auto flex-shrink-0 text-[#7A7268] hover:text-[#C45A4A] transition-colors"
+									>
+										<svg
+											aria-hidden="true"
+											width="12"
+											height="12"
+											viewBox="0 0 12 12"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2"
+											strokeLinecap="round"
+										>
+											<path d="M1 1l10 10M11 1L1 11" />
+										</svg>
+									</button>
+								)}
+							</li>
+						);
+					})}
 				</ul>
 			)}
 
