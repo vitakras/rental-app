@@ -81,6 +81,7 @@ const residenceEntrySchema = z.object({
 	isRental: z.boolean(),
 	landlordName: z.string().optional(),
 	landlordPhone: z.string().optional(),
+	notes: z.string().optional(),
 });
 
 export const addIncomeSourcesSchema = z.array(
@@ -99,7 +100,6 @@ export const upsertResidenceSchema = z.object({
 			}),
 		)
 		.default([]),
-	notes: z.string().optional(),
 });
 
 export type UpdateOccupantsData = z.input<typeof updateOccupantsSchema>;
@@ -152,6 +152,7 @@ export type ResidenceDetail = {
 	isRental: boolean;
 	landlordName: string | null;
 	landlordPhone: string | null;
+	notes: string | null;
 };
 
 export type ResidentDetail = {

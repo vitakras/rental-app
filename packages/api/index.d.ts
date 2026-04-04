@@ -139,6 +139,7 @@ export type ResidenceDetail = {
 	isRental: boolean;
 	landlordName: string | null;
 	landlordPhone: string | null;
+	notes: string | null;
 };
 
 export type ResidentDetail = {

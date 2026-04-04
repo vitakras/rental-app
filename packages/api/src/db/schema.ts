@@ -157,6 +157,7 @@ export const residencesTable = sqliteTable("residences", {
 	isRental: int({ mode: "boolean" }).notNull().default(false),
 	landlordName: text(),
 	landlordPhone: text(),
+	notes: text(),
 	...timestamps,
 });
 

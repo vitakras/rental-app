@@ -29,7 +29,6 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 	return {
 		applicationId: id,
 		residents,
-		notes: application.notes ?? "",
 	};
 }
 
@@ -52,9 +51,9 @@ export async function clientAction({
 				isRental: boolean;
 				landlordName?: string;
 				landlordPhone?: string;
+				notes?: string;
 			}>;
 		}>;
-		notes?: string;
 	};
 
 	const response = await apiClient.applications[":id"].residence.$put({
@@ -79,6 +78,7 @@ type ResidenceEntry = {
 	isRental: boolean;
 	landlordName: string;
 	landlordPhone: string;
+	notes: string;
 };
 
 function emptyResidence(): ResidenceEntry {
@@ -91,6 +91,7 @@ function emptyResidence(): ResidenceEntry {
 		isRental: false,
 		landlordName: "",
 		landlordPhone: "",
+		notes: "",
 	};
 }
 
@@ -251,7 +252,7 @@ function ResidentResidenceSection({
 					</div>
 
 					{residence.isRental && (
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-4">
 							<TextInput
 								label="Landlord name (optional)"
 								type="text"
@@ -273,6 +274,18 @@ function ResidentResidenceSection({
 							</div>
 						</div>
 					)}
+
+					<div>
+						<Label className="mb-1.5 block">Notes (optional)</Label>
+						<Textarea
+							rows={2}
+							placeholder="Anything else you'd like us to know about this address?"
+							value={residence.notes}
+							onChange={(e) =>
+								onUpdate(residence.id, "notes", e.target.value)
+							}
+						/>
+					</div>
 				</div>
 			))}
 
@@ -301,8 +314,7 @@ function ResidentResidenceSection({
 }
 
 export default function ApplicationResidence() {
-	const { residents, notes: initialNotes } =
-		useLoaderData<typeof clientLoader>();
+	const { residents } = useLoaderData<typeof clientLoader>();
 	const submit = useSubmit();
 
 	const [residentResidences, setResidentResidences] = useState<
@@ -320,10 +332,10 @@ export default function ApplicationResidence() {
 				isRental: residence.isRental,
 				landlordName: residence.landlordName ?? "",
 				landlordPhone: residence.landlordPhone ?? "",
+				notes: residence.notes ?? "",
 			})),
 		})),
 	);
-	const [notes, setNotes] = useState(initialNotes);
 
 	function addResidence(residentIndex: number) {
 		setResidentResidences((prev) =>
@@ -410,9 +422,9 @@ export default function ApplicationResidence() {
 						landlordPhone: residence.isRental
 							? residence.landlordPhone || undefined
 							: undefined,
+						notes: residence.notes || undefined,
 					})),
 			})),
-			notes: notes || undefined,
 		};
 
 		submit({ data: JSON.stringify(payload) }, { method: "post" });
@@ -453,16 +465,6 @@ export default function ApplicationResidence() {
 						/>
 					</div>
 				))}
-
-				<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
-					<SectionLabel>Notes</SectionLabel>
-					<Textarea
-						rows={4}
-						placeholder="Anything else you'd like us to know?"
-						value={notes}
-						onChange={(e) => setNotes(e.target.value)}
-					/>
-				</div>
 			</div>
 
 			<div className="fixed bottom-0 left-0 right-0 pointer-events-none z-20">
@@ -471,12 +473,7 @@ export default function ApplicationResidence() {
 						<Button variant="continue" type="button" onClick={handleContinue}>
 							Continue
 						</Button>
-						<p
-							className="text-center text-xs text-[#7A7268] mt-3"
-							style={{ fontFamily: "'DM Sans', sans-serif" }}
-						>
-							You can skip this step and add residence details later
-						</p>
+
 					</div>
 				</div>
 			</div>

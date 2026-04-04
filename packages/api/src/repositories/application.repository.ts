@@ -179,11 +179,6 @@ export function applicationRepository(db: DbInstance) {
 			applicationId: number,
 			input: UpsertResidencePayload,
 		) {
-			await db
-				.update(applicationsTable)
-				.set({ notes: input.notes ?? null })
-				.where(eq(applicationsTable.id, applicationId));
-
 			const residentIds = input.residents.map(
 				(resident) => resident.residentId,
 			);
@@ -210,6 +205,7 @@ export function applicationRepository(db: DbInstance) {
 					isRental: residence.isRental,
 					landlordName: residence.landlordName ?? null,
 					landlordPhone: residence.landlordPhone ?? null,
+					notes: residence.notes ?? null,
 				})),
 			);
 
