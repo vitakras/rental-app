@@ -439,8 +439,7 @@ export default function ApplicationIncome() {
 						className="text-[#7A7268] text-sm leading-relaxed"
 						style={{ fontFamily: "'DM Sans', sans-serif" }}
 					>
-						List all sources of income for each adult applicant. You can skip
-						this step if you'd prefer to provide documentation later.
+						List all sources of income for each adult applicant.
 					</p>
 				</div>
 
@@ -472,7 +471,7 @@ export default function ApplicationIncome() {
 							className="text-center text-xs text-[#7A7268] mt-3"
 							style={{ fontFamily: "'DM Sans', sans-serif" }}
 						>
-							You can skip this step and add income details later
+							Your progress is saved automatically
 						</p>
 					</div>
 				</div>
