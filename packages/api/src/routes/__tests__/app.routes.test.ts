@@ -182,9 +182,11 @@ function makeServices() {
 					},
 				}),
 			),
-			deleteDocument: vi.fn(async (): Promise<DeleteDocumentResult> => ({
-				success: true,
-			})),
+			deleteDocument: vi.fn(
+				async (): Promise<DeleteDocumentResult> => ({
+					success: true,
+				}),
+			),
 			serveFileForApplication: vi.fn(async () => ({ success: false as const })),
 		},
 	};

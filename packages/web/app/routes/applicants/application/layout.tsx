@@ -78,7 +78,10 @@ function StepNavigator({
 				const isLast = i === STEPS.length - 1;
 
 				return (
-					<li key={step.slug} className={cn("flex items-start min-w-0", !isLast && "flex-1")}>
+					<li
+						key={step.slug}
+						className={cn("flex items-start min-w-0", !isLast && "flex-1")}
+					>
 						<div className="flex flex-col items-center w-9 sm:w-11">
 							<button
 								type="button"

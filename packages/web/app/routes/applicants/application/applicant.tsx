@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { data, redirect, useNavigation, useSubmit } from "react-router";
+import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { PhoneInput } from "~/components/ui/phone-input";
-import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/applicant";
 import { loadEditableApplication, parseApplicationParam } from "./form-route";

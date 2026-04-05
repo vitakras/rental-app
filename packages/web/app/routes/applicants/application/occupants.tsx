@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { data, redirect, useNavigation, useSubmit } from "react-router";
+import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/occupants";
 import { loadEditableApplication, parseApplicationParam } from "./form-route";
@@ -794,7 +794,11 @@ export default function ApplicationOccupants({
 									Any furry, feathered, or scaly friends?
 								</p>
 							</div>
-							<Stepper value={pets.length} onChange={handlePetsChange} showDecrement={false} />
+							<Stepper
+								value={pets.length}
+								onChange={handlePetsChange}
+								showDecrement={false}
+							/>
 						</div>
 					</div>
 				</div>
@@ -888,7 +892,6 @@ export default function ApplicationOccupants({
 								</div>
 							</div>
 						))}
-
 					</div>
 				)}
 			</div>

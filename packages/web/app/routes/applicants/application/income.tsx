@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { data, redirect, useLoaderData, useNavigation, useSubmit } from "react-router";
+import {
+	data,
+	redirect,
+	useLoaderData,
+	useNavigation,
+	useSubmit,
+} from "react-router";
+import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/income";
 import { loadEditableApplication, parseApplicationParam } from "./form-route";
@@ -467,7 +473,12 @@ export default function ApplicationIncome() {
 			<div className="fixed bottom-0 left-0 right-0 z-20 bg-[#F5F0E8] border-t border-[#E8E1D9] shadow-[0_-4px_12px_rgba(28,26,23,0.06)]">
 				<div className="pt-4 pb-10 px-5">
 					<div className="max-w-lg mx-auto">
-						<Button variant="continue" type="button" disabled={isSubmitting} onClick={handleContinue}>
+						<Button
+							variant="continue"
+							type="button"
+							disabled={isSubmitting}
+							onClick={handleContinue}
+						>
 							{isSubmitting ? <SpinnerIcon /> : "Continue"}
 						</Button>
 						<p

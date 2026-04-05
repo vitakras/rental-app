@@ -68,7 +68,8 @@ function createDevelopmentAuthConfig(env: AuthEnv): AuthConfig {
 		webBaseUrl: getWebBaseUrl(env, "development"),
 		applicantSignupToken: applicantSignupToken || LOCAL_APPLICANT_SIGNUP_TOKEN,
 		landlordSignupToken: landlordSignupToken || LOCAL_LANDLORD_SIGNUP_TOKEN,
-		loginCodePepper: env.AUTH_LOGIN_CODE_PEPPER?.trim() || LOCAL_LOGIN_CODE_PEPPER,
+		loginCodePepper:
+			env.AUTH_LOGIN_CODE_PEPPER?.trim() || LOCAL_LOGIN_CODE_PEPPER,
 	};
 }
 
@@ -111,7 +112,9 @@ function createProductionAuthConfig(env: AuthEnv): AuthConfig {
 	};
 }
 
-export function createAuthConfig(env: AuthEnv = process.env as AuthEnv): AuthConfig {
+export function createAuthConfig(
+	env: AuthEnv = process.env as AuthEnv,
+): AuthConfig {
 	const runtimeEnv = env.NODE_ENV ?? "development";
 
 	if (runtimeEnv === "development") {

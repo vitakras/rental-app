@@ -26,7 +26,10 @@ export function createAuthCodeRoutes({
 }) {
 	const app = new Hono<AuthContextEnv>();
 
-	app.use("/", createRequireSession({ authService, cookieName: authConfig.cookieName }));
+	app.use(
+		"/",
+		createRequireSession({ authService, cookieName: authConfig.cookieName }),
+	);
 	app.use(
 		"/rotate",
 		createRequireSession({ authService, cookieName: authConfig.cookieName }),

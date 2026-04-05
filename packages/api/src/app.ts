@@ -24,10 +24,9 @@ export function createApp({
 		...services,
 		cookieName: authConfig.cookieName,
 	};
-	const applicantRoutes = createApplicantApplicationsRoutes(routeServices).route(
-		"/",
-		createApplicantUploadsRoutes(routeServices),
-	);
+	const applicantRoutes = createApplicantApplicationsRoutes(
+		routeServices,
+	).route("/", createApplicantUploadsRoutes(routeServices));
 	const storage = storageRoutes;
 
 	const routes = new Hono()
@@ -67,7 +66,7 @@ export function createApp({
 			c.header("Pragma", "no-cache");
 		})
 		.get("/", (c) => {
-			return c.json({})
+			return c.json({});
 		})
 		.route("/auth/code", createAuthCodeRoutes({ ...services, authConfig }))
 		.route("/auth/email", createAuthEmailRoutes({ ...services, authConfig }))

@@ -2,7 +2,10 @@ import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { SessionRecord } from "~/repositories/session.repository";
 
-export function getSessionCookie(c: Context, { cookieName }: { cookieName: string }) {
+export function getSessionCookie(
+	c: Context,
+	{ cookieName }: { cookieName: string },
+) {
 	return getCookie(c, cookieName) ?? null;
 }
 

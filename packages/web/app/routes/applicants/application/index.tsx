@@ -178,7 +178,13 @@ function LandlordDecisionBanner({
 							viewBox="0 0 18 18"
 							fill="none"
 						>
-							<circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
+							<circle
+								cx="9"
+								cy="9"
+								r="7"
+								stroke="currentColor"
+								strokeWidth="1.5"
+							/>
 							<path
 								d="M9 8v5"
 								stroke="currentColor"
@@ -234,7 +240,13 @@ function LandlordDecisionBanner({
 							viewBox="0 0 18 18"
 							fill="none"
 						>
-							<circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
+							<circle
+								cx="9"
+								cy="9"
+								r="7"
+								stroke="currentColor"
+								strokeWidth="1.5"
+							/>
 							<path
 								d="M5.5 9.5l2.5 2.5 4.5-5"
 								stroke="currentColor"
@@ -271,7 +283,13 @@ function LandlordDecisionBanner({
 							viewBox="0 0 18 18"
 							fill="none"
 						>
-							<circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
+							<circle
+								cx="9"
+								cy="9"
+								r="7"
+								stroke="currentColor"
+								strokeWidth="1.5"
+							/>
 							<path
 								d="M6 6l6 6M12 6l-6 6"
 								stroke="currentColor"
@@ -303,8 +321,11 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 	const navigation = useNavigation();
 	const submitting = navigation.state === "submitting";
 	const isSubmittable =
-		application.status === "draft" || application.status === "pending" || application.status === "info_requested";
-	const isLocked = application.status === "approved" || application.status === "rejected";
+		application.status === "draft" ||
+		application.status === "pending" ||
+		application.status === "info_requested";
+	const isLocked =
+		application.status === "approved" || application.status === "rejected";
 	const primary = application.residents.find(
 		(resident) => resident.role === "primary",
 	);
@@ -365,7 +386,10 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 
 				<LandlordDecisionBanner
 					status={application.status}
-					landlordNote={(application as { landlordNote?: string | null }).landlordNote ?? null}
+					landlordNote={
+						(application as { landlordNote?: string | null }).landlordNote ??
+						null
+					}
 					applicationId={applicationId}
 				/>
 
@@ -556,7 +580,10 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 													)}
 													<div className="grid grid-cols-2 gap-4">
 														<div className="col-span-2">
-															<Field label="Address" value={residence.address} />
+															<Field
+																label="Address"
+																value={residence.address}
+															/>
 														</div>
 														<Field
 															label="From"
@@ -690,11 +717,13 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						{isSubmittable ? (
 							<Form method="post">
 								<Button variant="continue" type="submit" disabled={submitting}>
-									{submitting
-										? <SpinnerIcon />
-										: application.status === "info_requested"
-											? "Resubmit application"
-											: "Submit application"}
+									{submitting ? (
+										<SpinnerIcon />
+									) : application.status === "info_requested" ? (
+										"Resubmit application"
+									) : (
+										"Submit application"
+									)}
 								</Button>
 							</Form>
 						) : (

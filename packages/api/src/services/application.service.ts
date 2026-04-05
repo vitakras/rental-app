@@ -311,7 +311,9 @@ export type GetApplicationWithDetailsResult =
 const noopLogger = pino({ level: "silent" });
 
 function isApplicationEditable(status: string) {
-	return status === "draft" || status === "pending" || status === "info_requested";
+	return (
+		status === "draft" || status === "pending" || status === "info_requested"
+	);
 }
 
 export function createApplicationService({

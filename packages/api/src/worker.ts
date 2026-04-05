@@ -1,5 +1,5 @@
-import { createAuthConfig } from "~/auth/config";
 import { createApp } from "~/app";
+import { createAuthConfig } from "~/auth/config";
 import { createCfServices } from "~/container";
 import type { CloudflareBindings } from "~/worker-env";
 

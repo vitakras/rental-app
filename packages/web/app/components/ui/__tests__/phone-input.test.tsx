@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 import { PhoneInput } from "../phone-input";
 
@@ -9,7 +9,10 @@ afterEach(cleanup);
 function Controlled({
 	name,
 	initialValue = "",
-}: { name?: string; initialValue?: string }) {
+}: {
+	name?: string;
+	initialValue?: string;
+}) {
 	const [value, setValue] = useState(initialValue);
 	return (
 		<form>

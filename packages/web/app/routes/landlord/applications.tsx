@@ -283,13 +283,38 @@ const STATUS_STYLES: Record<
 	string,
 	{ bg: string; color: string; dot: string; label: string }
 > = {
-	submitted: { bg: "#EEF1F8", color: "#4A6C9B", dot: "#4A6C9B", label: "Submitted" },
-	approved: { bg: "#EDFAF4", color: "#2E8A58", dot: "#2E8A58", label: "Approved" },
-	rejected: { bg: "#FFF0F0", color: "#C44A4A", dot: "#C44A4A", label: "Declined" },
-	info_requested: { bg: "#FFF9EE", color: "#A0742A", dot: "#C4974A", label: "More Info" },
+	submitted: {
+		bg: "#EEF1F8",
+		color: "#4A6C9B",
+		dot: "#4A6C9B",
+		label: "Submitted",
+	},
+	approved: {
+		bg: "#EDFAF4",
+		color: "#2E8A58",
+		dot: "#2E8A58",
+		label: "Approved",
+	},
+	rejected: {
+		bg: "#FFF0F0",
+		color: "#C44A4A",
+		dot: "#C44A4A",
+		label: "Declined",
+	},
+	info_requested: {
+		bg: "#FFF9EE",
+		color: "#A0742A",
+		dot: "#C4974A",
+		label: "More Info",
+	},
 };
 
-type FilterTab = "all" | "submitted" | "approved" | "rejected" | "info_requested";
+type FilterTab =
+	| "all"
+	| "submitted"
+	| "approved"
+	| "rejected"
+	| "info_requested";
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
 	{ key: "all", label: "All" },
@@ -451,7 +476,9 @@ export default function LandlordApplications({
 									<span
 										className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-medium"
 										style={{
-											background: isActive ? "rgba(255,255,255,0.15)" : "#D9D3CA",
+											background: isActive
+												? "rgba(255,255,255,0.15)"
+												: "#D9D3CA",
 											color: isActive ? "#F5F0E8" : "#5A5449",
 										}}
 									>
@@ -498,7 +525,9 @@ export default function LandlordApplications({
 					</div>
 				) : filtered.length === 0 ? (
 					<div className="bg-white rounded-2xl p-8 shadow-[0_1px_4px_rgba(28,26,23,0.07)] text-center">
-						<p className="text-sm text-[#7A7268]">No applications in this category.</p>
+						<p className="text-sm text-[#7A7268]">
+							No applications in this category.
+						</p>
 					</div>
 				) : (
 					<div className="space-y-3">

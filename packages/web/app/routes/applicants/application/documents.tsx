@@ -70,7 +70,10 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 	const adults = application.residents.filter((r) => r.role !== "child");
 
-	const existingByResidentAndType = new Map<string, { files: ExistingFile[] }>();
+	const existingByResidentAndType = new Map<
+		string,
+		{ files: ExistingFile[] }
+	>();
 	for (const doc of application.documents) {
 		const key = `${doc.residentId}-${doc.category}-${doc.documentType}`;
 		const bucket = existingByResidentAndType.get(key) ?? { files: [] };
@@ -83,7 +86,8 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 		category: ApplicationDocumentCategory,
 		documentType: ApplicationDocumentType,
 	): ExistingFile[] =>
-		existingByResidentAndType.get(`${residentId}-${category}-${documentType}`)?.files ?? [];
+		existingByResidentAndType.get(`${residentId}-${category}-${documentType}`)
+			?.files ?? [];
 
 	const residents: ResidentSlots[] = adults.map((resident) => {
 		const slots: DocumentSlot[] = [];
@@ -116,7 +120,11 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 					documentType: "employment_letter",
 					label: "Employment letter",
 					hint: source.employerOrSourceName,
-					existingFiles: getExisting(resident.id, "income", "employment_letter"),
+					existingFiles: getExisting(
+						resident.id,
+						"income",
+						"employment_letter",
+					),
 				});
 			} else if (source.type === "self_employment") {
 				slots.push({
@@ -131,7 +139,9 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 			}
 		}
 
-		const hasSelfEmployment = resident.incomeSources.some((s) => s.type === "self_employment");
+		const hasSelfEmployment = resident.incomeSources.some(
+			(s) => s.type === "self_employment",
+		);
 		if (!hasSelfEmployment) {
 			slots.push({
 				key: `${resident.id}-bank_statement`,
@@ -515,7 +525,7 @@ function SlotCard({
 				</ul>
 			)}
 
-<label className="flex items-center gap-2 text-sm text-[#C4714A] cursor-pointer select-none w-fit">
+			<label className="flex items-center gap-2 text-sm text-[#C4714A] cursor-pointer select-none w-fit">
 				<input
 					type="file"
 					multiple
@@ -568,7 +578,9 @@ export default function ApplicationDocuments() {
 						className="text-[#7A7268] text-sm leading-relaxed"
 						style={{ fontFamily: "'DM Sans', sans-serif" }}
 					>
-						The more you provide, the stronger your application. Upload as much as you can — two pieces of ID, recent bank statements, income documents, and anything else that helps.
+						The more you provide, the stronger your application. Upload as much
+						as you can — two pieces of ID, recent bank statements, income
+						documents, and anything else that helps.
 					</p>
 				</div>
 

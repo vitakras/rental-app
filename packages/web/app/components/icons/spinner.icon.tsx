@@ -3,7 +3,9 @@ import { cn } from "~/lib/utils";
 export function SpinnerIcon({ className }: { className?: string }) {
 	return (
 		<svg
+			aria-hidden="true"
 			className={cn("animate-spin size-5", className)}
+			focusable="false"
 			xmlns="http://www.w3.org/2000/svg"
 			fill="none"
 			viewBox="0 0 24 24"

@@ -620,7 +620,7 @@ function ApplicationActionBar({
 	) => Promise<void>;
 }) {
 	const [mode, setMode] = useState<ActionMode>("idle");
-	const [submitting, setSubmitting] = useState(false);
+	const [, setSubmitting] = useState(false);
 
 	const isDecided =
 		status === "approved" ||
