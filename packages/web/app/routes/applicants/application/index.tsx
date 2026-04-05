@@ -1,5 +1,6 @@
 import type { ApplicationWithDetails } from "api";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
+import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { Button } from "~/components/ui/button";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/index";
@@ -690,7 +691,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 							<Form method="post">
 								<Button variant="continue" type="submit" disabled={submitting}>
 									{submitting
-										? "Submitting..."
+										? <SpinnerIcon />
 										: application.status === "info_requested"
 											? "Resubmit application"
 											: "Submit application"}

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { data, redirect, useSubmit } from "react-router";
+import { data, redirect, useNavigation, useSubmit } from "react-router";
 import { Button } from "~/components/ui/button";
 import { DatePicker } from "~/components/ui/date-picker";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { PhoneInput } from "~/components/ui/phone-input";
+import { SpinnerIcon } from "~/components/icons/spinner.icon";
 import { apiClient } from "~/lib/api";
 import type { Route } from "./+types/applicant";
 import { loadEditableApplication, parseApplicationParam } from "./form-route";
@@ -105,6 +106,8 @@ export default function ApplicationApplicant({
 	actionData,
 }: Route.ComponentProps) {
 	const submit = useSubmit();
+	const navigation = useNavigation();
+	const isSubmitting = navigation.state === "submitting";
 	const errorMessage =
 		actionData && "errors" in actionData && actionData.errors?.length
 			? actionData.errors[0].message
@@ -209,6 +212,7 @@ export default function ApplicationApplicant({
 						<Button
 							variant="continue"
 							type="button"
+							disabled={isSubmitting}
 							onClick={() =>
 								submit(
 									{
@@ -224,7 +228,7 @@ export default function ApplicationApplicant({
 								)
 							}
 						>
-							Continue
+							{isSubmitting ? <SpinnerIcon /> : "Continue"}
 						</Button>
 						<p
 							className="text-center text-xs text-[#7A7268] mt-3"
