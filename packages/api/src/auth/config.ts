@@ -2,9 +2,20 @@ const LOCAL_WEB_BASE_URL = "http://localhost:5173";
 const LOCAL_APPLICANT_SIGNUP_TOKEN = "11111111-1111-4111-8111-111111111111";
 const LOCAL_LANDLORD_SIGNUP_TOKEN = "22222222-2222-4222-8222-222222222222";
 const LOCAL_LOGIN_CODE_PEPPER = "development-login-code-pepper";
-const runtimeEnv = process.env.NODE_ENV ?? "development";
+
+export interface AuthEnv {
+	NODE_ENV?: string;
+	WEB_BASE_URL?: string;
+	AUTH_APPLICANT_SIGNUP_TOKEN?: string;
+	AUTH_LANDLORD_SIGNUP_TOKEN?: string;
+	AUTH_LOGIN_CODE_TTL_SECONDS?: string;
+	AUTH_SESSION_TTL_SECONDS?: string;
+	AUTH_SESSION_COOKIE_NAME?: string;
+	AUTH_LOGIN_CODE_PEPPER?: string;
+}
 
 export interface AuthConfig {
+	runtimeEnv: string;
 	loginCodeTtlSeconds: number;
 	sessionTtlSeconds: number;
 	cookieName: string;
@@ -25,8 +36,8 @@ function normalizeBaseUrl(url: string) {
 	return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
-function getWebBaseUrl() {
-	const configuredBaseUrl = process.env.WEB_BASE_URL?.trim();
+function getWebBaseUrl(env: AuthEnv, runtimeEnv: string) {
+	const configuredBaseUrl = env.WEB_BASE_URL?.trim();
 
 	if (configuredBaseUrl) {
 		return normalizeBaseUrl(configuredBaseUrl);
@@ -39,36 +50,36 @@ function getWebBaseUrl() {
 	throw new Error("WEB_BASE_URL is required outside development and test");
 }
 
-function createDevelopmentAuthConfig(): AuthConfig {
-	const applicantSignupToken = process.env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
-	const landlordSignupToken = process.env.AUTH_LANDLORD_SIGNUP_TOKEN?.trim();
+function createDevelopmentAuthConfig(env: AuthEnv): AuthConfig {
+	const applicantSignupToken = env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
+	const landlordSignupToken = env.AUTH_LANDLORD_SIGNUP_TOKEN?.trim();
 
 	return {
+		runtimeEnv: "development",
 		loginCodeTtlSeconds: parsePositiveInt(
-			process.env.AUTH_LOGIN_CODE_TTL_SECONDS,
+			env.AUTH_LOGIN_CODE_TTL_SECONDS,
 			14 * 24 * 60 * 60,
 		),
 		sessionTtlSeconds: parsePositiveInt(
-			process.env.AUTH_SESSION_TTL_SECONDS,
+			env.AUTH_SESSION_TTL_SECONDS,
 			30 * 24 * 60 * 60,
 		),
-		cookieName: process.env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
-		webBaseUrl: getWebBaseUrl(),
+		cookieName: env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
+		webBaseUrl: getWebBaseUrl(env, "development"),
 		applicantSignupToken: applicantSignupToken || LOCAL_APPLICANT_SIGNUP_TOKEN,
 		landlordSignupToken: landlordSignupToken || LOCAL_LANDLORD_SIGNUP_TOKEN,
-		loginCodePepper:
-			process.env.AUTH_LOGIN_CODE_PEPPER?.trim() || LOCAL_LOGIN_CODE_PEPPER,
+		loginCodePepper: env.AUTH_LOGIN_CODE_PEPPER?.trim() || LOCAL_LOGIN_CODE_PEPPER,
 	};
 }
 
-function createTestAuthConfig(): AuthConfig {
-	return createDevelopmentAuthConfig();
+function createTestAuthConfig(env: AuthEnv): AuthConfig {
+	return createDevelopmentAuthConfig(env);
 }
 
-function createProductionAuthConfig(): AuthConfig {
-	const applicantSignupToken = process.env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
-	const landlordSignupToken = process.env.AUTH_LANDLORD_SIGNUP_TOKEN?.trim();
-	const loginCodePepper = process.env.AUTH_LOGIN_CODE_PEPPER?.trim();
+function createProductionAuthConfig(env: AuthEnv): AuthConfig {
+	const applicantSignupToken = env.AUTH_APPLICANT_SIGNUP_TOKEN?.trim();
+	const landlordSignupToken = env.AUTH_LANDLORD_SIGNUP_TOKEN?.trim();
+	const loginCodePepper = env.AUTH_LOGIN_CODE_PEPPER?.trim();
 
 	if (!applicantSignupToken) {
 		throw new Error("AUTH_APPLICANT_SIGNUP_TOKEN is required");
@@ -83,36 +94,37 @@ function createProductionAuthConfig(): AuthConfig {
 	}
 
 	return {
+		runtimeEnv: "production",
 		loginCodeTtlSeconds: parsePositiveInt(
-			process.env.AUTH_LOGIN_CODE_TTL_SECONDS,
+			env.AUTH_LOGIN_CODE_TTL_SECONDS,
 			14 * 24 * 60 * 60,
 		),
 		sessionTtlSeconds: parsePositiveInt(
-			process.env.AUTH_SESSION_TTL_SECONDS,
+			env.AUTH_SESSION_TTL_SECONDS,
 			30 * 24 * 60 * 60,
 		),
-		cookieName: process.env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
-		webBaseUrl: getWebBaseUrl(),
+		cookieName: env.AUTH_SESSION_COOKIE_NAME?.trim() || "session",
+		webBaseUrl: getWebBaseUrl(env, "production"),
 		applicantSignupToken,
 		landlordSignupToken,
 		loginCodePepper,
 	};
 }
 
-function createAuthConfig(): AuthConfig {
+export function createAuthConfig(env: AuthEnv = process.env as AuthEnv): AuthConfig {
+	const runtimeEnv = env.NODE_ENV ?? "development";
+
 	if (runtimeEnv === "development") {
-		return createDevelopmentAuthConfig();
+		return createDevelopmentAuthConfig(env);
 	}
 
 	if (runtimeEnv === "test") {
-		return createTestAuthConfig();
+		return createTestAuthConfig(env);
 	}
 
 	if (runtimeEnv === "production") {
-		return createProductionAuthConfig();
+		return createProductionAuthConfig(env);
 	}
 
-	return createDevelopmentAuthConfig();
+	return createDevelopmentAuthConfig(env);
 }
-
-export const authConfig = createAuthConfig();

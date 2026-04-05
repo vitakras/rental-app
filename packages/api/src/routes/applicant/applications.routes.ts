@@ -24,12 +24,14 @@ type AuthService = ReturnType<typeof createAuthService>;
 export function createApplicantApplicationsRoutes({
 	authService,
 	applicationService,
+	cookieName,
 }: {
 	authService: AuthService;
 	applicationService: ApplicationService;
+	cookieName: string;
 }) {
 	return new Hono<AuthContextEnv>()
-		.use("*", createRequireApplicantSession({ authService }))
+		.use("*", createRequireApplicantSession({ authService, cookieName }))
 		.get("/", async (c) => {
 			const auth = getAuthContext(c);
 			const result = await applicationService.listApplicationsByUser(

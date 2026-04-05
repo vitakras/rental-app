@@ -12,15 +12,17 @@ function unauthorized(c: Context<AuthContextEnv>) {
 
 export function createRequireSession({
 	authService,
+	cookieName,
 	invalidSessionError = "unauthorized",
 	role,
 }: {
 	authService: AuthService;
+	cookieName: string;
 	invalidSessionError?: string;
 	role?: UserGlobalRole;
 }): MiddlewareHandler<AuthContextEnv> {
 	return async (c, next) => {
-		const sessionId = getSessionCookie(c);
+		const sessionId = getSessionCookie(c, { cookieName });
 
 		if (!sessionId) {
 			return unauthorized(c);

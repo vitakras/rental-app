@@ -7,8 +7,10 @@ type AuthService = ReturnType<typeof createAuthService>;
 
 export function createRequireLandlordSession({
 	authService,
+	cookieName,
 }: {
 	authService: AuthService;
+	cookieName: string;
 }): MiddlewareHandler<AuthContextEnv> {
-	return createRequireSession({ authService, role: "landlord" });
+	return createRequireSession({ authService, cookieName, role: "landlord" });
 }

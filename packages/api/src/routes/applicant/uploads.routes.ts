@@ -28,13 +28,15 @@ export function createApplicantUploadsRoutes({
 	authService,
 	applicationService,
 	fileService,
+	cookieName,
 }: {
 	authService: AuthService;
 	applicationService: ApplicationService;
 	fileService: FileService;
+	cookieName: string;
 }) {
 	return new Hono<AuthContextEnv>()
-		.use("*", createRequireApplicantSession({ authService }))
+		.use("*", createRequireApplicantSession({ authService, cookieName }))
 		.post("/:id/documents", ensureValidApplicationId, async (c) => {
 			const applicationId = parseApplicationId(c.req.param("id"));
 

@@ -1,4 +1,4 @@
-import { authConfig } from "~/auth/config";
+import { createAuthConfig } from "~/auth/config";
 import { createDb } from "~/db";
 import logger from "~/logger";
 import { applicationRepository } from "~/repositories/application.repository";
@@ -22,6 +22,7 @@ export interface AppServices {
 
 export function createCfServices(env: CloudflareBindings): AppServices {
 	const db = createDb(env.DB);
+	const authConfig = createAuthConfig(env);
 
 	const repositories = {
 		userRepository: userRepository(db),

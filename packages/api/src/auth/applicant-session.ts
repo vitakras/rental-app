@@ -7,8 +7,10 @@ type AuthService = ReturnType<typeof createAuthService>;
 
 export function createRequireApplicantSession({
 	authService,
+	cookieName,
 }: {
 	authService: AuthService;
+	cookieName: string;
 }): MiddlewareHandler<AuthContextEnv> {
-	return createRequireSession({ authService, role: "applicant" });
+	return createRequireSession({ authService, cookieName, role: "applicant" });
 }

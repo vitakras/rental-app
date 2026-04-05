@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
+import type { AuthConfig } from "~/auth/config";
 import { setSessionCookie } from "~/auth/cookies";
 import { createRequireSession } from "~/auth/require-session";
 import { type AuthContextEnv, getAuthContext } from "~/auth/session-context";
@@ -18,13 +19,18 @@ function getClientIp(c: Context) {
 
 export function createAuthCodeRoutes({
 	authService,
+	authConfig,
 }: {
 	authService: AuthService;
+	authConfig: AuthConfig;
 }) {
 	const app = new Hono<AuthContextEnv>();
 
-	app.use("/", createRequireSession({ authService }));
-	app.use("/rotate", createRequireSession({ authService }));
+	app.use("/", createRequireSession({ authService, cookieName: authConfig.cookieName }));
+	app.use(
+		"/rotate",
+		createRequireSession({ authService, cookieName: authConfig.cookieName }),
+	);
 
 	return app
 		.get("/", async (c) => {
@@ -62,7 +68,10 @@ export function createAuthCodeRoutes({
 					return c.json({ error: result.reason }, 401);
 				}
 
-				setSessionCookie(c, result.session);
+				setSessionCookie(c, result.session, {
+					cookieName: authConfig.cookieName,
+					runtimeEnv: authConfig.runtimeEnv,
+				});
 
 				return c.json(
 					{

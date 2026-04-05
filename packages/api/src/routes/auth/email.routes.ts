@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
-import { authConfig } from "~/auth/config";
+import type { AuthConfig } from "~/auth/config";
 import {
 	clearSessionCookie,
 	getSessionCookie,
@@ -23,8 +23,10 @@ function getClientIp(c: Context) {
 
 export function createAuthEmailRoutes({
 	authService,
+	authConfig,
 }: {
 	authService: AuthService;
+	authConfig: AuthConfig;
 }) {
 	const app = new Hono<AuthContextEnv>();
 
@@ -32,6 +34,7 @@ export function createAuthEmailRoutes({
 		"/session",
 		createRequireSession({
 			authService,
+			cookieName: authConfig.cookieName,
 			invalidSessionError: "invalid_or_expired_session",
 		}),
 	);
@@ -63,7 +66,10 @@ export function createAuthEmailRoutes({
 				return c.json({ error: result.reason }, 401);
 			}
 
-			setSessionCookie(c, result.session);
+			setSessionCookie(c, result.session, {
+				cookieName: authConfig.cookieName,
+				runtimeEnv: authConfig.runtimeEnv,
+			});
 
 			const codeResult = await authService.rotateReusableLoginCode(
 				result.user,
@@ -82,7 +88,9 @@ export function createAuthEmailRoutes({
 			);
 		})
 		.post("/signout", async (c) => {
-			const sessionId = getSessionCookie(c);
+			const sessionId = getSessionCookie(c, {
+				cookieName: authConfig.cookieName,
+			});
 
 			if (sessionId) {
 				await authService.signout(sessionId);

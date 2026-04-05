@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { authConfig } from "~/auth/config";
+import { createAuthConfig } from "~/auth/config";
 import { createApplicantApplicationsRoutes } from "~/routes/applicant/applications.routes";
 import { createApplicantUploadsRoutes } from "~/routes/applicant/uploads.routes";
 import { createAuthCodeRoutes } from "~/routes/auth/code.routes";
@@ -10,22 +10,23 @@ import { createLandlordApplicationsRoutes } from "~/routes/landlord/applications
 import { createLandlordSignupRoutes } from "~/routes/landlord/signup.routes";
 import type { AppServices } from "./container";
 
-const allowedCorsOrigins = new Set([new URL(authConfig.webBaseUrl).origin]);
-
-function resolveCorsOrigin(origin: string) {
-	return allowedCorsOrigins.has(origin) ? origin : null;
-}
-
 export function createApp({
 	services,
 	storageRoutes = new Hono(),
+	authConfig = createAuthConfig(),
 }: {
 	services: AppServices;
 	storageRoutes?: Hono;
+	authConfig?: ReturnType<typeof createAuthConfig>;
 }) {
-	const applicantRoutes = createApplicantApplicationsRoutes(services).route(
+	const allowedCorsOrigins = new Set([new URL(authConfig.webBaseUrl).origin]);
+	const routeServices = {
+		...services,
+		cookieName: authConfig.cookieName,
+	};
+	const applicantRoutes = createApplicantApplicationsRoutes(routeServices).route(
 		"/",
-		createApplicantUploadsRoutes(services),
+		createApplicantUploadsRoutes(routeServices),
 	);
 	const storage = storageRoutes;
 
@@ -34,7 +35,7 @@ export function createApp({
 			"*",
 			secureHeaders({
 				strictTransportSecurity:
-					(process.env.NODE_ENV as string | undefined) === "production"
+					authConfig.runtimeEnv === "production"
 						? "max-age=63072000; includeSubDomains; preload"
 						: false,
 				xFrameOptions: "DENY",
@@ -54,7 +55,7 @@ export function createApp({
 		.use(
 			"*",
 			cors({
-				origin: resolveCorsOrigin,
+				origin: (origin) => (allowedCorsOrigins.has(origin) ? origin : null),
 				allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 				allowHeaders: ["Content-Type", "Authorization"],
 				credentials: true,
@@ -68,11 +69,14 @@ export function createApp({
 		.get("/", (c) => {
 			return c.text("Hello Hono!");
 		})
-		.route("/auth/code", createAuthCodeRoutes(services))
-		.route("/auth/email", createAuthEmailRoutes(services))
+		.route("/auth/code", createAuthCodeRoutes({ ...services, authConfig }))
+		.route("/auth/email", createAuthEmailRoutes({ ...services, authConfig }))
 		.route("/applications", applicantRoutes)
-		.route("/landlord/applications", createLandlordApplicationsRoutes(services))
-		.route("/landlord", createLandlordSignupRoutes(services))
+		.route(
+			"/landlord/applications",
+			createLandlordApplicationsRoutes(routeServices),
+		)
+		.route("/landlord", createLandlordSignupRoutes(routeServices))
 		.route("/storage", storage)
 		.route("/storage/", storage);
 

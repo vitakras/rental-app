@@ -19,13 +19,15 @@ export function createLandlordApplicationsRoutes({
 	authService,
 	applicationService,
 	fileService,
+	cookieName,
 }: {
 	authService: AuthService;
 	applicationService: ApplicationService;
 	fileService: FileService;
+	cookieName: string;
 }) {
 	return new Hono<AuthContextEnv>()
-		.use("*", createRequireLandlordSession({ authService }))
+		.use("*", createRequireLandlordSession({ authService, cookieName }))
 		.get("/", async (c) => {
 			const result = await applicationService.listSubmittedApplications();
 			return c.json({ applications: result.applications }, 200);

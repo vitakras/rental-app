@@ -16,6 +16,7 @@ import type {
 import { createAuthService } from "../auth.service";
 
 const authConfig: AuthConfig = {
+	runtimeEnv: "test",
 	loginCodeTtlSeconds: 14 * 24 * 60 * 60,
 	sessionTtlSeconds: 3600,
 	cookieName: "session",
