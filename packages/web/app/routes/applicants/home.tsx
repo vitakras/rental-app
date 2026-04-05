@@ -71,10 +71,16 @@ const STATUS_CONFIG: Record<
 		dot: "#2E8A58",
 	},
 	rejected: {
-		label: "Rejected",
+		label: "Not approved",
 		bg: "#FFF0F0",
 		text: "#C44A4A",
 		dot: "#C44A4A",
+	},
+	info_requested: {
+		label: "More info needed",
+		bg: "#FFF9EE",
+		text: "#A0742A",
+		dot: "#C4974A",
 	},
 };
 
@@ -105,7 +111,9 @@ function StatusBadge({ status }: { status: string }) {
 
 function ApplicationCard({ application }: { application: ApplicationSummary }) {
 	const isInProgress =
-		application.status === "draft" || application.status === "pending";
+		application.status === "draft" ||
+		application.status === "pending" ||
+		application.status === "info_requested";
 	const href =
 		application.status === "draft"
 			? `/a/applications/${application.id}/applicant`

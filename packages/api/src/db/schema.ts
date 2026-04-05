@@ -22,13 +22,14 @@ export type ResidentRole = "primary" | "co-applicant" | "dependent" | "child";
 // "employment" | "self_employment" | "other"
 export type IncomeSourceType = "employment" | "self_employment" | "other";
 
-// "draft" | "pending" | "submitted" | "approved" | "rejected"
+// "draft" | "pending" | "submitted" | "approved" | "rejected" | "info_requested"
 export type ApplicationStatus =
 	| "draft"
 	| "pending"
 	| "submitted"
 	| "approved"
-	| "rejected";
+	| "rejected"
+	| "info_requested";
 
 export type UserGlobalRole = "landlord" | "applicant";
 
@@ -98,6 +99,7 @@ export const applicationsTable = sqliteTable("applications", {
 	desiredMoveInDate: text(),
 	smokes: int({ mode: "boolean" }).notNull().default(false),
 	notes: text(),
+	landlordNote: text(),
 	createdByUserId: text().references(() => usersTable.id),
 	...timestamps,
 });

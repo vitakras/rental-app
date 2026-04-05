@@ -279,11 +279,37 @@ function ShareLinkSheet({ open, onClose }: ShareLinkSheetProps) {
 	);
 }
 
+const STATUS_STYLES: Record<
+	string,
+	{ bg: string; color: string; dot: string; label: string }
+> = {
+	submitted: { bg: "#EEF1F8", color: "#4A6C9B", dot: "#4A6C9B", label: "Submitted" },
+	approved: { bg: "#EDFAF4", color: "#2E8A58", dot: "#2E8A58", label: "Approved" },
+	rejected: { bg: "#FFF0F0", color: "#C44A4A", dot: "#C44A4A", label: "Declined" },
+	info_requested: { bg: "#FFF9EE", color: "#A0742A", dot: "#C4974A", label: "More Info" },
+};
+
+type FilterTab = "all" | "submitted" | "approved" | "rejected" | "info_requested";
+
+const FILTER_TABS: { key: FilterTab; label: string }[] = [
+	{ key: "all", label: "All" },
+	{ key: "submitted", label: "Submitted" },
+	{ key: "approved", label: "Approved" },
+	{ key: "rejected", label: "Declined" },
+	{ key: "info_requested", label: "More Info" },
+];
+
 export default function LandlordApplications({
 	loaderData,
 }: Route.ComponentProps) {
 	const { applications } = loaderData;
 	const [inviteOpen, setInviteOpen] = useState(false);
+	const [activeTab, setActiveTab] = useState<FilterTab>("all");
+
+	const filtered =
+		activeTab === "all"
+			? applications
+			: applications.filter((a) => a.status === activeTab);
 
 	return (
 		<div
@@ -389,10 +415,7 @@ export default function LandlordApplications({
 
 			{/* Content */}
 			<div className="max-w-lg mx-auto px-5 pt-[72px] pb-12">
-				<div className="mt-8 mb-6">
-					<p className="text-xs text-[#C4714A] tracking-widest uppercase font-medium mb-2">
-						Submitted
-					</p>
+				<div className="mt-8 mb-5">
 					<h2
 						className="text-[2rem] leading-tight text-[#1C1A17]"
 						style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
@@ -402,6 +425,43 @@ export default function LandlordApplications({
 							: `${applications.length} application${applications.length !== 1 ? "s" : ""}`}
 					</h2>
 				</div>
+
+				{/* Filter tabs */}
+				{applications.length > 0 && (
+					<div className="flex gap-2 overflow-x-auto pb-1 mb-5 scrollbar-none">
+						{FILTER_TABS.map(({ key, label }) => {
+							const count =
+								key === "all"
+									? applications.length
+									: applications.filter((a) => a.status === key).length;
+							if (key !== "all" && count === 0) return null;
+							const isActive = activeTab === key;
+							return (
+								<button
+									key={key}
+									type="button"
+									onClick={() => setActiveTab(key)}
+									className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+									style={{
+										background: isActive ? "#1C1A17" : "#EDE8E1",
+										color: isActive ? "#F5F0E8" : "#7A7268",
+									}}
+								>
+									{label}
+									<span
+										className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-medium"
+										style={{
+											background: isActive ? "rgba(255,255,255,0.15)" : "#D9D3CA",
+											color: isActive ? "#F5F0E8" : "#5A5449",
+										}}
+									>
+										{count}
+									</span>
+								</button>
+							);
+						})}
+					</div>
+				)}
 
 				{applications.length === 0 ? (
 					<div className="bg-white rounded-2xl p-8 shadow-[0_1px_4px_rgba(28,26,23,0.07)] text-center">
@@ -436,45 +496,66 @@ export default function LandlordApplications({
 							Share application link
 						</button>
 					</div>
+				) : filtered.length === 0 ? (
+					<div className="bg-white rounded-2xl p-8 shadow-[0_1px_4px_rgba(28,26,23,0.07)] text-center">
+						<p className="text-sm text-[#7A7268]">No applications in this category.</p>
+					</div>
 				) : (
 					<div className="space-y-3">
-						{applications.map((app) => (
-							<Link
-								key={app.id}
-								to={`/l/applications/${app.id}`}
-								className="block bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] hover:shadow-[0_2px_8px_rgba(28,26,23,0.12)] transition-shadow"
-							>
-								<div className="flex items-start justify-between gap-4 mb-3">
-									<div className="min-w-0">
-										<p className="text-sm font-medium text-[#1C1A17] truncate">
-											{app.primaryApplicantName}
-										</p>
-										<p className="text-xs text-[#7A7268] mt-0.5">#{app.id}</p>
+						{filtered.map((app) => {
+							const s = STATUS_STYLES[app.status];
+							return (
+								<Link
+									key={app.id}
+									to={`/l/applications/${app.id}`}
+									className="block bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)] hover:shadow-[0_2px_8px_rgba(28,26,23,0.12)] transition-shadow"
+								>
+									<div className="flex items-start justify-between gap-4 mb-3">
+										<div className="min-w-0">
+											<p className="text-sm font-medium text-[#1C1A17] truncate">
+												{app.primaryApplicantName}
+											</p>
+											<p className="text-xs text-[#7A7268] mt-0.5">#{app.id}</p>
+										</div>
+										{s ? (
+											<span
+												className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+												style={{ background: s.bg, color: s.color }}
+											>
+												<span
+													className="size-1.5 rounded-full"
+													style={{ background: s.dot }}
+													aria-hidden="true"
+												/>
+												{s.label}
+											</span>
+										) : (
+											<span className="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#F5E8DF] text-[#C4714A]">
+												{app.status}
+											</span>
+										)}
 									</div>
-									<span className="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-[#F5E8DF] text-[#C4714A]">
-										{app.status.charAt(0).toUpperCase() + app.status.slice(1)}
-									</span>
-								</div>
-								<div className="flex gap-6 pt-3 border-t border-[#F0EBE3]">
-									<div>
-										<p className="text-[10px] text-[#7A7268] mb-0.5 uppercase tracking-wider">
-											Move-in
-										</p>
-										<p className="text-sm text-[#1C1A17]">
-											{formatDate(app.desiredMoveInDate)}
-										</p>
+									<div className="flex gap-6 pt-3 border-t border-[#F0EBE3]">
+										<div>
+											<p className="text-[10px] text-[#7A7268] mb-0.5 uppercase tracking-wider">
+												Move-in
+											</p>
+											<p className="text-sm text-[#1C1A17]">
+												{formatDate(app.desiredMoveInDate)}
+											</p>
+										</div>
+										<div>
+											<p className="text-[10px] text-[#7A7268] mb-0.5 uppercase tracking-wider">
+												Submitted
+											</p>
+											<p className="text-sm text-[#1C1A17]">
+												{formatDate(app.createdAt)}
+											</p>
+										</div>
 									</div>
-									<div>
-										<p className="text-[10px] text-[#7A7268] mb-0.5 uppercase tracking-wider">
-											Submitted
-										</p>
-										<p className="text-sm text-[#1C1A17]">
-											{formatDate(app.createdAt)}
-										</p>
-									</div>
-								</div>
-							</Link>
-						))}
+								</Link>
+							);
+						})}
 					</div>
 				)}
 			</div>

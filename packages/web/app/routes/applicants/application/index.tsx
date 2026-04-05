@@ -114,24 +114,28 @@ function ReviewSection({
 	editTo,
 	children,
 	noCard = false,
+	locked = false,
 }: {
 	title: string;
 	editTo: string;
 	children: React.ReactNode;
 	noCard?: boolean;
+	locked?: boolean;
 }) {
 	return (
 		<div>
 			<div className="flex items-center justify-between mb-3 gap-3">
 				<SectionLabel>{title}</SectionLabel>
-				<Button
-					asChild
-					variant="ghost-muted"
-					size="sm"
-					className="h-auto px-0 py-0 text-sm font-medium"
-				>
-					<Link to={editTo}>Edit</Link>
-				</Button>
+				{!locked && (
+					<Button
+						asChild
+						variant="ghost-muted"
+						size="sm"
+						className="h-auto px-0 py-0 text-sm font-medium"
+					>
+						<Link to={editTo}>Edit</Link>
+					</Button>
+				)}
 			</div>
 			{noCard ? (
 				children
@@ -152,12 +156,154 @@ function ItemCard({ children }: { children: React.ReactNode }) {
 	);
 }
 
+function LandlordDecisionBanner({
+	status,
+	landlordNote,
+	applicationId,
+}: {
+	status: string;
+	landlordNote: string | null;
+	applicationId: number;
+}) {
+	if (status === "info_requested") {
+		return (
+			<div className="bg-[#FFF9EE] border border-[#DEC98A] rounded-2xl p-5 mb-6">
+				<div className="flex items-start gap-3">
+					<div className="mt-0.5 text-[#C4974A] shrink-0">
+						<svg
+							aria-hidden="true"
+							width="18"
+							height="18"
+							viewBox="0 0 18 18"
+							fill="none"
+						>
+							<circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
+							<path
+								d="M9 8v5"
+								stroke="currentColor"
+								strokeWidth="1.6"
+								strokeLinecap="round"
+							/>
+							<circle cx="9" cy="5.5" r="0.75" fill="currentColor" />
+						</svg>
+					</div>
+					<div className="flex-1 min-w-0">
+						<p className="text-sm font-medium text-[#1C1A17] mb-1">
+							Your landlord needs more information
+						</p>
+						{landlordNote && (
+							<p className="text-sm text-[#7A7268] leading-relaxed mb-3">
+								{landlordNote}
+							</p>
+						)}
+						<Link
+							to={`/a/applications/${applicationId}/applicant`}
+							className="inline-flex items-center gap-1.5 text-xs font-medium text-[#A0742A] hover:text-[#7A5820] transition-colors"
+						>
+							Edit application
+							<svg
+								width="12"
+								height="12"
+								viewBox="0 0 12 12"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="1.5"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								aria-hidden="true"
+							>
+								<path d="M2 6h8M7 3l3 3-3 3" />
+							</svg>
+						</Link>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (status === "approved") {
+		return (
+			<div className="bg-[#EDFAF4] border border-[#A8D9BC] rounded-2xl p-5 mb-6">
+				<div className="flex items-start gap-3">
+					<div className="mt-0.5 text-[#2E8A58] shrink-0">
+						<svg
+							aria-hidden="true"
+							width="18"
+							height="18"
+							viewBox="0 0 18 18"
+							fill="none"
+						>
+							<circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
+							<path
+								d="M5.5 9.5l2.5 2.5 4.5-5"
+								stroke="currentColor"
+								strokeWidth="1.6"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
+						</svg>
+					</div>
+					<div>
+						<p className="text-sm font-medium text-[#1C1A17] mb-0.5">
+							Your application has been approved
+						</p>
+						{landlordNote && (
+							<p className="text-sm text-[#7A7268] leading-relaxed">
+								{landlordNote}
+							</p>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (status === "rejected") {
+		return (
+			<div className="bg-[#FFF0F0] border border-[#F0C4C4] rounded-2xl p-5 mb-6">
+				<div className="flex items-start gap-3">
+					<div className="mt-0.5 text-[#C44A4A] shrink-0">
+						<svg
+							aria-hidden="true"
+							width="18"
+							height="18"
+							viewBox="0 0 18 18"
+							fill="none"
+						>
+							<circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
+							<path
+								d="M6 6l6 6M12 6l-6 6"
+								stroke="currentColor"
+								strokeWidth="1.6"
+								strokeLinecap="round"
+							/>
+						</svg>
+					</div>
+					<div>
+						<p className="text-sm font-medium text-[#1C1A17] mb-0.5">
+							Your application was not approved
+						</p>
+						{landlordNote && (
+							<p className="text-sm text-[#7A7268] leading-relaxed">
+								{landlordNote}
+							</p>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	return null;
+}
+
 export default function Application({ loaderData }: Route.ComponentProps) {
 	const { applicationId, application } = loaderData;
 	const navigation = useNavigation();
 	const submitting = navigation.state === "submitting";
 	const isSubmittable =
-		application.status === "draft" || application.status === "pending";
+		application.status === "draft" || application.status === "pending" || application.status === "info_requested";
+	const isLocked = application.status === "approved" || application.status === "rejected";
 	const primary = application.residents.find(
 		(resident) => resident.role === "primary",
 	);
@@ -201,15 +347,28 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						className="text-[1.9rem] leading-[1.15] text-[#1C1A17] mb-3"
 						style={{ fontFamily: "'Fraunces', serif", fontWeight: 300 }}
 					>
-						Review everything before <em>you submit.</em>
+						{isLocked
+							? "Your application."
+							: application.status === "info_requested"
+								? "Update your application."
+								: "Review everything before \u00A0you submit."}
 					</h1>
 					<p className="text-sm text-[#7A7268] leading-relaxed">
-						Make sure the details below look right. If anything needs work, jump
-						back to that section and update it before submitting.
+						{isLocked
+							? "This application is no longer editable."
+							: application.status === "info_requested"
+								? "Your landlord has requested more information. Update the relevant sections and resubmit."
+								: "Make sure the details below look right. If anything needs work, jump back to that section and update it before submitting."}
 					</p>
 				</div>
 
-				{warnings.length > 0 && (
+				<LandlordDecisionBanner
+					status={application.status}
+					landlordNote={(application as { landlordNote?: string | null }).landlordNote ?? null}
+					applicationId={applicationId}
+				/>
+
+				{!isLocked && warnings.length > 0 && (
 					<div className="bg-[#FFF8F2] border border-[#F0D5C6] rounded-2xl p-5 mb-6">
 						<div className="flex items-start gap-3">
 							<div className="mt-0.5 text-[#C4714A]">
@@ -246,13 +405,14 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					<ReviewSection
 						title="Application"
 						editTo={`/a/applications/${applicationId}/applicant`}
+						locked={isLocked}
 					>
 						<div className="grid grid-cols-2 gap-4">
 							<Field
 								label="Status"
 								value={
 									application.status.charAt(0).toUpperCase() +
-									application.status.slice(1)
+									application.status.slice(1).replace("_", " ")
 								}
 							/>
 							<Field
@@ -270,6 +430,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 					<ReviewSection
 						title="Primary Applicant"
 						editTo={`/a/applications/${applicationId}/applicant`}
+						locked={isLocked}
 					>
 						{primary ? (
 							<div className="grid grid-cols-2 gap-4">
@@ -292,6 +453,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						title="Occupants"
 						editTo={`/a/applications/${applicationId}/occupants`}
 						noCard={otherResidents.length > 0}
+						locked={isLocked}
 					>
 						{otherResidents.length > 0 ? (
 							<div className="space-y-3">
@@ -324,6 +486,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						title="Income"
 						editTo={`/a/applications/${applicationId}/income`}
 						noCard
+						locked={isLocked}
 					>
 						<div className="space-y-3">
 							{adultResidents.map((resident) => (
@@ -375,6 +538,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						title="Residence"
 						editTo={`/a/applications/${applicationId}/residence`}
 						noCard
+						locked={isLocked}
 					>
 						<div className="space-y-3">
 							{adultResidents.map((resident) => (
@@ -443,6 +607,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						title="Pets"
 						editTo={`/a/applications/${applicationId}/occupants`}
 						noCard={application.pets.length > 0}
+						locked={isLocked}
 					>
 						{application.pets.length > 0 ? (
 							<div className="space-y-3">
@@ -472,6 +637,7 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						title="Documents"
 						editTo={`/a/applications/${applicationId}/documents`}
 						noCard={application.documents.length > 0}
+						locked={isLocked}
 					>
 						{application.documents.length > 0 ? (
 							<div className="space-y-3">
@@ -523,19 +689,29 @@ export default function Application({ loaderData }: Route.ComponentProps) {
 						{isSubmittable ? (
 							<Form method="post">
 								<Button variant="continue" type="submit" disabled={submitting}>
-									{submitting ? "Submitting..." : "Submit application"}
+									{submitting
+										? "Submitting..."
+										: application.status === "info_requested"
+											? "Resubmit application"
+											: "Submit application"}
 								</Button>
 							</Form>
 						) : (
 							<div className="bg-white rounded-2xl p-4 text-center shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
 								<p className="text-sm text-[#1C1A17]">
-									This application has already been submitted.
+									{application.status === "approved"
+										? "Your application has been approved."
+										: application.status === "rejected"
+											? "This application has been reviewed."
+											: "This application has already been submitted."}
 								</p>
 							</div>
 						)}
 						<p className="text-center text-xs text-[#7A7268] mt-3">
 							{isSubmittable
-								? "You can still return to any section above before submitting."
+								? application.status === "info_requested"
+									? "Update the relevant sections above and resubmit."
+									: "You can still return to any section above before submitting."
 								: "This application is no longer editable from the applicant portal."}
 						</p>
 					</div>

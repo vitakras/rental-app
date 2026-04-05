@@ -263,6 +263,20 @@ export function applicationRepository(db: DbInstance) {
 			return updated ?? null;
 		},
 
+		async decide(
+			id: number,
+			status: "approved" | "rejected" | "info_requested",
+			landlordNote?: string,
+		) {
+			const [updated] = await db
+				.update(applicationsTable)
+				.set({ status, landlordNote: landlordNote ?? null })
+				.where(eq(applicationsTable.id, id))
+				.returning();
+
+			return updated ?? null;
+		},
+
 		async findByIdWithDetails(id: number) {
 			const [app] = await db
 				.select()
@@ -342,6 +356,7 @@ export function applicationRepository(db: DbInstance) {
 					desiredMoveInDate: applicationsTable.desiredMoveInDate,
 					createdAt: applicationsTable.createdAt,
 					primaryApplicantName: residentsTable.fullName,
+					landlordNote: applicationsTable.landlordNote,
 				})
 				.from(applicationsTable)
 				.innerJoin(
@@ -351,7 +366,14 @@ export function applicationRepository(db: DbInstance) {
 						eq(residentsTable.role, "primary"),
 					),
 				)
-				.where(eq(applicationsTable.status, "submitted"))
+				.where(
+					inArray(applicationsTable.status, [
+						"submitted",
+						"approved",
+						"rejected",
+						"info_requested",
+					]),
+				)
 				.orderBy(desc(applicationsTable.createdAt));
 		},
 

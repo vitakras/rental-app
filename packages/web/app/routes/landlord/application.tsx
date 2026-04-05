@@ -348,7 +348,7 @@ const STATUS_STYLES: Record<
 		dot: "#C44A4A",
 		label: "Rejected",
 	},
-	"info-requested": {
+	info_requested: {
 		bg: "#FFF9EE",
 		color: "#A0742A",
 		dot: "#C4974A",
@@ -617,14 +617,15 @@ function ApplicationActionBar({
 	onAction: (
 		action: "approve" | "reject" | "request-info",
 		note: string,
-	) => void;
+	) => Promise<void>;
 }) {
 	const [mode, setMode] = useState<ActionMode>("idle");
+	const [submitting, setSubmitting] = useState(false);
 
 	const isDecided =
 		status === "approved" ||
 		status === "rejected" ||
-		status === "info-requested";
+		status === "info_requested";
 	const isSubmitted = status === "submitted";
 
 	if (!isSubmitted && !isDecided) return null;
@@ -637,9 +638,11 @@ function ApplicationActionBar({
 				mode={mode}
 				applicantName={applicantName}
 				onClose={() => setMode("idle")}
-				onConfirm={(note) => {
+				onConfirm={async (note) => {
 					if (mode !== "idle") {
-						onAction(mode, note);
+						setSubmitting(true);
+						await onAction(mode, note);
+						setSubmitting(false);
 						setMode("idle");
 					}
 				}}
@@ -726,37 +729,21 @@ function ApplicationActionBar({
 						)}
 
 						{isDecided && s && (
-							<div className="flex items-center gap-3">
-								{/* Status summary */}
-								<div
-									className="flex-1 flex items-center gap-2.5 px-4 py-3 rounded-2xl"
-									style={{ background: s.bg }}
+							<div
+								className="flex items-center gap-2.5 px-4 py-3.5 rounded-2xl"
+								style={{ background: s.bg }}
+							>
+								<span
+									className="size-2 rounded-full shrink-0"
+									style={{ background: s.dot }}
+									aria-hidden="true"
+								/>
+								<span
+									className="text-sm font-medium"
+									style={{ color: s.color }}
 								>
-									<span
-										className="size-2 rounded-full shrink-0"
-										style={{ background: s.dot }}
-										aria-hidden="true"
-									/>
-									<span
-										className="text-sm font-medium"
-										style={{ color: s.color }}
-									>
-										{s.label}
-									</span>
-								</div>
-								{/* Change decision */}
-								<button
-									type="button"
-									onClick={() => {
-										if (status === "approved") setMode("reject");
-										else if (status === "rejected") setMode("approve");
-										else setMode("approve");
-									}}
-									className="shrink-0 h-11 px-4 rounded-2xl text-sm text-[#7A7268] border border-[#E8E1D9] transition-colors active:bg-[#EDE8E1]"
-									style={{ background: "#FEFCF9" }}
-								>
-									Change
-								</button>
+									{s.label}
+								</span>
 							</div>
 						)}
 					</div>
@@ -778,20 +765,40 @@ export default function LandlordApplicationDetail({
 
 	const applicantName = primary?.fullName ?? `Applicant #${application.id}`;
 
-	const handleAction = (
+	const handleAction = async (
 		action: "approve" | "reject" | "request-info",
-		_note: string,
+		note: string,
 	) => {
-		if (action === "approve") setLocalStatus("approved");
-		else if (action === "reject") setLocalStatus("rejected");
-		else setLocalStatus("info-requested");
+		const apiAction =
+			action === "approve"
+				? "approve"
+				: action === "reject"
+					? "reject"
+					: "request_info";
+
+		const response = await fetch(
+			`${BASE_API_URL}/landlord/applications/${application.id}/decision`,
+			{
+				method: "PATCH",
+				credentials: "include",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ action: apiAction, note: note || undefined }),
+			},
+		);
+
+		if (response.ok) {
+			const { status: newStatus } = (await response.json()) as {
+				status: string;
+			};
+			setLocalStatus(newStatus);
+		}
 	};
 
 	const showActionBar =
 		localStatus === "submitted" ||
 		localStatus === "approved" ||
 		localStatus === "rejected" ||
-		localStatus === "info-requested";
+		localStatus === "info_requested";
 	const bottomPadding = showActionBar ? "pb-36" : "pb-12";
 
 	return (

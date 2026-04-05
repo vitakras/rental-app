@@ -125,6 +125,7 @@ export type SubmittedApplicationSummary = {
 	desiredMoveInDate: string | null;
 	createdAt: string;
 	primaryApplicantName: string | null;
+	landlordNote: string | null;
 };
 
 export type IncomeSourceDetail = {
@@ -200,6 +201,7 @@ export type ApplicationWithDetails = {
 	desiredMoveInDate: string | null;
 	smokes: boolean;
 	notes: string | null;
+	landlordNote: string | null;
 	createdAt: string;
 	updatedAt: string;
 	residents: ResidentDetail[];
@@ -227,6 +229,11 @@ export interface ApplicationRepository {
 		createdByUserId: string | null;
 	} | null>;
 	submit(id: number): Promise<{ id: number } | null>;
+	decide(
+		id: number,
+		status: "approved" | "rejected" | "info_requested",
+		landlordNote?: string,
+	): Promise<{ id: number } | null>;
 	updateOccupants(id: number, input: UpdateOccupantsPayload): Promise<void>;
 	upsertResidences(
 		applicationId: number,
@@ -288,6 +295,10 @@ export type ListSubmittedApplicationsResult = {
 	applications: SubmittedApplicationSummary[];
 };
 
+export type DecideApplicationResult =
+	| { success: true; status: "approved" | "rejected" | "info_requested" }
+	| { success: false; reason: "not_found" | "already_decided" };
+
 export type ListApplicationsByUserResult = {
 	success: true;
 	applications: ApplicantApplicationSummary[];
@@ -300,7 +311,7 @@ export type GetApplicationWithDetailsResult =
 const noopLogger = pino({ level: "silent" });
 
 function isApplicationEditable(status: string) {
-	return status === "draft" || status === "pending";
+	return status === "draft" || status === "pending" || status === "info_requested";
 }
 
 export function createApplicationService({
@@ -613,7 +624,11 @@ export function createApplicationService({
 				return { success: false, reason: "not_found" };
 			}
 
-			if (app.status !== "pending" && app.status !== "draft") {
+			if (
+				app.status !== "pending" &&
+				app.status !== "draft" &&
+				app.status !== "info_requested"
+			) {
 				logger.warn(
 					{ applicationId, status: app.status },
 					"Cannot submit application: not pending",
@@ -625,6 +640,42 @@ export function createApplicationService({
 
 			logger.info({ applicationId }, "Application submitted");
 			return { success: true, applicationId };
+		},
+
+		async decideApplication(
+			applicationId: number,
+			action: "approve" | "reject" | "request_info",
+			note?: string,
+		): Promise<DecideApplicationResult> {
+			const app = await applicationRepository.findById(applicationId);
+
+			if (!app) {
+				logger.warn({ applicationId }, "Cannot decide: application not found");
+				return { success: false, reason: "not_found" };
+			}
+
+			if (app.status === "approved" || app.status === "rejected") {
+				logger.warn(
+					{ applicationId, status: app.status },
+					"Cannot decide: decision already made",
+				);
+				return { success: false, reason: "already_decided" };
+			}
+
+			const newStatus =
+				action === "approve"
+					? "approved"
+					: action === "reject"
+						? "rejected"
+						: "info_requested";
+
+			await applicationRepository.decide(applicationId, newStatus, note);
+
+			logger.info(
+				{ applicationId, newStatus },
+				"Application decision recorded",
+			);
+			return { success: true, status: newStatus };
 		},
 	};
 }

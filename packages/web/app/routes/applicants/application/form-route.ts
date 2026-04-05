@@ -13,7 +13,7 @@ export function parseApplicationParam(idParam: string | undefined) {
 }
 
 export function isApplicationEditable(status: string) {
-	return status === "draft" || status === "pending";
+	return status === "draft" || status === "pending" || status === "info_requested";
 }
 
 export async function loadEditableApplication(id: number) {

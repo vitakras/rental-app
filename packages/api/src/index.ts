@@ -9,6 +9,7 @@ export type {
 	ApplicationWithDetails,
 	AuthUser,
 	CreateApplicationData,
+	DecideApplicationResult,
 	IncomeSourceDetail,
 	IncomeSourceType,
 	PetDetail,

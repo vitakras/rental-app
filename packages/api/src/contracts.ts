@@ -12,6 +12,7 @@ export type {
 	ApplicationDocumentDetail,
 	ApplicationWithDetails,
 	CreateApplicationData,
+	DecideApplicationResult,
 	IncomeSourceDetail,
 	PetDetail,
 	ResidenceDetail,
