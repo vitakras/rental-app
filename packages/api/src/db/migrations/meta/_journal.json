@@ -15,6 +15,20 @@
       "when": 1775324122634,
       "tag": "0001_special_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1775396803183,
+      "tag": "0002_landlord_decision",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1775396984576,
+      "tag": "0003_large_pandemic",
+      "breakpoints": true
     }
   ]
 }

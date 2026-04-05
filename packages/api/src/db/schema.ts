@@ -93,75 +93,106 @@ export const loginCodesTable = sqliteTable(
 	],
 );
 
-export const applicationsTable = sqliteTable("applications", {
-	id: int().primaryKey({ autoIncrement: true }),
-	status: text().$type<ApplicationStatus>().notNull().default("draft"),
-	desiredMoveInDate: text(),
-	smokes: int({ mode: "boolean" }).notNull().default(false),
-	notes: text(),
-	landlordNote: text(),
-	createdByUserId: text().references(() => usersTable.id),
-	...timestamps,
-});
+export const applicationsTable = sqliteTable(
+	"applications",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		status: text().$type<ApplicationStatus>().notNull().default("draft"),
+		desiredMoveInDate: text(),
+		smokes: int({ mode: "boolean" }).notNull().default(false),
+		notes: text(),
+		landlordNote: text(),
+		createdByUserId: text().references(() => usersTable.id),
+		...timestamps,
+	},
+	(table) => [
+		index("applications_created_by_user_id_idx").on(table.createdByUserId),
+		index("applications_status_idx").on(table.status),
+	],
+);
 
-export const residentsTable = sqliteTable("residents", {
-	id: int().primaryKey({ autoIncrement: true }),
-	applicationId: int()
-		.notNull()
-		.references(() => applicationsTable.id),
-	role: text().$type<ResidentRole>().notNull(),
-	fullName: text().notNull(),
-	dateOfBirth: text().notNull(),
-	email: text(),
-	phone: text(),
-	...timestamps,
-});
+export const residentsTable = sqliteTable(
+	"residents",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		applicationId: int()
+			.notNull()
+			.references(() => applicationsTable.id),
+		role: text().$type<ResidentRole>().notNull(),
+		fullName: text().notNull(),
+		dateOfBirth: text().notNull(),
+		email: text(),
+		phone: text(),
+		...timestamps,
+	},
+	(table) => [
+		index("residents_application_id_role_idx").on(
+			table.applicationId,
+			table.role,
+		),
+	],
+);
 
-export const incomeSourcesTable = sqliteTable("income_sources", {
-	id: int().primaryKey({ autoIncrement: true }),
-	residentId: int()
-		.notNull()
-		.references(() => residentsTable.id),
-	type: text().$type<IncomeSourceType>().notNull(),
-	employerOrSourceName: text().notNull(),
-	titleOrOccupation: text(),
-	monthlyAmountCents: int().notNull(),
-	startDate: text().notNull(),
-	endDate: text(),
-	notes: text(),
-	...timestamps,
-});
+export const incomeSourcesTable = sqliteTable(
+	"income_sources",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		residentId: int()
+			.notNull()
+			.references(() => residentsTable.id),
+		type: text().$type<IncomeSourceType>().notNull(),
+		employerOrSourceName: text().notNull(),
+		titleOrOccupation: text(),
+		monthlyAmountCents: int().notNull(),
+		startDate: text().notNull(),
+		endDate: text(),
+		notes: text(),
+		...timestamps,
+	},
+	(table) => [index("income_sources_resident_id_idx").on(table.residentId)],
+);
 
-export const petsTable = sqliteTable("pets", {
-	id: int().primaryKey({ autoIncrement: true }),
-	applicationId: int()
-		.notNull()
-		.references(() => applicationsTable.id),
-	name: text(),
-	type: text().notNull(),
-	breed: text(),
-	notes: text(),
-	...timestamps,
-});
+export const petsTable = sqliteTable(
+	"pets",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		applicationId: int()
+			.notNull()
+			.references(() => applicationsTable.id),
+		name: text(),
+		type: text().notNull(),
+		breed: text(),
+		notes: text(),
+		...timestamps,
+	},
+	(table) => [index("pets_application_id_idx").on(table.applicationId)],
+);
 
-export const residencesTable = sqliteTable("residences", {
-	id: int().primaryKey({ autoIncrement: true }),
-	applicationId: int()
-		.notNull()
-		.references(() => applicationsTable.id),
-	residentId: int()
-		.notNull()
-		.references(() => residentsTable.id),
-	address: text().notNull(),
-	fromDate: text().notNull(),
-	toDate: text(),
-	reasonForLeaving: text(),
-	isRental: int({ mode: "boolean" }).notNull().default(false),
-	landlordName: text(),
-	landlordPhone: text(),
-	notes: text(),
-	...timestamps,
-});
+export const residencesTable = sqliteTable(
+	"residences",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		applicationId: int()
+			.notNull()
+			.references(() => applicationsTable.id),
+		residentId: int()
+			.notNull()
+			.references(() => residentsTable.id),
+		address: text().notNull(),
+		fromDate: text().notNull(),
+		toDate: text(),
+		reasonForLeaving: text(),
+		isRental: int({ mode: "boolean" }).notNull().default(false),
+		landlordName: text(),
+		landlordPhone: text(),
+		notes: text(),
+		...timestamps,
+	},
+	(table) => [
+		index("residences_application_id_idx").on(table.applicationId),
+		index("residences_resident_id_idx").on(table.residentId),
+	],
+);
 
 // "identity" | "income" | "residence" | "reference" | "other"
 export type ApplicationDocumentCategory =
@@ -207,24 +238,32 @@ export const filesTable = sqliteTable("files", {
 	...timestamps,
 });
 
-export const applicationDocumentsTable = sqliteTable("application_documents", {
-	id: int().primaryKey({ autoIncrement: true }),
-	applicationId: int()
-		.notNull()
-		.references(() => applicationsTable.id),
-	residentId: int().references(() => residentsTable.id),
-	fileId: text()
-		.notNull()
-		.references(() => filesTable.id),
-	category: text().$type<ApplicationDocumentCategory>().notNull(),
-	documentType: text().$type<ApplicationDocumentType>().notNull(),
-	status: text()
-		.$type<ApplicationDocumentStatus>()
-		.notNull()
-		.default("submitted"),
-	notes: text(),
-	...timestamps,
-});
+export const applicationDocumentsTable = sqliteTable(
+	"application_documents",
+	{
+		id: int().primaryKey({ autoIncrement: true }),
+		applicationId: int()
+			.notNull()
+			.references(() => applicationsTable.id),
+		residentId: int().references(() => residentsTable.id),
+		fileId: text()
+			.notNull()
+			.references(() => filesTable.id),
+		category: text().$type<ApplicationDocumentCategory>().notNull(),
+		documentType: text().$type<ApplicationDocumentType>().notNull(),
+		status: text()
+			.$type<ApplicationDocumentStatus>()
+			.notNull()
+			.default("submitted"),
+		notes: text(),
+		...timestamps,
+	},
+	(table) => [
+		index("application_documents_application_id_idx").on(table.applicationId),
+		index("application_documents_file_id_idx").on(table.fileId),
+		index("application_documents_resident_id_idx").on(table.residentId),
+	],
+);
 
 export const applicationAccessTable = sqliteTable(
 	"application_access",
