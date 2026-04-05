@@ -612,9 +612,7 @@ describe("upsertResidence", () => {
 
 		expect(result).toEqual({ success: true });
 		expect(repo.findById).toHaveBeenCalledWith(1);
-		expect(repo.upsertResidences).toHaveBeenCalledWith(1, {
-			residents: baseResidence.residents,
-		});
+		expect(repo.upsertResidences).toHaveBeenCalledWith(1, baseResidence);
 	});
 
 	it("returns validation errors for malformed residence payloads", async () => {
