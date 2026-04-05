@@ -3,8 +3,8 @@ import type { Route } from "./+types/home";
 
 export function meta(_: Route.MetaArgs) {
 	return [
-		{ title: "Rental Portal" },
-		{ name: "description", content: "Sign in to your rental portal" },
+		{ title: "Rental Application" },
+		{ name: "description", content: "Find your next home" },
 	];
 }
 
