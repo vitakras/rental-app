@@ -6,7 +6,13 @@ Layer-based structure. All new code follows this layout:
 
 ```
 src/
-├── index.ts          # entry point, mounts all routers
+├── worker.ts         # Cloudflare Worker entry point
+├── app.ts            # Hono app setup
+├── container.ts      # wires repositories and services together
+├── worker-env.ts     # Cloudflare bindings types (D1, R2)
+├── db/
+│   ├── index.ts      # createDb(d1) factory, DbInstance type
+│   └── schema.ts     # Drizzle schema
 ├── routes/           # Hono routers, one file per domain
 ├── services/         # business logic, one file per domain
 └── repositories/     # database access, one file per domain
@@ -27,11 +33,10 @@ Use `<name>.<type>.ts` convention:
 **Services** — business logic. Call repositories and other services. Use the factory function pattern:
 
 ```ts
-export function usersService(db: DbInstance) {
-  const repo = usersRepository(db)
+export function createUsersService({ userRepository }: { userRepository: UserRepository }) {
   return {
     createUser: async (input) => {
-      return repo.create(input)
+      return userRepository.create(input)
     }
   }
 }
@@ -40,7 +45,7 @@ export function usersService(db: DbInstance) {
 **Repositories** — database access only. Use the factory function pattern:
 
 ```ts
-export function usersRepository(db: DbInstance) {
+export function userRepository(db: DbInstance) {
   return {
     findById: (id: string) => ...,
     create: (input: CreateUserInput) => ...,
@@ -54,20 +59,29 @@ export function usersRepository(db: DbInstance) {
 - Never skip layers (routes should not call repositories directly)
 - Services and repositories do not import from routes
 
-## Database Injection
+## Service Container
 
-Inject `db` via Hono context middleware, set once at startup:
+Services are instantiated once per request in `container.ts` via `createCfServices(env)`, which receives Cloudflare bindings (`D1Database`, `R2Bucket`) and wires all repositories and services:
 
 ```ts
-// index.ts
-app.use('*', async (c, next) => {
-  c.set('db', db)
-  await next()
-})
+// container.ts
+export function createCfServices(env: CloudflareBindings): AppServices {
+  const db = createDb(env.DB)
+  const userRepo = userRepository(db)
+  // ...
+  return { authService, applicationService, fileService }
+}
+```
 
-// routes
-usersRoutes.get('/', async (c) => {
-  const service = usersService(c.get('db'))
-  ...
-})
+Routes access services through Hono context middleware set in `app.ts`.
+
+## Cloudflare Bindings
+
+Defined in `worker-env.ts`:
+
+```ts
+export interface CloudflareBindings {
+  DB: D1Database;      // Cloudflare D1 SQLite database
+  STORAGE: R2Bucket;   // Cloudflare R2 object storage
+}
 ```

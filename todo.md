@@ -1,7 +1,4 @@
 Plan for today
-- Fix minor UI issues
-- Make sure I can update parts of the form
-- Add / Remove files to the file upload
 - Able to deploy an initial version on cloudflare
 
 Security

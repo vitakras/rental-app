@@ -2,7 +2,7 @@
 
 ## Architecture
 
-`packages/web` is the React Router 7 SSR frontend for the rental app.
+`packages/web` is the React Router 7 frontend for the rental app. It runs client-side (`ssr: false`).
 
 - It does not own database access or business logic.
 - All loaders and actions call `packages/api` over HTTP.
