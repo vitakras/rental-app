@@ -297,6 +297,7 @@ describe("API application flow routes", () => {
 		expect(services.authService.applicantSignup).toHaveBeenCalledWith(
 			{
 				email: "alex@example.com",
+				role: "applicant",
 				signupToken: "11111111-1111-4111-8111-111111111111",
 			},
 			{ ipAddress: "127.0.0.1", userAgent: "bun-test" },
@@ -989,7 +990,7 @@ describe("API application flow routes", () => {
 		});
 		expect(services.applicationService.upsertResidence).toHaveBeenCalledWith(
 			12,
-			payload,
+			{ residents: payload.residents },
 			"user-1",
 		);
 	});

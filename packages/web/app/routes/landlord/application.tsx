@@ -3,7 +3,7 @@ import type {
 	ApplicationWithDetails,
 	ResidenceDetail,
 } from "api";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { BASE_API_URL } from "~/config/env";
 import { apiClient } from "~/lib/api";
@@ -223,6 +223,84 @@ function DocumentsSection({
 	adultResidents: { id: number; fullName: string }[];
 	applicationId: number;
 }) {
+	const [activeFileAction, setActiveFileAction] = useState<string | null>(null);
+	const previewUrlsRef = useRef<string[]>([]);
+
+	useEffect(() => {
+		return () => {
+			for (const url of previewUrlsRef.current) {
+				URL.revokeObjectURL(url);
+			}
+		};
+	}, []);
+
+	const fetchDocumentBlob = async (fileId: string) => {
+		const response = await fetch(
+			`${BASE_API_URL}/landlord/applications/${applicationId}/files/${fileId}`,
+			{ credentials: "include" },
+		);
+
+		if (!response.ok) {
+			throw new Error(`File request failed with status ${response.status}`);
+		}
+
+		return response.blob();
+	};
+
+	const handleView = async (doc: ApplicationDocumentDetail) => {
+		const previewWindow = window.open("", "_blank");
+
+		if (!previewWindow) {
+			window.alert("Unable to open the document preview.");
+			return;
+		}
+
+		previewWindow.opener = null;
+		previewWindow.document.title = doc.originalFilename;
+		previewWindow.document.body.textContent = "Loading document...";
+		setActiveFileAction(`view:${doc.fileId}`);
+
+		try {
+			const blob = await fetchDocumentBlob(doc.fileId);
+			const previewUrl = URL.createObjectURL(blob);
+			previewUrlsRef.current.push(previewUrl);
+			previewWindow.location.replace(previewUrl);
+		} catch {
+			previewWindow.close();
+			window.alert("Unable to open the document.");
+		} finally {
+			setActiveFileAction((current) =>
+				current === `view:${doc.fileId}` ? null : current,
+			);
+		}
+	};
+
+	const handleDownload = async (doc: ApplicationDocumentDetail) => {
+		setActiveFileAction(`download:${doc.fileId}`);
+
+		try {
+			const blob = await fetchDocumentBlob(`${doc.fileId}?download=true`);
+			const downloadUrl = URL.createObjectURL(blob);
+			const link = document.createElement("a");
+
+			link.href = downloadUrl;
+			link.download = doc.originalFilename;
+			document.body.append(link);
+			link.click();
+			link.remove();
+
+			window.setTimeout(() => {
+				URL.revokeObjectURL(downloadUrl);
+			}, 1000);
+		} catch {
+			window.alert("Unable to download the document.");
+		} finally {
+			setActiveFileAction((current) =>
+				current === `download:${doc.fileId}` ? null : current,
+			);
+		}
+	};
+
 	if (documents.length === 0) {
 		return (
 			<div className="bg-white rounded-2xl p-5 shadow-[0_1px_4px_rgba(28,26,23,0.07)]">
@@ -248,7 +326,9 @@ function DocumentsSection({
 						{residentDocs.length > 0 ? (
 							<div className="space-y-3">
 								{residentDocs.map((doc) => {
-									const fileUrl = `${BASE_API_URL}/landlord/applications/${applicationId}/files/${doc.fileId}`;
+									const isDownloading =
+										activeFileAction === `download:${doc.fileId}`;
+									const isViewing = activeFileAction === `view:${doc.fileId}`;
 									return (
 										<div key={doc.id}>
 											<p className="text-[10px] text-[#7A7268] uppercase tracking-wider mb-0.5">
@@ -259,9 +339,10 @@ function DocumentsSection({
 												<p className="text-sm text-[#1C1A17] truncate flex-1 min-w-0">
 													{doc.originalFilename}
 												</p>
-												<a
-													href={`${fileUrl}?download=true`}
-													download={doc.originalFilename}
+												<button
+													type="button"
+													onClick={() => void handleDownload(doc)}
+													disabled={isDownloading || isViewing}
 													className="shrink-0 flex items-center justify-center w-8 h-8 -mr-1 rounded-lg text-[#B0A89E] active:text-[#7A7268] active:bg-[#F0EBE3] transition-colors"
 												>
 													<svg
@@ -286,18 +367,20 @@ function DocumentsSection({
 														/>
 													</svg>
 													<span className="sr-only">
-														Download {doc.originalFilename}
+														{isDownloading
+															? `Downloading ${doc.originalFilename}`
+															: `Download ${doc.originalFilename}`}
 													</span>
-												</a>
+												</button>
 											</div>
-											<a
-												href={fileUrl}
-												target="_blank"
-												rel="noopener noreferrer"
+											<button
+												type="button"
+												onClick={() => void handleView(doc)}
+												disabled={isDownloading || isViewing}
 												className="mt-2 flex items-center justify-center w-full h-9 rounded-lg bg-[#C4714A] text-white text-xs font-medium active:bg-[#A85A36] transition-colors"
 											>
-												View
-											</a>
+												{isViewing ? "Opening..." : "View"}
+											</button>
 										</div>
 									);
 								})}
