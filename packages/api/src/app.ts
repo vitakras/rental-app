@@ -67,7 +67,7 @@ export function createApp({
 			c.header("Pragma", "no-cache");
 		})
 		.get("/", (c) => {
-			return c.text("Hello Hono!");
+			return c.json({})
 		})
 		.route("/auth/code", createAuthCodeRoutes({ ...services, authConfig }))
 		.route("/auth/email", createAuthEmailRoutes({ ...services, authConfig }))
