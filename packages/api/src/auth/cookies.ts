@@ -18,6 +18,7 @@ export function setSessionCookie(
 	},
 ) {
 	const expiresAtDate = new Date(session.expiresAt);
+	const isSecure = runtimeEnv !== "development" && runtimeEnv !== "test";
 	const maxAge = Math.max(
 		0,
 		Math.floor((expiresAtDate.getTime() - Date.now()) / 1000),
@@ -26,8 +27,10 @@ export function setSessionCookie(
 	setCookie(c, cookieName, session.id, {
 		httpOnly: true,
 		path: "/",
-		sameSite: "Lax",
-		secure: runtimeEnv !== "development" && runtimeEnv !== "test",
+		// The production web app calls the API from a different origin, so the
+		// session cookie must be explicitly marked for cross-site requests.
+		sameSite: isSecure ? "None" : "Lax",
+		secure: isSecure,
 		maxAge,
 		expires: expiresAtDate,
 	});
