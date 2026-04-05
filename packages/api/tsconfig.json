@@ -7,12 +7,12 @@
 		"skipLibCheck": true,
 		"noEmit": true,
 		"lib": ["ESNext"],
-		"types": ["node"],
+		"types": ["node", "./worker-configuration.d.ts"],
 		"jsx": "react-jsx",
 		"jsxImportSource": "hono/jsx",
 		"paths": {
 			"~/*": ["./src/*"]
 		}
 	},
-	"include": ["src/**/*", "worker-configuration.d.ts"]
+	"include": ["src/**/*"]
 }

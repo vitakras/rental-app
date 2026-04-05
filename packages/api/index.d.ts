@@ -194,4 +194,4 @@ export type ApplicationWithDetails = {
 	documents: ApplicationDocumentDetail[];
 };
 
-export type { AppType } from "./src/app";
+export type { AppType } from "./dist/app";
