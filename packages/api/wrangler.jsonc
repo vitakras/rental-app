@@ -28,7 +28,7 @@
 		"production": {
 			"vars": {
 				"NODE_ENV": "production",
-				"API_BASE_URL": "https://api.example.com",
+				"API_BASE_URL": "https://api.rental-app.workers.dev",
 				"WEB_BASE_URL": "https://rental-app-9zw.pages.dev"
 			},
 			"d1_databases": [
