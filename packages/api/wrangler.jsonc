@@ -12,9 +12,9 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "rental-app-dev",
+			"database_name": "rental-application-dev",
 			"database_id": "00000000-0000-0000-0000-000000000000",
-			"preview_database_id": "rental-app-dev-local",
+			"preview_database_id": "rental-application-dev-local",
 			"migrations_dir": "src/db/migrations"
 		}
 	],
@@ -23,5 +23,28 @@
 			"binding": "STORAGE",
 			"bucket_name": "rental-app-storage-dev"
 		}
-	]
+	],
+	"env": {
+		"production": {
+			"vars": {
+				"NODE_ENV": "production",
+				"API_BASE_URL": "https://api.example.com",
+				"WEB_BASE_URL": "https://rental-app-9zw.pages.dev"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "rental-application-production",
+					"database_id": "2cec2d22-3bcc-4047-8a3d-4829111fc609",
+					"migrations_dir": "src/db/migrations"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "STORAGE",
+					"bucket_name": "rental-app-production"
+				}
+			]
+		}
+	}
 }

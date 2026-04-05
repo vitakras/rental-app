@@ -11,7 +11,7 @@
 	},
 	"scripts": {
 		"dev": "wrangler dev --port 8788",
-		"deploy": "wrangler deploy --minify",
+		"deploy": "wrangler deploy --env production --minify",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "wrangler d1 migrations apply DB --local",
 		"test": "vitest run",
